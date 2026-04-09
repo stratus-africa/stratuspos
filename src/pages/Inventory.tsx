@@ -119,7 +119,7 @@ const Inventory = () => {
                             {isOut ? (
                               <Badge variant="destructive">Out of Stock</Badge>
                             ) : isLow ? (
-                              <Badge variant="secondary" className="bg-orange-100 text-orange-700">Low Stock</Badge>
+                              <Badge variant="secondary" className="bg-accent text-accent-foreground">Low Stock</Badge>
                             ) : (
                               <Badge variant="default">In Stock</Badge>
                             )}
