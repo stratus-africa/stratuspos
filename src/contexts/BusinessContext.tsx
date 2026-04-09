@@ -99,32 +99,34 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!user) return { error: new Error("Not authenticated") };
 
     try {
-      const { data: biz, error: bizError } = await supabase
+      // Generate ID client-side to avoid needing .select() which requires SELECT RLS
+      const businessId = crypto.randomUUID();
+
+      const { error: bizError } = await supabase
         .from("businesses")
-        .insert({ name })
-        .select()
-        .single();
+        .insert({ id: businessId, name });
 
       if (bizError) throw bizError;
 
+      // Update profile with business_id first so RLS works for subsequent inserts
       const { error: profileError } = await supabase
         .from("profiles")
-        .update({ business_id: biz.id })
+        .update({ business_id: businessId })
         .eq("id", user.id);
 
       if (profileError) throw profileError;
 
-      const { error: locError } = await supabase
-        .from("locations")
-        .insert({ business_id: biz.id, name: locationName, type: "store" });
-
-      if (locError) throw locError;
-
       const { error: roleError } = await supabase
         .from("user_roles")
-        .insert({ user_id: user.id, role: "admin", business_id: biz.id });
+        .insert({ user_id: user.id, role: "admin", business_id: businessId });
 
       if (roleError) throw roleError;
+
+      const { error: locError } = await supabase
+        .from("locations")
+        .insert({ business_id: businessId, name: locationName, type: "store" });
+
+      if (locError) throw locError;
 
       await fetchBusiness();
       return { error: null };
