@@ -67,7 +67,7 @@ const Sales = () => {
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">Paid</p>
-            <p className="text-2xl font-bold text-green-600">{paidSales} / {sales.length}</p>
+            <p className="text-2xl font-bold text-primary">{paidSales} / {sales.length}</p>
           </CardContent>
         </Card>
       </div>
