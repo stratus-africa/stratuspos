@@ -1,20 +1,280 @@
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShoppingCart } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Separator } from "@/components/ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  ShoppingCart, Search, Plus, Minus, Trash2, Pause, Play, X,
+  User, List, LayoutGrid,
+} from "lucide-react";
+import { useProducts, useCategories } from "@/hooks/useProducts";
+import { useCustomers } from "@/hooks/useSales";
+import { usePOS, CartItem, PaymentEntry } from "@/hooks/usePOS";
+import PaymentDialog from "@/components/pos/PaymentDialog";
+import ReceiptDialog from "@/components/pos/ReceiptDialog";
 
-const POS = () => (
-  <div className="space-y-4">
-    <h1 className="text-2xl font-bold">Point of Sale</h1>
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ShoppingCart className="h-5 w-5" /> POS Terminal
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-muted-foreground">POS screen coming soon. Add products first to start selling.</p>
-      </CardContent>
-    </Card>
-  </div>
-);
+const POS = () => {
+  const { productsQuery } = useProducts();
+  const { query: categoriesQuery } = useCategories();
+  const { query: customersQuery } = useCustomers();
+  const pos = usePOS();
+
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [receiptData, setReceiptData] = useState<any>(null);
+  const [receiptOpen, setReceiptOpen] = useState(false);
+
+  const products = productsQuery.data ?? [];
+  const categories = categoriesQuery.data ?? [];
+  const customers = customersQuery.data ?? [];
+
+  const activeProducts = useMemo(
+    () =>
+      products.filter((p) => {
+        if (!p.is_active) return false;
+        const matchSearch =
+          p.name.toLowerCase().includes(search.toLowerCase()) ||
+          (p.sku || "").toLowerCase().includes(search.toLowerCase()) ||
+          (p.barcode || "").includes(search);
+        const matchCat = categoryFilter === "all" || p.category_id === categoryFilter;
+        return matchSearch && matchCat;
+      }),
+    [products, search, categoryFilter]
+  );
+
+  const handlePaymentConfirm = async (payments: PaymentEntry[]) => {
+    const result = await pos.completeSale(payments);
+    if (result) {
+      setPaymentOpen(false);
+      setReceiptData(result);
+      setReceiptOpen(true);
+    }
+  };
+
+  return (
+    <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-6rem)]">
+      {/* Left: Product selection */}
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Search & filters */}
+        <div className="flex flex-col sm:flex-row gap-2 mb-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search product or scan barcode..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+              autoFocus
+            />
+          </div>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categories.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex gap-1">
+            <Button size="icon" variant={viewMode === "grid" ? "default" : "outline"} onClick={() => setViewMode("grid")}>
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+            <Button size="icon" variant={viewMode === "list" ? "default" : "outline"} onClick={() => setViewMode("list")}>
+              <List className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Product grid/list */}
+        <ScrollArea className="flex-1">
+          {viewMode === "grid" ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              {activeProducts.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => pos.addToCart(p)}
+                  className="flex flex-col items-start p-3 rounded-lg border bg-card text-left transition-colors hover:bg-accent hover:border-primary"
+                >
+                  <span className="font-medium text-sm line-clamp-2">{p.name}</span>
+                  {p.sku && <span className="text-xs text-muted-foreground">{p.sku}</span>}
+                  <span className="mt-auto pt-1 font-semibold text-primary">KES {Number(p.selling_price).toLocaleString()}</span>
+                </button>
+              ))}
+              {activeProducts.length === 0 && (
+                <p className="col-span-full text-center py-10 text-muted-foreground">No products found</p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {activeProducts.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => pos.addToCart(p)}
+                  className="flex items-center justify-between w-full p-3 rounded-lg border bg-card hover:bg-accent hover:border-primary transition-colors"
+                >
+                  <div>
+                    <span className="font-medium text-sm">{p.name}</span>
+                    {p.sku && <span className="text-xs text-muted-foreground ml-2">{p.sku}</span>}
+                  </div>
+                  <span className="font-semibold text-primary">KES {Number(p.selling_price).toLocaleString()}</span>
+                </button>
+              ))}
+              {activeProducts.length === 0 && (
+                <p className="text-center py-10 text-muted-foreground">No products found</p>
+              )}
+            </div>
+          )}
+        </ScrollArea>
+
+        {/* Held sales bar */}
+        {pos.heldSales.length > 0 && (
+          <div className="flex items-center gap-2 mt-2 pt-2 border-t overflow-x-auto">
+            <span className="text-xs text-muted-foreground whitespace-nowrap">Held:</span>
+            {pos.heldSales.map((h) => (
+              <Badge key={h.id} variant="secondary" className="cursor-pointer flex items-center gap-1 whitespace-nowrap">
+                <button onClick={() => pos.resumeSale(h.id)} className="flex items-center gap-1">
+                  <Play className="h-3 w-3" /> {h.label}
+                </button>
+                <button onClick={() => pos.removeHeldSale(h.id)}>
+                  <X className="h-3 w-3 hover:text-destructive" />
+                </button>
+              </Badge>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Right: Cart */}
+      <Card className="w-full lg:w-96 flex flex-col min-h-0">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5" /> Cart
+              {pos.cart.length > 0 && <Badge variant="secondary">{pos.cart.length}</Badge>}
+            </CardTitle>
+            <div className="flex gap-1">
+              {pos.cart.length > 0 && (
+                <>
+                  <Button size="sm" variant="outline" onClick={pos.holdSale}>
+                    <Pause className="h-4 w-4 mr-1" /> Hold
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={pos.clearCart}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+          {/* Customer selector */}
+          <Select
+            value={pos.customerId || "walkin"}
+            onValueChange={(v) => {
+              if (v === "walkin") {
+                pos.setCustomerId(null);
+                pos.setCustomerName(null);
+              } else {
+                const cust = customers.find((c) => c.id === v);
+                pos.setCustomerId(v);
+                pos.setCustomerName(cust?.name || null);
+              }
+            }}
+          >
+            <SelectTrigger className="mt-1">
+              <User className="h-4 w-4 mr-1 text-muted-foreground" />
+              <SelectValue placeholder="Walk-in Customer" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="walkin">Walk-in Customer</SelectItem>
+              {customers.map((c) => (
+                <SelectItem key={c.id} value={c.id}>{c.name} {c.phone ? `(${c.phone})` : ""}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </CardHeader>
+
+        <CardContent className="flex-1 flex flex-col min-h-0 p-3">
+          <ScrollArea className="flex-1">
+            {pos.cart.length === 0 ? (
+              <p className="text-center py-10 text-muted-foreground text-sm">Add products to start a sale</p>
+            ) : (
+              <div className="space-y-2">
+                {pos.cart.map((item) => (
+                  <CartItemRow key={item.product.id} item={item} onUpdate={pos.updateCartItem} onRemove={pos.removeFromCart} />
+                ))}
+              </div>
+            )}
+          </ScrollArea>
+
+          {pos.cart.length > 0 && (
+            <div className="pt-3 border-t mt-2 space-y-1">
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>KES {pos.cartSubtotal.toLocaleString()}</span></div>
+              <div className="flex justify-between text-sm"><span className="text-muted-foreground">VAT (incl.)</span><span>KES {Math.round(pos.cartTax).toLocaleString()}</span></div>
+              <Separator />
+              <div className="flex justify-between font-bold text-lg"><span>Total</span><span>KES {pos.cartTotal.toLocaleString()}</span></div>
+              <Button className="w-full mt-2" size="lg" onClick={() => setPaymentOpen(true)}>
+                Charge KES {pos.cartTotal.toLocaleString()}
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <PaymentDialog
+        open={paymentOpen}
+        onOpenChange={setPaymentOpen}
+        total={pos.cartTotal}
+        onConfirm={handlePaymentConfirm}
+        processing={pos.processing}
+      />
+
+      <ReceiptDialog
+        open={receiptOpen}
+        onOpenChange={setReceiptOpen}
+        data={receiptData}
+      />
+    </div>
+  );
+};
+
+function CartItemRow({ item, onUpdate, onRemove }: { item: CartItem; onUpdate: (id: string, u: Partial<CartItem>) => void; onRemove: (id: string) => void }) {
+  const lineTotal = item.unit_price * item.quantity - item.discount;
+  return (
+    <div className="flex items-start gap-2 p-2 rounded border bg-background">
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm truncate">{item.product.name}</p>
+        <p className="text-xs text-muted-foreground">@ KES {Number(item.unit_price).toLocaleString()}</p>
+      </div>
+      <div className="flex items-center gap-1">
+        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => onUpdate(item.product.id, { quantity: Math.max(1, item.quantity - 1) })}>
+          <Minus className="h-3 w-3" />
+        </Button>
+        <Input
+          className="w-12 h-7 text-center text-sm p-0"
+          type="number"
+          min={1}
+          value={item.quantity}
+          onChange={(e) => onUpdate(item.product.id, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
+        />
+        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => onUpdate(item.product.id, { quantity: item.quantity + 1 })}>
+          <Plus className="h-3 w-3" />
+        </Button>
+      </div>
+      <div className="text-right min-w-[70px]">
+        <p className="font-semibold text-sm">KES {lineTotal.toLocaleString()}</p>
+      </div>
+      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onRemove(item.product.id)}>
+        <Trash2 className="h-3 w-3 text-destructive" />
+      </Button>
+    </div>
+  );
+}
 
 export default POS;
