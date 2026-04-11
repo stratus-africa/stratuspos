@@ -29,26 +29,36 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
-const mainNav = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "POS", url: "/pos", icon: ShoppingCart },
+type AppRole = "admin" | "manager" | "cashier";
+
+interface NavItem {
+  title: string;
+  url: string;
+  icon: any;
+  roles: AppRole[];
+}
+
+const mainNav: NavItem[] = [
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, roles: ["admin", "manager"] },
+  { title: "POS", url: "/pos", icon: ShoppingCart, roles: ["admin", "manager", "cashier"] },
 ];
 
-const inventoryNav = [
-  { title: "Products", url: "/products", icon: Package },
-  { title: "Inventory", url: "/inventory", icon: Warehouse },
+const inventoryNav: NavItem[] = [
+  { title: "Products", url: "/products", icon: Package, roles: ["admin", "manager"] },
+  { title: "Inventory", url: "/inventory", icon: Warehouse, roles: ["admin", "manager"] },
 ];
 
-const transactionNav = [
-  { title: "Sales", url: "/sales", icon: Receipt },
-  { title: "Purchases", url: "/purchases", icon: TruckIcon },
-  { title: "Expenses", url: "/expenses", icon: CreditCard },
+const transactionNav: NavItem[] = [
+  { title: "Sales", url: "/sales", icon: Receipt, roles: ["admin", "manager"] },
+  { title: "Purchases", url: "/purchases", icon: TruckIcon, roles: ["admin", "manager"] },
+  { title: "Expenses", url: "/expenses", icon: CreditCard, roles: ["admin"] },
 ];
 
-const reportNav = [
-  { title: "Reports", url: "/reports", icon: BarChart3 },
-  { title: "Settings", url: "/settings", icon: Settings },
+const reportNav: NavItem[] = [
+  { title: "Reports", url: "/reports", icon: BarChart3, roles: ["admin"] },
+  { title: "Settings", url: "/settings", icon: Settings, roles: ["admin"] },
 ];
 
 export function AppSidebar() {
@@ -56,28 +66,36 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const { signOut } = useAuth();
-  const { business } = useBusiness();
+  const { business, userRole } = useBusiness();
   const currentPath = location.pathname;
 
-  const renderNav = (items: typeof mainNav, label: string) => (
-    <SidebarGroup>
-      <SidebarGroupLabel>{label}</SidebarGroupLabel>
-      <SidebarGroupContent>
-        <SidebarMenu>
-          {items.map((item) => (
-            <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton asChild isActive={currentPath === item.url}>
-                <NavLink to={item.url} end className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                  <item.icon className="mr-2 h-4 w-4" />
-                  {!collapsed && <span>{item.title}</span>}
-                </NavLink>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
-        </SidebarMenu>
-      </SidebarGroupContent>
-    </SidebarGroup>
-  );
+  const filterByRole = (items: NavItem[]) =>
+    items.filter((item) => userRole && item.roles.includes(userRole));
+
+  const renderNav = (items: NavItem[], label: string) => {
+    const filtered = filterByRole(items);
+    if (filtered.length === 0) return null;
+
+    return (
+      <SidebarGroup>
+        <SidebarGroupLabel>{label}</SidebarGroupLabel>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {filtered.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton asChild isActive={currentPath === item.url}>
+                  <NavLink to={item.url} end className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
+                    <item.icon className="mr-2 h-4 w-4" />
+                    {!collapsed && <span>{item.title}</span>}
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -105,6 +123,13 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-2">
+        {!collapsed && userRole && (
+          <div className="px-2 pb-1">
+            <Badge variant="outline" className="text-xs capitalize w-full justify-center">
+              {userRole}
+            </Badge>
+          </div>
+        )}
         <Button
           variant="ghost"
           className="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"

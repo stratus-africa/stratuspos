@@ -20,6 +20,8 @@ interface Location {
   is_active: boolean;
 }
 
+type AppRole = "admin" | "manager" | "cashier";
+
 interface BusinessContextType {
   business: Business | null;
   locations: Location[];
@@ -29,6 +31,8 @@ interface BusinessContextType {
   needsOnboarding: boolean;
   createBusiness: (name: string, locationName: string) => Promise<{ error: Error | null }>;
   refreshBusiness: () => Promise<void>;
+  userRole: AppRole | null;
+  hasAccess: (requiredRoles: AppRole[]) => boolean;
 }
 
 const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
@@ -40,6 +44,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
   const [loading, setLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [userRole, setUserRole] = useState<AppRole | null>(null);
 
   const fetchBusiness = async () => {
     if (!user) {
@@ -48,6 +53,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setCurrentLocation(null);
       setLoading(false);
       setNeedsOnboarding(false);
+      setUserRole(null);
       return;
     }
 
@@ -74,6 +80,16 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setBusiness(biz as Business);
         setNeedsOnboarding(false);
 
+        // Fetch role
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .eq("business_id", biz.id)
+          .single();
+
+        setUserRole((roleData?.role as AppRole) || null);
+
         const { data: locs } = await supabase
           .from("locations")
           .select("*")
@@ -99,7 +115,6 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     if (!user) return { error: new Error("Not authenticated") };
 
     try {
-      // Generate ID client-side to avoid needing .select() which requires SELECT RLS
       const businessId = crypto.randomUUID();
 
       const { error: bizError } = await supabase
@@ -108,7 +123,6 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       if (bizError) throw bizError;
 
-      // Update profile with business_id first so RLS works for subsequent inserts
       const { error: profileError } = await supabase
         .from("profiles")
         .update({ business_id: businessId })
@@ -140,6 +154,11 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     localStorage.setItem("currentLocationId", location.id);
   };
 
+  const hasAccess = (requiredRoles: AppRole[]) => {
+    if (!userRole) return false;
+    return requiredRoles.includes(userRole);
+  };
+
   useEffect(() => {
     fetchBusiness();
   }, [user]);
@@ -155,6 +174,8 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         needsOnboarding,
         createBusiness,
         refreshBusiness: fetchBusiness,
+        userRole,
+        hasAccess,
       }}
     >
       {children}

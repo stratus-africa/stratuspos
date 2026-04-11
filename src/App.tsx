@@ -22,9 +22,16 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
+const AccessDenied = () => (
+  <div className="flex flex-col items-center justify-center py-20 text-center">
+    <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+    <p className="text-muted-foreground">You don't have permission to view this page.</p>
+  </div>
+);
+
 const ProtectedRoutes = () => {
   const { user, loading: authLoading } = useAuth();
-  const { needsOnboarding, loading: bizLoading } = useBusiness();
+  const { needsOnboarding, loading: bizLoading, hasAccess } = useBusiness();
 
   if (authLoading || bizLoading) {
     return (
@@ -37,18 +44,21 @@ const ProtectedRoutes = () => {
   if (!user) return <Navigate to="/auth" replace />;
   if (needsOnboarding) return <Onboarding />;
 
+  const guard = (roles: ("admin" | "manager" | "cashier")[], element: React.ReactNode) =>
+    hasAccess(roles) ? element : <AccessDenied />;
+
   return (
     <AppLayout>
       <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/pos" element={<POS />} />
-        <Route path="/products" element={<Products />} />
-        <Route path="/inventory" element={<Inventory />} />
-        <Route path="/sales" element={<Sales />} />
-        <Route path="/purchases" element={<Purchases />} />
-        <Route path="/expenses" element={<Expenses />} />
-        <Route path="/reports" element={<Reports />} />
-        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/" element={guard(["admin", "manager"], <Index />)} />
+        <Route path="/pos" element={guard(["admin", "manager", "cashier"], <POS />)} />
+        <Route path="/products" element={guard(["admin", "manager"], <Products />)} />
+        <Route path="/inventory" element={guard(["admin", "manager"], <Inventory />)} />
+        <Route path="/sales" element={guard(["admin", "manager"], <Sales />)} />
+        <Route path="/purchases" element={guard(["admin", "manager"], <Purchases />)} />
+        <Route path="/expenses" element={guard(["admin"], <Expenses />)} />
+        <Route path="/reports" element={guard(["admin"], <Reports />)} />
+        <Route path="/settings" element={guard(["admin"], <SettingsPage />)} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AppLayout>
