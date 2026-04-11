@@ -11,13 +11,15 @@ import { useBusiness } from "@/contexts/BusinessContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { UserPlus, Shield, User, Crown } from "lucide-react";
+import { UserPlus, Shield, User, Crown, Pencil, Loader2 } from "lucide-react";
+
+type AppRole = "admin" | "manager" | "cashier";
 
 interface TeamMember {
   user_id: string;
-  role: string;
+  role_id: string;
+  role: AppRole;
   full_name: string | null;
-  email?: string;
 }
 
 const roleIcon = (role: string) => {
@@ -37,7 +39,7 @@ const roleBadgeVariant = (role: string) => {
 };
 
 export function UserManagementTab() {
-  const { business } = useBusiness();
+  const { business, userRole } = useBusiness();
   const { user } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,13 +48,20 @@ export function UserManagementTab() {
   const [inviteRole, setInviteRole] = useState<string>("cashier");
   const [inviting, setInviting] = useState(false);
 
+  // Role edit state
+  const [editMember, setEditMember] = useState<TeamMember | null>(null);
+  const [editRole, setEditRole] = useState<AppRole>("cashier");
+  const [saving, setSaving] = useState(false);
+
+  const isAdmin = userRole === "admin";
+
   const fetchMembers = async () => {
     if (!business) return;
     setLoading(true);
 
     const { data: roles } = await supabase
       .from("user_roles")
-      .select("user_id, role")
+      .select("id, user_id, role")
       .eq("business_id", business.id);
 
     if (!roles || roles.length === 0) {
@@ -71,7 +80,8 @@ export function UserManagementTab() {
     setMembers(
       roles.map((r) => ({
         user_id: r.user_id,
-        role: r.role,
+        role_id: r.id,
+        role: r.role as AppRole,
         full_name: profileMap.get(r.user_id)?.full_name || null,
       }))
     );
@@ -82,10 +92,33 @@ export function UserManagementTab() {
     fetchMembers();
   }, [business?.id]);
 
+  const openEditRole = (member: TeamMember) => {
+    setEditMember(member);
+    setEditRole(member.role);
+  };
+
+  const handleSaveRole = async () => {
+    if (!editMember) return;
+    setSaving(true);
+
+    const { error } = await supabase
+      .from("user_roles")
+      .update({ role: editRole })
+      .eq("id", editMember.role_id);
+
+    if (error) {
+      toast.error("Failed to update role: " + error.message);
+    } else {
+      toast.success(`Role updated to ${editRole}`);
+      await fetchMembers();
+    }
+    setSaving(false);
+    setEditMember(null);
+  };
+
   const handleInvite = async () => {
     if (!inviteEmail.trim()) return;
     setInviting(true);
-    // For MVP, we show a message explaining the invite flow
     toast.info(
       `To add ${inviteEmail} as a ${inviteRole}: Have them sign up, then you can assign their role here.`,
       { duration: 6000 }
@@ -102,9 +135,11 @@ export function UserManagementTab() {
           <CardTitle>Team Members</CardTitle>
           <CardDescription>Manage who has access to your business and their roles.</CardDescription>
         </div>
-        <Button size="sm" onClick={() => setInviteOpen(true)}>
-          <UserPlus className="mr-1 h-4 w-4" /> Invite User
-        </Button>
+        {isAdmin && (
+          <Button size="sm" onClick={() => setInviteOpen(true)}>
+            <UserPlus className="mr-1 h-4 w-4" /> Invite User
+          </Button>
+        )}
       </CardHeader>
       <CardContent>
         <Table>
@@ -113,16 +148,17 @@ export function UserManagementTab() {
               <TableHead>Name</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
+              {isAdmin && <TableHead className="w-[60px]" />}
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
+                <TableCell colSpan={isAdmin ? 4 : 3} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
               </TableRow>
             ) : members.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">No team members found.</TableCell>
+                <TableCell colSpan={isAdmin ? 4 : 3} className="text-center py-8 text-muted-foreground">No team members found.</TableCell>
               </TableRow>
             ) : (
               members.map((m) => (
@@ -139,10 +175,23 @@ export function UserManagementTab() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
+                    <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50">
                       Active
                     </Badge>
                   </TableCell>
+                  {isAdmin && (
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => openEditRole(m)}
+                        disabled={m.user_id === user?.id}
+                        title={m.user_id === user?.id ? "You can't change your own role" : "Change role"}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}
@@ -150,6 +199,39 @@ export function UserManagementTab() {
         </Table>
       </CardContent>
 
+      {/* Edit Role Dialog */}
+      <Dialog open={!!editMember} onOpenChange={(open) => !open && setEditMember(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Role — {editMember?.full_name || "User"}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>New Role</Label>
+              <Select value={editRole} onValueChange={(v) => setEditRole(v as AppRole)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Admin — Full access to all features</SelectItem>
+                  <SelectItem value="manager">Manager — Inventory, sales & purchases</SelectItem>
+                  <SelectItem value="cashier">Cashier — POS access only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Changing a user's role takes effect immediately. They may need to refresh their browser.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditMember(null)}>Cancel</Button>
+            <Button onClick={handleSaveRole} disabled={saving || editRole === editMember?.role}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Role
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Invite Dialog */}
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
         <DialogContent>
           <DialogHeader>
