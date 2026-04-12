@@ -10,11 +10,13 @@ import {
   Settings,
   LogOut,
   Store,
+  Shield,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import {
   Sidebar,
   SidebarContent,
@@ -67,6 +69,7 @@ export function AppSidebar() {
   const location = useLocation();
   const { signOut } = useAuth();
   const { business, userRole } = useBusiness();
+  const { isSuperAdmin } = useSuperAdmin();
   const currentPath = location.pathname;
 
   const filterByRole = (items: NavItem[]) =>
@@ -123,6 +126,15 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-2">
+        {!collapsed && isSuperAdmin && (
+          <Link
+            to="/super-admin"
+            className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-red-400 hover:bg-sidebar-accent/50 transition-colors"
+          >
+            <Shield className="h-3.5 w-3.5" />
+            Super Admin Panel
+          </Link>
+        )}
         {!collapsed && userRole && (
           <div className="px-2 pb-1">
             <Badge variant="outline" className="text-xs capitalize w-full justify-center">
