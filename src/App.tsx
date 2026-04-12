@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { BusinessProvider, useBusiness } from "@/contexts/BusinessContext";
 import { AppLayout } from "@/components/AppLayout";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { SuperAdminLayout } from "@/components/super-admin/SuperAdminLayout";
 
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
@@ -19,6 +21,9 @@ import Expenses from "./pages/Expenses";
 import Reports from "./pages/Reports";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound";
+import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
+import SuperAdminBusinesses from "./pages/super-admin/SuperAdminBusinesses";
+import SuperAdminUsers from "./pages/super-admin/SuperAdminUsers";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +33,33 @@ const AccessDenied = () => (
     <p className="text-muted-foreground">You don't have permission to view this page.</p>
   </div>
 );
+
+const SuperAdminRoutes = () => {
+  const { user, loading: authLoading } = useAuth();
+  const { isSuperAdmin, loading: saLoading } = useSuperAdmin();
+
+  if (authLoading || saLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  if (!user) return <Navigate to="/auth" replace />;
+  if (!isSuperAdmin) return <Navigate to="/" replace />;
+
+  return (
+    <SuperAdminLayout>
+      <Routes>
+        <Route path="/" element={<SuperAdminDashboard />} />
+        <Route path="/businesses" element={<SuperAdminBusinesses />} />
+        <Route path="/users" element={<SuperAdminUsers />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </SuperAdminLayout>
+  );
+};
 
 const ProtectedRoutes = () => {
   const { user, loading: authLoading } = useAuth();
@@ -78,6 +110,7 @@ const App = () => (
           <BusinessProvider>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/super-admin/*" element={<SuperAdminRoutes />} />
               <Route path="/*" element={<ProtectedRoutes />} />
             </Routes>
           </BusinessProvider>
