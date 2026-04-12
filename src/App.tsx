@@ -44,6 +44,9 @@ const ProtectedRoutes = () => {
   if (!user) return <Navigate to="/auth" replace />;
   if (needsOnboarding) return <Onboarding />;
 
+  // Default redirect based on role - cashiers go to POS
+  if (userRole === "cashier") return <Navigate to="/pos" replace />;
+
   const guard = (roles: ("admin" | "manager" | "cashier")[], element: React.ReactNode) =>
     hasAccess(roles) ? element : <AccessDenied />;
 
