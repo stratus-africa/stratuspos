@@ -31,7 +31,7 @@ const AccessDenied = () => (
 
 const ProtectedRoutes = () => {
   const { user, loading: authLoading } = useAuth();
-  const { needsOnboarding, loading: bizLoading, hasAccess } = useBusiness();
+  const { needsOnboarding, loading: bizLoading, hasAccess, userRole } = useBusiness();
 
   if (authLoading || bizLoading) {
     return (
@@ -43,6 +43,9 @@ const ProtectedRoutes = () => {
 
   if (!user) return <Navigate to="/auth" replace />;
   if (needsOnboarding) return <Onboarding />;
+
+  // Default redirect based on role - cashiers go to POS
+  if (userRole === "cashier") return <Navigate to="/pos" replace />;
 
   const guard = (roles: ("admin" | "manager" | "cashier")[], element: React.ReactNode) =>
     hasAccess(roles) ? element : <AccessDenied />;
