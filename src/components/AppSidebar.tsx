@@ -12,9 +12,10 @@ import {
   Store,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
-import { useLocation } from "react-router-dom";
+import { useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import {
   Sidebar,
   SidebarContent,
