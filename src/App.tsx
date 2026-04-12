@@ -31,7 +31,7 @@ const AccessDenied = () => (
 
 const ProtectedRoutes = () => {
   const { user, loading: authLoading } = useAuth();
-  const { needsOnboarding, loading: bizLoading, hasAccess } = useBusiness();
+  const { needsOnboarding, loading: bizLoading, hasAccess, userRole } = useBusiness();
 
   if (authLoading || bizLoading) {
     return (
