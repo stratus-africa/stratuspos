@@ -20,6 +20,8 @@ import Purchases from "./pages/Purchases";
 import Expenses from "./pages/Expenses";
 import Reports from "./pages/Reports";
 import SettingsPage from "./pages/SettingsPage";
+import ChartOfAccounts from "./pages/ChartOfAccounts";
+import Banking from "./pages/Banking";
 import NotFound from "./pages/NotFound";
 import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
 import SuperAdminBusinesses from "./pages/super-admin/SuperAdminBusinesses";
@@ -92,6 +94,8 @@ const ProtectedRoutes = () => {
         <Route path="/sales" element={guard(["admin", "manager"], <Sales />)} />
         <Route path="/purchases" element={guard(["admin", "manager"], <Purchases />)} />
         <Route path="/expenses" element={guard(["admin"], <Expenses />)} />
+        <Route path="/chart-of-accounts" element={guard(["admin"], <ChartOfAccounts />)} />
+        <Route path="/banking" element={guard(["admin"], <Banking />)} />
         <Route path="/reports" element={guard(["admin"], <Reports />)} />
         <Route path="/settings" element={guard(["admin"], <SettingsPage />)} />
         <Route path="*" element={<NotFound />} />
