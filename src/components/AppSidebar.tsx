@@ -11,6 +11,8 @@ import {
   LogOut,
   Store,
   Shield,
+  BookOpen,
+  Landmark,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, Link } from "react-router-dom";
@@ -58,7 +60,12 @@ const transactionNav: NavItem[] = [
   { title: "Expenses", url: "/expenses", icon: CreditCard, roles: ["admin"] },
 ];
 
-const reportNav: NavItem[] = [
+const financeNav: NavItem[] = [
+  { title: "Accountant", url: "/chart-of-accounts", icon: BookOpen, roles: ["admin"] },
+  { title: "Banking", url: "/banking", icon: Landmark, roles: ["admin"] },
+];
+
+const systemNav: NavItem[] = [
   { title: "Reports", url: "/reports", icon: BarChart3, roles: ["admin"] },
   { title: "Settings", url: "/settings", icon: Settings, roles: ["admin"] },
 ];
@@ -122,7 +129,8 @@ export function AppSidebar() {
         {renderNav(mainNav, "Main")}
         {renderNav(inventoryNav, "Inventory")}
         {renderNav(transactionNav, "Transactions")}
-        {renderNav(reportNav, "System")}
+        {renderNav(financeNav, "Finance")}
+        {renderNav(systemNav, "System")}
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-2">
