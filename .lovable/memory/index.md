@@ -12,3 +12,4 @@ Paddle payments enabled. Plans: Free/Basic($15)/Pro($39) in USD.
 - [Architecture](mem://features/architecture) — Multi-tenant schema, tables, RLS patterns
 - [Design tokens](mem://design/tokens) — Color palette, sidebar, success/warning tokens
 - [Subscriptions](mem://features/subscriptions) — Paddle billing tiers, price IDs, edge functions
+- [Feature gating](mem://features/feature-gating) — Tier restrictions, masquerade mode
