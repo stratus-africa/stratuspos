@@ -35,6 +35,8 @@ interface BusinessContextType {
   refreshBusiness: () => Promise<void>;
   userRole: AppRole | null;
   hasAccess: (requiredRoles: AppRole[]) => boolean;
+  isMasquerading: boolean;
+  stopMasquerade: () => void;
 }
 
 const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
