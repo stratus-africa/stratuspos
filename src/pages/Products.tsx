@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -245,9 +246,27 @@ const Products = () => {
               {selectedIds.size > 0 && (
                 <div className="flex items-center gap-3 pt-2">
                   <span className="text-sm text-muted-foreground">{selectedIds.size} selected</span>
-                  <Button size="sm" variant="destructive" onClick={handleBulkDelete} disabled={bulkDeleting}>
-                    <Trash2 className="mr-1 h-4 w-4" /> {bulkDeleting ? "Deleting..." : `Delete ${selectedIds.size}`}
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button size="sm" variant="destructive" disabled={bulkDeleting}>
+                        <Trash2 className="mr-1 h-4 w-4" /> {bulkDeleting ? "Deleting..." : `Delete ${selectedIds.size}`}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete {selectedIds.size} product{selectedIds.size > 1 ? "s" : ""}?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. The selected products will be permanently removed from your inventory.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleBulkDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                   <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>Clear</Button>
                 </div>
               )}
