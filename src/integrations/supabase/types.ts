@@ -72,8 +72,10 @@ export type Database = {
           created_by: string
           date: string
           description: string | null
+          expense_id: string | null
           id: string
           reference: string | null
+          sale_id: string | null
           type: string
           updated_at: string
         }
@@ -87,8 +89,10 @@ export type Database = {
           created_by: string
           date?: string
           description?: string | null
+          expense_id?: string | null
           id?: string
           reference?: string | null
+          sale_id?: string | null
           type?: string
           updated_at?: string
         }
@@ -102,8 +106,10 @@ export type Database = {
           created_by?: string
           date?: string
           description?: string | null
+          expense_id?: string | null
           id?: string
           reference?: string | null
+          sale_id?: string | null
           type?: string
           updated_at?: string
         }
@@ -120,6 +126,20 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transactions_expense_id_fkey"
+            columns: ["expense_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_transactions_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
             referencedColumns: ["id"]
           },
         ]
