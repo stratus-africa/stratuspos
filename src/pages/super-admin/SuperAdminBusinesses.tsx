@@ -196,7 +196,14 @@ export default function SuperAdminBusinesses() {
             <TableBody>
               {filtered.map((biz) => (
                 <TableRow key={biz.id} className={!biz.is_active ? "opacity-60" : ""}>
-                  <TableCell className="font-medium">{biz.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <button
+                      className="text-left hover:underline text-primary cursor-pointer"
+                      onClick={() => setDetailBiz(biz)}
+                    >
+                      {biz.name}
+                    </button>
+                  </TableCell>
                   <TableCell>
                     {biz.is_active ? (
                       <Badge variant="default" className="bg-emerald-500/10 text-emerald-600 border-emerald-200">Active</Badge>
