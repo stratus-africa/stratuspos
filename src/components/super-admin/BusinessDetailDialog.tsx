@@ -4,11 +4,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import {
   DollarSign, ShoppingCart, Users, MapPin, TrendingUp, Package,
-  BarChart3, CreditCard, Activity, Layers, CheckCircle2, XCircle
+  BarChart3, CreditCard, Activity, Layers, CheckCircle2, XCircle, Loader2, ArrowUpCircle, Trash2
 } from "lucide-react";
 
 interface BusinessDetailDialogProps {
@@ -291,7 +295,7 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
             </TabsContent>
 
             {/* Subscription Tab */}
-            <TabsContent value="subscription" className="mt-4">
+            <TabsContent value="subscription" className="space-y-4 mt-4">
               <Card>
                 <CardContent className="pt-6">
                   {subscription ? (
@@ -305,7 +309,7 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
                       </div>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <p className="text-muted-foreground">Paddle Subscription ID</p>
+                          <p className="text-muted-foreground">Subscription ID</p>
                           <p className="font-mono text-xs">{subscription.paddle_subscription_id}</p>
                         </div>
                         <div>
@@ -338,6 +342,14 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
                   )}
                 </CardContent>
               </Card>
+
+              {/* Manual Tier Management */}
+              <ManualTierManager
+                businessId={businessId!}
+                users={users}
+                subscription={subscription}
+                onUpdated={fetchAll}
+              />
             </TabsContent>
 
             {/* Modules Tab */}
@@ -373,6 +385,125 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ManualTierManager({
+  businessId, users, subscription, onUpdated,
+}: {
+  businessId: string;
+  users: any[];
+  subscription: any;
+  onUpdated: () => void;
+}) {
+  const [selectedTier, setSelectedTier] = useState<string>(subscription ? (subscription.product_id?.includes("pro") ? "pro" : "basic") : "basic");
+  const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  const ownerUserId = users[0]?.user_id || users[0]?.id;
+
+  const handleSetTier = async () => {
+    if (!ownerUserId) {
+      toast.error("No user found for this business");
+      return;
+    }
+    setSaving(true);
+    try {
+      const productId = selectedTier === "pro" ? "pro_plan" : "basic_plan";
+      const priceId = selectedTier === "pro" ? "pro_monthly" : "basic_monthly";
+      const now = new Date().toISOString();
+
+      if (subscription) {
+        // Update existing
+        const { error } = await supabase
+          .from("subscriptions")
+          .update({
+            product_id: productId,
+            price_id: priceId,
+            status: "active",
+            cancel_at_period_end: false,
+          })
+          .eq("id", subscription.id);
+        if (error) throw error;
+        toast.success(`Subscription updated to ${selectedTier.toUpperCase()}`);
+      } else {
+        // Create manual subscription
+        const { error } = await supabase
+          .from("subscriptions")
+          .insert({
+            user_id: ownerUserId,
+            paddle_subscription_id: `manual_${crypto.randomUUID().slice(0, 8)}`,
+            paddle_customer_id: `manual_${crypto.randomUUID().slice(0, 8)}`,
+            product_id: productId,
+            price_id: priceId,
+            status: "active",
+            environment: "sandbox",
+            current_period_start: now,
+          });
+        if (error) throw error;
+        toast.success(`Business upgraded to ${selectedTier.toUpperCase()} plan`);
+      }
+      onUpdated();
+    } catch (err: any) {
+      toast.error("Failed to update: " + err.message);
+    }
+    setSaving(false);
+  };
+
+  const handleRemoveSubscription = async () => {
+    if (!subscription) return;
+    setRemoving(true);
+    try {
+      const { error } = await supabase
+        .from("subscriptions")
+        .delete()
+        .eq("id", subscription.id);
+      if (error) throw error;
+      toast.success("Subscription removed — business is now on Free plan");
+      onUpdated();
+    } catch (err: any) {
+      toast.error("Failed to remove: " + err.message);
+    }
+    setRemoving(false);
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <ArrowUpCircle className="h-4 w-4" />
+          Manual Tier Management
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-end gap-3">
+          <div className="flex-1 space-y-2">
+            <Label>Set Plan</Label>
+            <Select value={selectedTier} onValueChange={setSelectedTier}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="basic">Basic — $15/mo</SelectItem>
+                <SelectItem value="pro">Pro — $39/mo</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={handleSetTier} disabled={saving}>
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {subscription ? "Update Plan" : "Activate Plan"}
+          </Button>
+          {subscription && (
+            <Button variant="destructive" size="icon" onClick={handleRemoveSubscription} disabled={removing} title="Remove subscription (downgrade to Free)">
+              {removing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            </Button>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">
+          This creates or updates a manual subscription record. Changes take effect immediately.
+        </p>
+      </CardContent>
+    </Card>
   );
 }
 
