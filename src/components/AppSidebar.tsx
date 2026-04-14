@@ -90,21 +90,28 @@ export function AppSidebar() {
     const filtered = filterByRole(items);
     if (filtered.length === 0) return null;
 
+    const tierLevel: Record<string, number> = { free: 0, basic: 1, pro: 2 };
+    const currentTierLevel = tierLevel[tier] ?? 0;
+
     return (
       <SidebarGroup>
         <SidebarGroupLabel>{label}</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
-            {filtered.map((item) => (
-              <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton asChild isActive={currentPath === item.url}>
-                  <NavLink to={item.url} end className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                    <item.icon className="mr-2 h-4 w-4" />
-                    {!collapsed && <span>{item.title}</span>}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+            {filtered.map((item) => {
+              const locked = item.requiredTier && currentTierLevel < (tierLevel[item.requiredTier] ?? 0);
+              return (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={currentPath === item.url}>
+                    <NavLink to={item.url} end className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {!collapsed && <span>{item.title}</span>}
+                      {!collapsed && locked && <Lock className="ml-auto h-3 w-3 text-muted-foreground" />}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
