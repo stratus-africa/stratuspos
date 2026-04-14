@@ -26,6 +26,7 @@ import NotFound from "./pages/NotFound";
 import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
 import SuperAdminBusinesses from "./pages/super-admin/SuperAdminBusinesses";
 import SuperAdminUsers from "./pages/super-admin/SuperAdminUsers";
+import SuperAdminActivity from "./pages/super-admin/SuperAdminActivity";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,8 @@ const SuperAdminRoutes = () => {
         <Route path="/" element={<SuperAdminDashboard />} />
         <Route path="/businesses" element={<SuperAdminBusinesses />} />
         <Route path="/users" element={<SuperAdminUsers />} />
+        <Route path="/activity" element={<SuperAdminActivity />} />
+        <Route path="*" element={<NotFound />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </SuperAdminLayout>
