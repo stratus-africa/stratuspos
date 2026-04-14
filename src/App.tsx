@@ -66,9 +66,25 @@ const SuperAdminRoutes = () => {
   );
 };
 
+const BusinessSuspended = () => {
+  const { signOut } = useAuth();
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="text-center max-w-md mx-auto p-8">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-destructive" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg>
+        </div>
+        <h2 className="text-xl font-semibold mb-2">Your business has been suspended</h2>
+        <p className="text-muted-foreground mb-6">Your business account has been deactivated by the platform administrator. Please contact support for more information.</p>
+        <button onClick={() => signOut()} className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">Sign Out</button>
+      </div>
+    </div>
+  );
+};
+
 const ProtectedRoutes = () => {
   const { user, loading: authLoading } = useAuth();
-  const { needsOnboarding, loading: bizLoading, hasAccess, userRole } = useBusiness();
+  const { needsOnboarding, loading: bizLoading, hasAccess, userRole, isSuspended } = useBusiness();
 
   if (authLoading || bizLoading) {
     return (
@@ -79,6 +95,7 @@ const ProtectedRoutes = () => {
   }
 
   if (!user) return <Navigate to="/auth" replace />;
+  if (isSuspended) return <BusinessSuspended />;
   if (needsOnboarding) return <Onboarding />;
 
   // Default redirect based on role - cashiers go to POS

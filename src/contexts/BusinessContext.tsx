@@ -9,6 +9,7 @@ interface Business {
   timezone: string;
   logo_url: string | null;
   tax_rate: number;
+  is_active: boolean;
 }
 
 interface Location {
@@ -29,6 +30,7 @@ interface BusinessContextType {
   setCurrentLocation: (location: Location) => void;
   loading: boolean;
   needsOnboarding: boolean;
+  isSuspended: boolean;
   createBusiness: (name: string, locationName: string) => Promise<{ error: Error | null }>;
   refreshBusiness: () => Promise<void>;
   userRole: AppRole | null;
@@ -45,6 +47,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [loading, setLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [userRole, setUserRole] = useState<AppRole | null>(null);
+  const [isSuspended, setIsSuspended] = useState(false);
 
   const fetchBusiness = async () => {
     if (!user) {
@@ -54,6 +57,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(false);
       setNeedsOnboarding(false);
       setUserRole(null);
+      setIsSuspended(false);
       return;
     }
 
@@ -79,6 +83,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (biz) {
         setBusiness(biz as Business);
         setNeedsOnboarding(false);
+        setIsSuspended(biz.is_active === false);
 
         // Fetch role
         const { data: roleData } = await supabase
@@ -172,6 +177,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setCurrentLocation: handleSetCurrentLocation,
         loading,
         needsOnboarding,
+        isSuspended,
         createBusiness,
         refreshBusiness: fetchBusiness,
         userRole,
