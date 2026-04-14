@@ -47,8 +47,8 @@ const POS = () => {
     [products, search, categoryFilter]
   );
 
-  const handlePaymentConfirm = async (payments: PaymentEntry[]) => {
-    const result = await pos.completeSale(payments);
+  const handlePaymentConfirm = async (payments: PaymentEntry[], bankAccountId: string | null) => {
+    const result = await pos.completeSale(payments, bankAccountId);
     if (result) {
       setPaymentOpen(false);
       setReceiptData(result);

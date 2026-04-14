@@ -35,6 +35,8 @@ interface BankTransaction {
   description: string | null;
   category: string | null;
   contact_name: string | null;
+  sale_id: string | null;
+  expense_id: string | null;
   created_at: string;
 }
 
