@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,10 +6,15 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Package, Plus, Search, Pencil, Trash2, Tag, Layers, Ruler } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Package, Plus, Search, Pencil, Trash2, Tag, Layers, Ruler, Download, Upload } from "lucide-react";
 import { useProducts, useCategories, useBrands, useUnits, type ProductFormData, type Product } from "@/hooks/useProducts";
 import { ProductFormDialog } from "@/components/products/ProductFormDialog";
 import { QuickAddDialog } from "@/components/products/QuickAddDialog";
+import { useBusiness } from "@/contexts/BusinessContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 const Products = () => {
   const { productsQuery, createProduct, updateProduct, deleteProduct } = useProducts();
