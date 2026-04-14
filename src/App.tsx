@@ -26,6 +26,7 @@ import NotFound from "./pages/NotFound";
 import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
 import SuperAdminBusinesses from "./pages/super-admin/SuperAdminBusinesses";
 import SuperAdminUsers from "./pages/super-admin/SuperAdminUsers";
+import SuperAdminActivity from "./pages/super-admin/SuperAdminActivity";
 
 const queryClient = new QueryClient();
 
