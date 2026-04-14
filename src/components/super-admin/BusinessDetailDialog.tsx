@@ -295,7 +295,7 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
             </TabsContent>
 
             {/* Subscription Tab */}
-            <TabsContent value="subscription" className="mt-4">
+            <TabsContent value="subscription" className="space-y-4 mt-4">
               <Card>
                 <CardContent className="pt-6">
                   {subscription ? (
@@ -309,7 +309,7 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
                       </div>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
-                          <p className="text-muted-foreground">Paddle Subscription ID</p>
+                          <p className="text-muted-foreground">Subscription ID</p>
                           <p className="font-mono text-xs">{subscription.paddle_subscription_id}</p>
                         </div>
                         <div>
@@ -342,6 +342,14 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
                   )}
                 </CardContent>
               </Card>
+
+              {/* Manual Tier Management */}
+              <ManualTierManager
+                businessId={businessId!}
+                users={users}
+                subscription={subscription}
+                onUpdated={fetchAll}
+              />
             </TabsContent>
 
             {/* Modules Tab */}
