@@ -57,6 +57,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setLoading(false);
       setNeedsOnboarding(false);
       setUserRole(null);
+      setIsSuspended(false);
       return;
     }
 
@@ -176,6 +177,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setCurrentLocation: handleSetCurrentLocation,
         loading,
         needsOnboarding,
+        isSuspended,
         createBusiness,
         refreshBusiness: fetchBusiness,
         userRole,
