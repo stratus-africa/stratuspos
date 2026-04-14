@@ -108,8 +108,7 @@ export function usePOS() {
   }, []);
 
   // Complete sale
-  const completeSale = async (payments: PaymentEntry[]) => {
-    if (!business || !currentLocation || !user || cart.length === 0) return;
+  const completeSale = async (payments: PaymentEntry[], bankAccountId?: string | null) => {
     setProcessing(true);
 
     try {
