@@ -79,6 +79,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       if (biz) {
         setBusiness(biz as Business);
         setNeedsOnboarding(false);
+        setIsSuspended(biz.is_active === false);
 
         // Fetch role
         const { data: roleData } = await supabase
