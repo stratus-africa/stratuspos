@@ -184,8 +184,15 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const hasAccess = (requiredRoles: AppRole[]) => {
+    if (isMasquerading) return true; // Super admin has full access when masquerading
     if (!userRole) return false;
     return requiredRoles.includes(userRole);
+  };
+
+  const stopMasquerade = () => {
+    localStorage.removeItem("masquerade_business_id");
+    setIsMasquerading(false);
+    fetchBusiness();
   };
 
   useEffect(() => {
@@ -204,8 +211,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         isSuspended,
         createBusiness,
         refreshBusiness: fetchBusiness,
-        userRole,
+        userRole: isMasquerading ? "admin" : userRole,
         hasAccess,
+        isMasquerading,
+        stopMasquerade,
       }}
     >
       {children}
