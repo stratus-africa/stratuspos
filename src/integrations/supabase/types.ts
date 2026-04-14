@@ -181,6 +181,7 @@ export type Database = {
           created_at: string
           currency: string
           id: string
+          is_active: boolean
           logo_url: string | null
           name: string
           tax_rate: number | null
@@ -191,6 +192,7 @@ export type Database = {
           created_at?: string
           currency?: string
           id?: string
+          is_active?: boolean
           logo_url?: string | null
           name: string
           tax_rate?: number | null
@@ -201,6 +203,7 @@ export type Database = {
           created_at?: string
           currency?: string
           id?: string
+          is_active?: boolean
           logo_url?: string | null
           name?: string
           tax_rate?: number | null
