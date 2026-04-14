@@ -20,6 +20,8 @@ interface TeamMember {
   role_id: string;
   role: AppRole;
   full_name: string | null;
+  email: string | null;
+  phone: string | null;
 }
 
 const roleIcon = (role: string) => {
@@ -48,9 +50,11 @@ export function UserManagementTab() {
   const [inviteRole, setInviteRole] = useState<string>("cashier");
   const [inviting, setInviting] = useState(false);
 
-  // Role edit state
+  // Edit state
   const [editMember, setEditMember] = useState<TeamMember | null>(null);
   const [editRole, setEditRole] = useState<AppRole>("cashier");
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
   const [saving, setSaving] = useState(false);
 
   const isAdmin = userRole === "admin";
@@ -73,7 +77,7 @@ export function UserManagementTab() {
     const userIds = roles.map((r) => r.user_id);
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("id, full_name")
+      .select("id, full_name, email, phone")
       .in("id", userIds);
 
     const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
@@ -83,6 +87,8 @@ export function UserManagementTab() {
         role_id: r.id,
         role: r.role as AppRole,
         full_name: profileMap.get(r.user_id)?.full_name || null,
+        email: profileMap.get(r.user_id)?.email || null,
+        phone: profileMap.get(r.user_id)?.phone || null,
       }))
     );
     setLoading(false);
@@ -95,21 +101,30 @@ export function UserManagementTab() {
   const openEditRole = (member: TeamMember) => {
     setEditMember(member);
     setEditRole(member.role);
+    setEditName(member.full_name || "");
+    setEditPhone(member.phone || "");
   };
 
-  const handleSaveRole = async () => {
+  const handleSaveUser = async () => {
     if (!editMember) return;
     setSaving(true);
 
-    const { error } = await supabase
+    // Update role
+    const { error: roleError } = await supabase
       .from("user_roles")
       .update({ role: editRole })
       .eq("id", editMember.role_id);
 
-    if (error) {
-      toast.error("Failed to update role: " + error.message);
+    // Update profile
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({ full_name: editName.trim(), phone: editPhone.trim() || null })
+      .eq("id", editMember.user_id);
+
+    if (roleError || profileError) {
+      toast.error("Failed to update: " + (roleError?.message || profileError?.message));
     } else {
-      toast.success(`Role updated to ${editRole}`);
+      toast.success("User updated successfully");
       await fetchMembers();
     }
     setSaving(false);
@@ -199,15 +214,28 @@ export function UserManagementTab() {
         </Table>
       </CardContent>
 
-      {/* Edit Role Dialog */}
+      {/* Edit User Dialog */}
       <Dialog open={!!editMember} onOpenChange={(open) => !open && setEditMember(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Change Role — {editMember?.full_name || "User"}</DialogTitle>
+            <DialogTitle>Edit User — {editMember?.full_name || "User"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>New Role</Label>
+              <Label>Full Name</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Full name" />
+            </div>
+            <div className="space-y-2">
+              <Label>Phone</Label>
+              <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="Phone number" />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input value={editMember?.email || ""} disabled className="bg-muted" />
+              <p className="text-xs text-muted-foreground">Email cannot be changed here.</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Role</Label>
               <Select value={editRole} onValueChange={(v) => setEditRole(v as AppRole)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -217,15 +245,12 @@ export function UserManagementTab() {
                 </SelectContent>
               </Select>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Changing a user's role takes effect immediately. They may need to refresh their browser.
-            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditMember(null)}>Cancel</Button>
-            <Button onClick={handleSaveRole} disabled={saving || editRole === editMember?.role}>
+            <Button onClick={handleSaveUser} disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Role
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
