@@ -7,7 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Package, Plus, Search, Pencil, Trash2, Tag, Layers, Ruler, Download, Upload } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Package, Plus, Search, Pencil, Trash2, Tag, Layers, Ruler, Download, Upload, FileDown } from "lucide-react";
 import { useProducts, useCategories, useBrands, useUnits, type ProductFormData, type Product } from "@/hooks/useProducts";
 import { ProductFormDialog } from "@/components/products/ProductFormDialog";
 import { QuickAddDialog } from "@/components/products/QuickAddDialog";
@@ -34,6 +35,8 @@ const Products = () => {
   const [brandDialogOpen, setBrandDialogOpen] = useState(false);
   const [unitDialogOpen, setUnitDialogOpen] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const products = productsQuery.data || [];
   const filtered = products.filter((p) => {
@@ -46,6 +49,41 @@ const Products = () => {
       (statusFilter === "inactive" && !p.is_active);
     return matchSearch && matchCategory && matchStatus;
   });
+
+  const allFilteredSelected = filtered.length > 0 && filtered.every((p) => selectedIds.has(p.id));
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (allFilteredSelected) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filtered.map((p) => p.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    setBulkDeleting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      const { error } = await supabase.from("products").delete().in("id", ids);
+      if (error) throw error;
+      toast.success(`Deleted ${ids.length} products`);
+      setSelectedIds(new Set());
+      productsQuery.refetch();
+    } catch (err: any) {
+      toast.error(`Delete failed: ${err.message}`);
+    } finally {
+      setBulkDeleting(false);
+    }
+  };
 
   const handleProductSubmit = (data: ProductFormData) => {
     if (editingProduct) {
@@ -66,6 +104,19 @@ const Products = () => {
 
   const formatKES = (amount: number) =>
     new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", minimumFractionDigits: 0 }).format(amount);
+
+  const downloadTemplate = () => {
+    const sample = [
+      { Name: "Maize Flour 2kg", SKU: "MF-2KG", Barcode: "6901234567890", Category: "Flour", Brand: "Jogoo", Unit: "Pieces", "Purchase Price": 120, "Selling Price": 150, "Tax Rate": 16, Active: "Yes" },
+      { Name: "Sugar 1kg", SKU: "SG-1KG", Barcode: "6907654321098", Category: "Sugar", Brand: "Mumias", Unit: "Pieces", "Purchase Price": 140, "Selling Price": 180, "Tax Rate": 16, Active: "Yes" },
+    ];
+    const ws = XLSX.utils.json_to_sheet(sample);
+    ws["!cols"] = [{ wch: 20 }, { wch: 10 }, { wch: 15 }, { wch: 12 }, { wch: 10 }, { wch: 10 }, { wch: 14 }, { wch: 14 }, { wch: 10 }, { wch: 8 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, "product_import_template.csv", { bookType: "csv" });
+    toast.success("Template downloaded");
+  };
 
   const exportProducts = (format: "csv" | "xlsx") => {
     const data = products.map((p) => ({
@@ -99,7 +150,6 @@ const Products = () => {
 
       if (rows.length === 0) { toast.error("File is empty"); return; }
 
-      // Build lookup maps for categories, brands, units
       const catMap = new Map((categoriesQuery.data || []).map((c) => [c.name.toLowerCase(), c.id]));
       const brandMap = new Map((brandsQuery.data || []).map((b) => [b.name.toLowerCase(), b.id]));
       const unitMap = new Map((unitsQuery.data || []).map((u) => [u.name.toLowerCase(), u.id]));
@@ -137,6 +187,9 @@ const Products = () => {
         <h1 className="text-2xl font-bold">Products</h1>
         <div className="flex gap-2">
           <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} />
+          <Button variant="outline" size="sm" onClick={downloadTemplate}>
+            <FileDown className="mr-2 h-4 w-4" /> Template
+          </Button>
           <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={importing}>
             <Upload className="mr-2 h-4 w-4" /> {importing ? "Importing..." : "Import"}
           </Button>
@@ -189,11 +242,23 @@ const Products = () => {
                   </SelectContent>
                 </Select>
               </div>
+              {selectedIds.size > 0 && (
+                <div className="flex items-center gap-3 pt-2">
+                  <span className="text-sm text-muted-foreground">{selectedIds.size} selected</span>
+                  <Button size="sm" variant="destructive" onClick={handleBulkDelete} disabled={bulkDeleting}>
+                    <Trash2 className="mr-1 h-4 w-4" /> {bulkDeleting ? "Deleting..." : `Delete ${selectedIds.size}`}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>Clear</Button>
+                </div>
+              )}
             </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[40px]">
+                      <Checkbox checked={allFilteredSelected} onCheckedChange={toggleSelectAll} />
+                    </TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>SKU</TableHead>
                     <TableHead>Category</TableHead>
@@ -207,7 +272,7 @@ const Products = () => {
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                         {products.length === 0 ? "No products yet. Add your first product!" : "No products match your filters."}
                       </TableCell>
                     </TableRow>
@@ -217,7 +282,10 @@ const Products = () => {
                         ? (((p.selling_price - p.purchase_price) / p.purchase_price) * 100).toFixed(0)
                         : "—";
                       return (
-                        <TableRow key={p.id}>
+                        <TableRow key={p.id} className={selectedIds.has(p.id) ? "bg-muted/50" : ""}>
+                          <TableCell>
+                            <Checkbox checked={selectedIds.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} />
+                          </TableCell>
                           <TableCell className="font-medium">{p.name}</TableCell>
                           <TableCell className="text-muted-foreground">{p.sku || "—"}</TableCell>
                           <TableCell>{p.categories?.name || "—"}</TableCell>
