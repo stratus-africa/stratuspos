@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useExpenseCategories } from "@/hooks/useExpenses";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBankAccounts } from "@/hooks/useBankAccounts";
 
 interface Props {
   open: boolean;
@@ -21,6 +22,7 @@ interface Props {
     payment_method?: string;
     reference?: string;
     created_by: string;
+    bank_account_id?: string | null;
   }) => void;
   isLoading?: boolean;
 }
@@ -31,6 +33,7 @@ export function ExpenseFormDialog({ open, onOpenChange, onSubmit, isLoading }: P
   const { query: categoriesQuery } = useExpenseCategories();
   const { locations, currentLocation } = useBusiness();
   const { user } = useAuth();
+  const { data: bankAccounts = [] } = useBankAccounts();
 
   const [categoryId, setCategoryId] = useState<string>("none");
   const [locationId, setLocationId] = useState(currentLocation?.id || "none");
@@ -39,6 +42,7 @@ export function ExpenseFormDialog({ open, onOpenChange, onSubmit, isLoading }: P
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [paymentMethod, setPaymentMethod] = useState("cash");
   const [reference, setReference] = useState("");
+  const [bankAccountId, setBankAccountId] = useState<string>("none");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,10 +56,12 @@ export function ExpenseFormDialog({ open, onOpenChange, onSubmit, isLoading }: P
       payment_method: paymentMethod,
       reference: reference || undefined,
       created_by: user.id,
+      bank_account_id: bankAccountId === "none" ? null : bankAccountId,
     });
     setAmount(0);
     setDescription("");
     setReference("");
+    setBankAccountId("none");
     onOpenChange(false);
   };
 
@@ -117,9 +123,22 @@ export function ExpenseFormDialog({ open, onOpenChange, onSubmit, isLoading }: P
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>Reference</Label>
-              <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Receipt/Ref #" />
+              <Label>Pay From Account</Label>
+              <Select value={bankAccountId} onValueChange={setBankAccountId}>
+                <SelectTrigger><SelectValue placeholder="None (no bank link)" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  {bankAccounts.map((a) => (
+                    <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Reference</Label>
+            <Input value={reference} onChange={(e) => setReference(e.target.value)} placeholder="Receipt/Ref #" />
           </div>
 
           <div className="space-y-2">
