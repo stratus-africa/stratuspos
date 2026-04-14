@@ -507,6 +507,7 @@ function ManualTierManager({
   );
 }
 
+function StatCard({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
   return (
     <Card>
       <CardContent className="pt-4 pb-3">
