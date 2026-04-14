@@ -35,6 +35,8 @@ interface BusinessContextType {
   refreshBusiness: () => Promise<void>;
   userRole: AppRole | null;
   hasAccess: (requiredRoles: AppRole[]) => boolean;
+  isMasquerading: boolean;
+  stopMasquerade: () => void;
 }
 
 const BusinessContext = createContext<BusinessContextType | undefined>(undefined);
@@ -48,6 +50,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [userRole, setUserRole] = useState<AppRole | null>(null);
   const [isSuspended, setIsSuspended] = useState(false);
+  const [isMasquerading, setIsMasquerading] = useState(false);
 
   const fetchBusiness = async () => {
     if (!user) {
@@ -58,17 +61,38 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setNeedsOnboarding(false);
       setUserRole(null);
       setIsSuspended(false);
+      setIsMasquerading(false);
       return;
     }
 
     try {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("business_id")
-        .eq("id", user.id)
-        .single();
+      // Check for masquerade mode (super admin viewing as another business)
+      const masqueradeId = localStorage.getItem("masquerade_business_id");
+      
+      let businessId: string | null = null;
+      
+      if (masqueradeId) {
+        // Verify user is super admin
+        const { data: isSA } = await supabase.rpc("is_super_admin", { _user_id: user.id });
+        if (isSA) {
+          businessId = masqueradeId;
+          setIsMasquerading(true);
+        } else {
+          localStorage.removeItem("masquerade_business_id");
+        }
+      }
 
-      if (!profile?.business_id) {
+      if (!businessId) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("business_id")
+          .eq("id", user.id)
+          .single();
+        businessId = profile?.business_id || null;
+        setIsMasquerading(false);
+      }
+
+      if (!businessId) {
         setNeedsOnboarding(true);
         setLoading(false);
         return;
@@ -77,7 +101,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const { data: biz } = await supabase
         .from("businesses")
         .select("*")
-        .eq("id", profile.business_id)
+        .eq("id", businessId)
         .single();
 
       if (biz) {
@@ -160,8 +184,15 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   };
 
   const hasAccess = (requiredRoles: AppRole[]) => {
+    if (isMasquerading) return true; // Super admin has full access when masquerading
     if (!userRole) return false;
     return requiredRoles.includes(userRole);
+  };
+
+  const stopMasquerade = () => {
+    localStorage.removeItem("masquerade_business_id");
+    setIsMasquerading(false);
+    fetchBusiness();
   };
 
   useEffect(() => {
@@ -180,8 +211,10 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         isSuspended,
         createBusiness,
         refreshBusiness: fetchBusiness,
-        userRole,
+        userRole: isMasquerading ? "admin" : userRole,
         hasAccess,
+        isMasquerading,
+        stopMasquerade,
       }}
     >
       {children}

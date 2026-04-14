@@ -5,8 +5,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { format } from "date-fns";
-import { Search, Ban, CheckCircle2 } from "lucide-react";
+import { Search, Ban, CheckCircle2, Pencil, Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
 interface BusinessRow {
@@ -16,6 +19,7 @@ interface BusinessRow {
   timezone: string;
   created_at: string;
   is_active: boolean;
+  tax_rate: number | null;
   _userCount: number;
   _locationCount: number;
   _salesCount: number;
@@ -27,6 +31,17 @@ export default function SuperAdminBusinesses() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [toggling, setToggling] = useState<string | null>(null);
+
+  // Edit state
+  const [editBiz, setEditBiz] = useState<BusinessRow | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editCurrency, setEditCurrency] = useState("KES");
+  const [editTaxRate, setEditTaxRate] = useState("16");
+  const [editTimezone, setEditTimezone] = useState("Africa/Nairobi");
+  const [saving, setSaving] = useState(false);
+
+  // Masquerade
+  const [masquerading, setMasquerading] = useState<string | null>(null);
 
   const fetchData = async () => {
     const [bizRes, salesRes] = await Promise.all([
@@ -82,6 +97,50 @@ export default function SuperAdminBusinesses() {
       );
     }
     setToggling(null);
+  };
+
+  const openEdit = (biz: BusinessRow) => {
+    setEditBiz(biz);
+    setEditName(biz.name);
+    setEditCurrency(biz.currency);
+    setEditTaxRate(String(biz.tax_rate ?? 16));
+    setEditTimezone(biz.timezone);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editBiz) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("businesses")
+      .update({
+        name: editName.trim(),
+        currency: editCurrency,
+        tax_rate: parseFloat(editTaxRate) || 0,
+        timezone: editTimezone,
+      })
+      .eq("id", editBiz.id);
+
+    if (error) {
+      toast.error("Failed to update: " + error.message);
+    } else {
+      toast.success("Business updated");
+      setBusinesses((prev) =>
+        prev.map((b) =>
+          b.id === editBiz.id
+            ? { ...b, name: editName.trim(), currency: editCurrency, tax_rate: parseFloat(editTaxRate), timezone: editTimezone }
+            : b
+        )
+      );
+      setEditBiz(null);
+    }
+    setSaving(false);
+  };
+
+  const handleMasquerade = (bizId: string) => {
+    setMasquerading(bizId);
+    // Store masquerade business ID and redirect to main app
+    localStorage.setItem("masquerade_business_id", bizId);
+    window.location.href = "/";
   };
 
   const filtered = businesses.filter((b) =>
@@ -154,18 +213,32 @@ export default function SuperAdminBusinesses() {
                     {format(new Date(biz.created_at), "MMM dd, yyyy")}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button
-                      variant={biz.is_active ? "destructive" : "outline"}
-                      size="sm"
-                      disabled={toggling === biz.id}
-                      onClick={() => toggleActive(biz.id, biz.is_active)}
-                    >
-                      {biz.is_active ? (
-                        <><Ban className="h-3 w-3 mr-1" /> Deactivate</>
-                      ) : (
-                        <><CheckCircle2 className="h-3 w-3 mr-1" /> Reactivate</>
-                      )}
-                    </Button>
+                    <div className="flex gap-1 justify-end">
+                      <Button variant="outline" size="sm" onClick={() => openEdit(biz)} title="Edit business">
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleMasquerade(biz.id)}
+                        disabled={masquerading === biz.id}
+                        title="View as this business"
+                      >
+                        {masquerading === biz.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eye className="h-3 w-3" />}
+                      </Button>
+                      <Button
+                        variant={biz.is_active ? "destructive" : "outline"}
+                        size="sm"
+                        disabled={toggling === biz.id}
+                        onClick={() => toggleActive(biz.id, biz.is_active)}
+                      >
+                        {biz.is_active ? (
+                          <><Ban className="h-3 w-3 mr-1" /> Deactivate</>
+                        ) : (
+                          <><CheckCircle2 className="h-3 w-3 mr-1" /> Reactivate</>
+                        )}
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -180,6 +253,60 @@ export default function SuperAdminBusinesses() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Edit Business Dialog */}
+      <Dialog open={!!editBiz} onOpenChange={(open) => !open && setEditBiz(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Business — {editBiz?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Business Name</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Currency</Label>
+                <Select value={editCurrency} onValueChange={setEditCurrency}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="KES">KES</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                    <SelectItem value="EUR">EUR</SelectItem>
+                    <SelectItem value="GBP">GBP</SelectItem>
+                    <SelectItem value="UGX">UGX</SelectItem>
+                    <SelectItem value="TZS">TZS</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Tax Rate (%)</Label>
+                <Input type="number" min={0} max={100} step={0.5} value={editTaxRate} onChange={(e) => setEditTaxRate(e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Timezone</Label>
+              <Select value={editTimezone} onValueChange={setEditTimezone}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Africa/Nairobi">Africa/Nairobi (EAT)</SelectItem>
+                  <SelectItem value="Africa/Lagos">Africa/Lagos (WAT)</SelectItem>
+                  <SelectItem value="Africa/Cairo">Africa/Cairo (EET)</SelectItem>
+                  <SelectItem value="UTC">UTC</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditBiz(null)}>Cancel</Button>
+            <Button onClick={handleSaveEdit} disabled={saving || !editName.trim()}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

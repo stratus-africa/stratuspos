@@ -8,6 +8,7 @@ import { BusinessProvider, useBusiness } from "@/contexts/BusinessContext";
 import { AppLayout } from "@/components/AppLayout";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { SuperAdminLayout } from "@/components/super-admin/SuperAdminLayout";
+import { FeatureGate } from "@/components/FeatureGate";
 
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
@@ -114,9 +115,9 @@ const ProtectedRoutes = () => {
         <Route path="/sales" element={guard(["admin", "manager"], <Sales />)} />
         <Route path="/purchases" element={guard(["admin", "manager"], <Purchases />)} />
         <Route path="/expenses" element={guard(["admin"], <Expenses />)} />
-        <Route path="/chart-of-accounts" element={guard(["admin"], <ChartOfAccounts />)} />
-        <Route path="/banking" element={guard(["admin"], <Banking />)} />
-        <Route path="/reports" element={guard(["admin"], <Reports />)} />
+        <Route path="/chart-of-accounts" element={guard(["admin"], <FeatureGate requiredTier="pro"><ChartOfAccounts /></FeatureGate>)} />
+        <Route path="/banking" element={guard(["admin"], <FeatureGate requiredTier="pro"><Banking /></FeatureGate>)} />
+        <Route path="/reports" element={guard(["admin"], <FeatureGate requiredTier="pro"><Reports /></FeatureGate>)} />
         <Route path="/settings" element={guard(["admin"], <SettingsPage />)} />
         <Route path="*" element={<NotFound />} />
       </Routes>

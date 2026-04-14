@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Package, Plus, Search, Pencil, Trash2, Tag, Layers, Ruler, Download, Upload, FileDown } from "lucide-react";
+import { Package, Plus, Search, Pencil, Trash2, Tag, Layers, Ruler, Download, Upload, FileDown, Lock } from "lucide-react";
 import { useProducts, useCategories, useBrands, useUnits, type ProductFormData, type Product } from "@/hooks/useProducts";
 import { ProductFormDialog } from "@/components/products/ProductFormDialog";
 import { QuickAddDialog } from "@/components/products/QuickAddDialog";
@@ -17,6 +17,7 @@ import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import { useFeatureLimit } from "@/components/FeatureGate";
 
 const Products = () => {
   const { productsQuery, createProduct, updateProduct, deleteProduct } = useProducts();
@@ -25,6 +26,7 @@ const Products = () => {
   const { query: unitsQuery, create: createUnit, remove: removeUnit } = useUnits();
 
   const { business } = useBusiness();
+  const { maxProducts } = useFeatureLimit();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [search, setSearch] = useState("");
@@ -40,6 +42,7 @@ const Products = () => {
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const products = productsQuery.data || [];
+  const atProductLimit = maxProducts !== Infinity && products.length >= maxProducts;
   const filtered = products.filter((p) => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
       (p.sku && p.sku.toLowerCase().includes(search.toLowerCase())) ||
@@ -203,8 +206,13 @@ const Products = () => {
               <DropdownMenuItem onClick={() => exportProducts("xlsx")}>Export as Excel (.xlsx)</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button onClick={() => { setEditingProduct(null); setProductDialogOpen(true); }}>
-            <Plus className="mr-2 h-4 w-4" /> Add Product
+          <Button 
+            onClick={() => { setEditingProduct(null); setProductDialogOpen(true); }}
+            disabled={atProductLimit}
+            title={atProductLimit ? `Product limit reached (${maxProducts}). Upgrade your plan.` : undefined}
+          >
+            {atProductLimit ? <Lock className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+            {atProductLimit ? `Limit (${maxProducts})` : "Add Product"}
           </Button>
         </div>
       </div>

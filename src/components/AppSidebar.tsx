@@ -13,7 +13,9 @@ import {
   Shield,
   BookOpen,
   Landmark,
+  Lock,
 } from "lucide-react";
+import { useFeatureLimit } from "@/components/FeatureGate";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -42,6 +44,7 @@ interface NavItem {
   url: string;
   icon: any;
   roles: AppRole[];
+  requiredTier?: "basic" | "pro";
 }
 
 const mainNav: NavItem[] = [
@@ -61,12 +64,12 @@ const transactionNav: NavItem[] = [
 ];
 
 const financeNav: NavItem[] = [
-  { title: "Accountant", url: "/chart-of-accounts", icon: BookOpen, roles: ["admin"] },
-  { title: "Banking", url: "/banking", icon: Landmark, roles: ["admin"] },
+  { title: "Accountant", url: "/chart-of-accounts", icon: BookOpen, roles: ["admin"], requiredTier: "pro" },
+  { title: "Banking", url: "/banking", icon: Landmark, roles: ["admin"], requiredTier: "pro" },
 ];
 
 const systemNav: NavItem[] = [
-  { title: "Reports", url: "/reports", icon: BarChart3, roles: ["admin"] },
+  { title: "Reports", url: "/reports", icon: BarChart3, roles: ["admin"], requiredTier: "pro" },
   { title: "Settings", url: "/settings", icon: Settings, roles: ["admin"] },
 ];
 
@@ -77,6 +80,7 @@ export function AppSidebar() {
   const { signOut } = useAuth();
   const { business, userRole } = useBusiness();
   const { isSuperAdmin } = useSuperAdmin();
+  const { tier } = useFeatureLimit();
   const currentPath = location.pathname;
 
   const filterByRole = (items: NavItem[]) =>
@@ -86,21 +90,28 @@ export function AppSidebar() {
     const filtered = filterByRole(items);
     if (filtered.length === 0) return null;
 
+    const tierLevel: Record<string, number> = { free: 0, basic: 1, pro: 2 };
+    const currentTierLevel = tierLevel[tier] ?? 0;
+
     return (
       <SidebarGroup>
         <SidebarGroupLabel>{label}</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
-            {filtered.map((item) => (
-              <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton asChild isActive={currentPath === item.url}>
-                  <NavLink to={item.url} end className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                    <item.icon className="mr-2 h-4 w-4" />
-                    {!collapsed && <span>{item.title}</span>}
-                  </NavLink>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+            {filtered.map((item) => {
+              const locked = item.requiredTier && currentTierLevel < (tierLevel[item.requiredTier] ?? 0);
+              return (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild isActive={currentPath === item.url}>
+                    <NavLink to={item.url} end className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
+                      <item.icon className="mr-2 h-4 w-4" />
+                      {!collapsed && <span>{item.title}</span>}
+                      {!collapsed && locked && <Lock className="ml-auto h-3 w-3 text-muted-foreground" />}
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
