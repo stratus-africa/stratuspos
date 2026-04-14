@@ -67,13 +67,92 @@ const Products = () => {
   const formatKES = (amount: number) =>
     new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", minimumFractionDigits: 0 }).format(amount);
 
+  const exportProducts = (format: "csv" | "xlsx") => {
+    const data = products.map((p) => ({
+      Name: p.name,
+      SKU: p.sku || "",
+      Barcode: p.barcode || "",
+      Category: p.categories?.name || "",
+      Brand: p.brands?.name || "",
+      Unit: p.units?.name || "",
+      "Purchase Price": p.purchase_price,
+      "Selling Price": p.selling_price,
+      "Tax Rate": p.tax_rate ?? "",
+      Active: p.is_active ? "Yes" : "No",
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Products");
+    XLSX.writeFile(wb, `products.${format}`, { bookType: format === "csv" ? "csv" : "xlsx" });
+    toast.success(`Exported ${products.length} products as ${format.toUpperCase()}`);
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !business) return;
+    setImporting(true);
+    try {
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data);
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json<Record<string, any>>(ws);
+
+      if (rows.length === 0) { toast.error("File is empty"); return; }
+
+      // Build lookup maps for categories, brands, units
+      const catMap = new Map((categoriesQuery.data || []).map((c) => [c.name.toLowerCase(), c.id]));
+      const brandMap = new Map((brandsQuery.data || []).map((b) => [b.name.toLowerCase(), b.id]));
+      const unitMap = new Map((unitsQuery.data || []).map((u) => [u.name.toLowerCase(), u.id]));
+
+      const toInsert = rows.map((row) => ({
+        business_id: business.id,
+        name: String(row["Name"] || row["name"] || "Unnamed"),
+        sku: row["SKU"] || row["sku"] || null,
+        barcode: row["Barcode"] || row["barcode"] || null,
+        category_id: catMap.get(String(row["Category"] || row["category"] || "").toLowerCase()) || null,
+        brand_id: brandMap.get(String(row["Brand"] || row["brand"] || "").toLowerCase()) || null,
+        unit_id: unitMap.get(String(row["Unit"] || row["unit"] || "").toLowerCase()) || null,
+        purchase_price: Number(row["Purchase Price"] || row["purchase_price"] || 0),
+        selling_price: Number(row["Selling Price"] || row["selling_price"] || 0),
+        tax_rate: row["Tax Rate"] != null && row["Tax Rate"] !== "" ? Number(row["Tax Rate"]) : 16,
+        is_active: String(row["Active"] || row["active"] || "Yes").toLowerCase() !== "no",
+      }));
+
+      const { error } = await supabase.from("products").insert(toInsert);
+      if (error) throw error;
+
+      toast.success(`Imported ${toInsert.length} products`);
+      productsQuery.refetch();
+    } catch (err: any) {
+      toast.error(`Import failed: ${err.message}`);
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Products</h1>
-        <Button onClick={() => { setEditingProduct(null); setProductDialogOpen(true); }}>
-          <Plus className="mr-2 h-4 w-4" /> Add Product
-        </Button>
+        <div className="flex gap-2">
+          <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} />
+          <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={importing}>
+            <Upload className="mr-2 h-4 w-4" /> {importing ? "Importing..." : "Import"}
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline"><Download className="mr-2 h-4 w-4" /> Export</Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => exportProducts("csv")}>Export as CSV</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => exportProducts("xlsx")}>Export as Excel (.xlsx)</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button onClick={() => { setEditingProduct(null); setProductDialogOpen(true); }}>
+            <Plus className="mr-2 h-4 w-4" /> Add Product
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="products" className="space-y-4">
