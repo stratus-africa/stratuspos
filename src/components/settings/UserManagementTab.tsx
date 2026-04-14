@@ -101,6 +101,8 @@ export function UserManagementTab() {
   const openEditRole = (member: TeamMember) => {
     setEditMember(member);
     setEditRole(member.role);
+    setEditName(member.full_name || "");
+    setEditPhone(member.phone || "");
   };
 
   const handleSaveRole = async () => {
