@@ -22,6 +22,9 @@ const Products = () => {
   const { query: brandsQuery, create: createBrand, remove: removeBrand } = useBrands();
   const { query: unitsQuery, create: createUnit, remove: removeUnit } = useUnits();
 
+  const { business } = useBusiness();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -30,6 +33,7 @@ const Products = () => {
   const [catDialogOpen, setCatDialogOpen] = useState(false);
   const [brandDialogOpen, setBrandDialogOpen] = useState(false);
   const [unitDialogOpen, setUnitDialogOpen] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const products = productsQuery.data || [];
   const filtered = products.filter((p) => {
