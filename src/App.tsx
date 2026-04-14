@@ -8,6 +8,7 @@ import { BusinessProvider, useBusiness } from "@/contexts/BusinessContext";
 import { AppLayout } from "@/components/AppLayout";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { SuperAdminLayout } from "@/components/super-admin/SuperAdminLayout";
+import { FeatureGate } from "@/components/FeatureGate";
 
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
