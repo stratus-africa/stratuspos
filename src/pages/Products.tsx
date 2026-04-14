@@ -28,7 +28,6 @@ const Products = () => {
   const { business } = useBusiness();
   const { maxProducts } = useFeatureLimit();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const atProductLimit = maxProducts !== Infinity && products.length >= maxProducts;
 
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
