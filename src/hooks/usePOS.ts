@@ -189,9 +189,35 @@ export function usePOS() {
         });
       }
 
+      // Auto-create linked bank transaction for the sale
+      if (bankAccountId) {
+        const { error: btErr } = await supabase.from("bank_transactions").insert({
+          business_id: business.id,
+          bank_account_id: bankAccountId,
+          type: "payment_received",
+          amount: Math.min(totalPaid, cartTotal),
+          date: new Date().toISOString().split("T")[0],
+          reference: invoiceNumber,
+          description: `Sale ${invoiceNumber}`,
+          category: "Sales",
+          contact_name: customerName || null,
+          sale_id: saleId,
+          created_by: user.id,
+        });
+        if (btErr) console.error("Bank txn error:", btErr);
+
+        // Update account balance
+        const { data: acc } = await supabase.from("bank_accounts").select("balance").eq("id", bankAccountId).single();
+        if (acc) {
+          await supabase.from("bank_accounts").update({ balance: acc.balance + Math.min(totalPaid, cartTotal) }).eq("id", bankAccountId);
+        }
+      }
+
       queryClient.invalidateQueries({ queryKey: ["sales"] });
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
       queryClient.invalidateQueries({ queryKey: ["stock_adjustments"] });
+      queryClient.invalidateQueries({ queryKey: ["bank_accounts"] });
+      queryClient.invalidateQueries({ queryKey: ["bank_transactions"] });
 
       const result = {
         saleId,
