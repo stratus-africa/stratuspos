@@ -13,7 +13,9 @@ import {
   Shield,
   BookOpen,
   Landmark,
+  Lock,
 } from "lucide-react";
+import { useFeatureLimit } from "@/components/FeatureGate";
 import { NavLink } from "@/components/NavLink";
 import { useLocation, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
