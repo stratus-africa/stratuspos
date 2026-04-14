@@ -105,19 +105,26 @@ export function UserManagementTab() {
     setEditPhone(member.phone || "");
   };
 
-  const handleSaveRole = async () => {
+  const handleSaveUser = async () => {
     if (!editMember) return;
     setSaving(true);
 
-    const { error } = await supabase
+    // Update role
+    const { error: roleError } = await supabase
       .from("user_roles")
       .update({ role: editRole })
       .eq("id", editMember.role_id);
 
-    if (error) {
-      toast.error("Failed to update role: " + error.message);
+    // Update profile
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .update({ full_name: editName.trim(), phone: editPhone.trim() || null })
+      .eq("id", editMember.user_id);
+
+    if (roleError || profileError) {
+      toast.error("Failed to update: " + (roleError?.message || profileError?.message));
     } else {
-      toast.success(`Role updated to ${editRole}`);
+      toast.success("User updated successfully");
       await fetchMembers();
     }
     setSaving(false);
