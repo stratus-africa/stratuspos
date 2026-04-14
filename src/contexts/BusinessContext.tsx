@@ -9,6 +9,7 @@ interface Business {
   timezone: string;
   logo_url: string | null;
   tax_rate: number;
+  is_active: boolean;
 }
 
 interface Location {
@@ -29,6 +30,7 @@ interface BusinessContextType {
   setCurrentLocation: (location: Location) => void;
   loading: boolean;
   needsOnboarding: boolean;
+  isSuspended: boolean;
   createBusiness: (name: string, locationName: string) => Promise<{ error: Error | null }>;
   refreshBusiness: () => Promise<void>;
   userRole: AppRole | null;
@@ -45,6 +47,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [loading, setLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [userRole, setUserRole] = useState<AppRole | null>(null);
+  const [isSuspended, setIsSuspended] = useState(false);
 
   const fetchBusiness = async () => {
     if (!user) {
