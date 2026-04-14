@@ -94,6 +94,32 @@ export function usePurchases() {
   const { business } = useBusiness();
   const qc = useQueryClient();
 
+  const updateInventoryForItems = async (items: PurchaseItem[], locationId: string, createdBy: string, ref: string) => {
+    for (const item of items) {
+      const { data: existing } = await supabase
+        .from("inventory")
+        .select("id, quantity")
+        .eq("product_id", item.product_id)
+        .eq("location_id", locationId)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase.from("inventory").update({ quantity: existing.quantity + item.quantity }).eq("id", existing.id);
+      } else {
+        await supabase.from("inventory").insert({ product_id: item.product_id, location_id: locationId, quantity: item.quantity });
+      }
+
+      await supabase.from("stock_adjustments").insert({
+        product_id: item.product_id,
+        location_id: locationId,
+        quantity_change: item.quantity,
+        reason: "Purchase received",
+        notes: `Purchase #${ref}`,
+        created_by: createdBy,
+      });
+    }
+  };
+
   const query = useQuery({
     queryKey: ["purchases", business?.id],
     queryFn: async () => {
