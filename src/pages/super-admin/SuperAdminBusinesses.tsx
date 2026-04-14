@@ -44,6 +44,9 @@ export default function SuperAdminBusinesses() {
   // Masquerade
   const [masquerading, setMasquerading] = useState<string | null>(null);
 
+  // Detail dialog
+  const [detailBiz, setDetailBiz] = useState<BusinessRow | null>(null);
+
   const fetchData = async () => {
     const [bizRes, salesRes] = await Promise.all([
       supabase.from("businesses").select("*"),
