@@ -318,6 +318,12 @@ export default function SuperAdminBusinesses() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BusinessDetailDialog
+        businessId={detailBiz?.id || null}
+        businessName={detailBiz?.name || ""}
+        onClose={() => setDetailBiz(null)}
+      />
     </div>
   );
 }
