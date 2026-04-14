@@ -20,6 +20,8 @@ interface TeamMember {
   role_id: string;
   role: AppRole;
   full_name: string | null;
+  email: string | null;
+  phone: string | null;
 }
 
 const roleIcon = (role: string) => {
