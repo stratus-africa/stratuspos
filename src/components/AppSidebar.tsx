@@ -44,6 +44,7 @@ interface NavItem {
   url: string;
   icon: any;
   roles: AppRole[];
+  requiredTier?: "basic" | "pro";
 }
 
 const mainNav: NavItem[] = [
@@ -63,12 +64,12 @@ const transactionNav: NavItem[] = [
 ];
 
 const financeNav: NavItem[] = [
-  { title: "Accountant", url: "/chart-of-accounts", icon: BookOpen, roles: ["admin"] },
-  { title: "Banking", url: "/banking", icon: Landmark, roles: ["admin"] },
+  { title: "Accountant", url: "/chart-of-accounts", icon: BookOpen, roles: ["admin"], requiredTier: "pro" },
+  { title: "Banking", url: "/banking", icon: Landmark, roles: ["admin"], requiredTier: "pro" },
 ];
 
 const systemNav: NavItem[] = [
-  { title: "Reports", url: "/reports", icon: BarChart3, roles: ["admin"] },
+  { title: "Reports", url: "/reports", icon: BarChart3, roles: ["admin"], requiredTier: "pro" },
   { title: "Settings", url: "/settings", icon: Settings, roles: ["admin"] },
 ];
 
