@@ -80,6 +80,7 @@ export function AppSidebar() {
   const { signOut } = useAuth();
   const { business, userRole } = useBusiness();
   const { isSuperAdmin } = useSuperAdmin();
+  const { tier } = useFeatureLimit();
   const currentPath = location.pathname;
 
   const filterByRole = (items: NavItem[]) =>
