@@ -7,19 +7,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TruckIcon, Plus, Search, Users, Pencil, Trash2 } from "lucide-react";
-import { useSuppliers, usePurchases, type Supplier } from "@/hooks/usePurchases";
+import { useSuppliers, usePurchases, type Supplier, type Purchase, type PurchaseItem } from "@/hooks/usePurchases";
 import { SupplierFormDialog } from "@/components/purchases/SupplierFormDialog";
 import { PurchaseFormDialog } from "@/components/purchases/PurchaseFormDialog";
+import { toast } from "sonner";
 
 const Purchases = () => {
   const { query: suppliersQuery, create: createSupplier, update: updateSupplier, remove: removeSupplier } = useSuppliers();
-  const { query: purchasesQuery, createPurchase } = usePurchases();
+  const { query: purchasesQuery, createPurchase, updatePurchase, deletePurchase, getPurchaseItems } = usePurchases();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
+  const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
+  const [editingItems, setEditingItems] = useState<PurchaseItem[]>([]);
 
   const purchases = purchasesQuery.data || [];
   const filteredPurchases = purchases.filter((p) => {
@@ -56,11 +59,52 @@ const Purchases = () => {
     setEditingSupplier(null);
   };
 
+  const handleEditPurchase = async (purchase: Purchase) => {
+    try {
+      const items = await getPurchaseItems(purchase.id);
+      setEditingPurchase(purchase);
+      setEditingItems(items);
+      setPurchaseDialogOpen(true);
+    } catch {
+      toast.error("Failed to load purchase items");
+    }
+  };
+
+  const handlePurchaseSubmit = (data: {
+    purchase: {
+      supplier_id: string | null;
+      location_id: string;
+      invoice_number?: string;
+      subtotal: number;
+      tax: number;
+      total: number;
+      payment_status: string;
+      status: string;
+      notes?: string;
+      created_by: string;
+    };
+    items: PurchaseItem[];
+  }) => {
+    if (editingPurchase) {
+      updatePurchase.mutate({ id: editingPurchase.id, purchase: data.purchase, items: data.items }, {
+        onSuccess: () => {
+          setPurchaseDialogOpen(false);
+          setEditingPurchase(null);
+          setEditingItems([]);
+        },
+      });
+    } else {
+      createPurchase.mutate(data, {
+        onSuccess: () => setPurchaseDialogOpen(false),
+      });
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Purchases</h1>
-        <Button onClick={() => setPurchaseDialogOpen(true)}>
+        <Button onClick={() => { setEditingPurchase(null); setEditingItems([]); setPurchaseDialogOpen(true); }}>
           <Plus className="mr-2 h-4 w-4" /> New Purchase
         </Button>
       </div>
@@ -101,12 +145,13 @@ const Purchases = () => {
                     <TableHead className="text-right">Total</TableHead>
                     <TableHead>Payment</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead className="w-[80px]"></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredPurchases.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                         No purchases yet. Create your first purchase order!
                       </TableCell>
                     </TableRow>
@@ -122,6 +167,16 @@ const Purchases = () => {
                         <TableCell className="text-right font-medium">{formatKES(p.total)}</TableCell>
                         <TableCell>{paymentBadge(p.payment_status)}</TableCell>
                         <TableCell>{statusBadge(p.status)}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button size="icon" variant="ghost" onClick={() => handleEditPurchase(p)}>
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={() => deletePurchase.mutate(p.id)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -192,9 +247,11 @@ const Purchases = () => {
 
       <PurchaseFormDialog
         open={purchaseDialogOpen}
-        onOpenChange={setPurchaseDialogOpen}
-        onSubmit={(data) => createPurchase.mutate(data, { onSuccess: () => setPurchaseDialogOpen(false) })}
-        isLoading={createPurchase.isPending}
+        onOpenChange={(o) => { setPurchaseDialogOpen(o); if (!o) { setEditingPurchase(null); setEditingItems([]); } }}
+        onSubmit={handlePurchaseSubmit}
+        isLoading={createPurchase.isPending || updatePurchase.isPending}
+        editingPurchase={editingPurchase}
+        editingItems={editingItems}
       />
     </div>
   );
