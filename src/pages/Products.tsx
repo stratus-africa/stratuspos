@@ -42,6 +42,7 @@ const Products = () => {
   const [bulkDeleting, setBulkDeleting] = useState(false);
 
   const products = productsQuery.data || [];
+  const atProductLimit = maxProducts !== Infinity && products.length >= maxProducts;
   const filtered = products.filter((p) => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
       (p.sku && p.sku.toLowerCase().includes(search.toLowerCase())) ||
