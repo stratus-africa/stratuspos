@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Trash2 } from "lucide-react";
-import { useSuppliers, type PurchaseItem } from "@/hooks/usePurchases";
+import { useSuppliers, type PurchaseItem, type Purchase } from "@/hooks/usePurchases";
 import { useProducts } from "@/hooks/useProducts";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,9 +31,11 @@ interface Props {
     items: PurchaseItem[];
   }) => void;
   isLoading?: boolean;
+  editingPurchase?: Purchase | null;
+  editingItems?: PurchaseItem[];
 }
 
-export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading }: Props) {
+export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, editingPurchase, editingItems }: Props) {
   const { query: suppliersQuery } = useSuppliers();
   const { productsQuery } = useProducts();
   const { locations, currentLocation, business } = useBusiness();
@@ -47,6 +49,26 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading }: 
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [addProductId, setAddProductId] = useState("");
+
+  useEffect(() => {
+    if (editingPurchase) {
+      setSupplierId(editingPurchase.supplier_id || "none");
+      setLocationId(editingPurchase.location_id);
+      setInvoiceNumber(editingPurchase.invoice_number || "");
+      setPaymentStatus(editingPurchase.payment_status);
+      setStatus(editingPurchase.status);
+      setNotes(editingPurchase.notes || "");
+      setItems(editingItems || []);
+    } else {
+      setSupplierId("none");
+      setLocationId(currentLocation?.id || "");
+      setInvoiceNumber("");
+      setPaymentStatus("unpaid");
+      setStatus("received");
+      setNotes("");
+      setItems([]);
+    }
+  }, [editingPurchase, editingItems, currentLocation?.id]);
 
   const taxRate = business?.tax_rate ?? 16;
 
@@ -93,11 +115,6 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading }: 
       },
       items,
     });
-    // Reset
-    setItems([]);
-    setInvoiceNumber("");
-    setNotes("");
-    onOpenChange(false);
   };
 
   const formatKES = (n: number) => new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", minimumFractionDigits: 0 }).format(n);
@@ -106,7 +123,7 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>New Purchase Order</DialogTitle>
+          <DialogTitle>{editingPurchase ? "Edit Purchase Order" : "New Purchase Order"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
@@ -164,7 +181,6 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading }: 
             </div>
           </div>
 
-          {/* Add product row */}
           <div className="flex gap-2">
             <Select value={addProductId} onValueChange={setAddProductId}>
               <SelectTrigger className="flex-1"><SelectValue placeholder="Select product to add..." /></SelectTrigger>
@@ -226,7 +242,7 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading }: 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" disabled={isLoading || items.length === 0}>
-              {isLoading ? "Saving..." : "Create Purchase"}
+              {isLoading ? "Saving..." : editingPurchase ? "Update Purchase" : "Create Purchase"}
             </Button>
           </div>
         </form>

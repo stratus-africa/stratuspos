@@ -94,6 +94,32 @@ export function usePurchases() {
   const { business } = useBusiness();
   const qc = useQueryClient();
 
+  const updateInventoryForItems = async (items: PurchaseItem[], locationId: string, createdBy: string, ref: string) => {
+    for (const item of items) {
+      const { data: existing } = await supabase
+        .from("inventory")
+        .select("id, quantity")
+        .eq("product_id", item.product_id)
+        .eq("location_id", locationId)
+        .maybeSingle();
+
+      if (existing) {
+        await supabase.from("inventory").update({ quantity: existing.quantity + item.quantity }).eq("id", existing.id);
+      } else {
+        await supabase.from("inventory").insert({ product_id: item.product_id, location_id: locationId, quantity: item.quantity });
+      }
+
+      await supabase.from("stock_adjustments").insert({
+        product_id: item.product_id,
+        location_id: locationId,
+        quantity_change: item.quantity,
+        reason: "Purchase received",
+        notes: `Purchase #${ref}`,
+        created_by: createdBy,
+      });
+    }
+  };
+
   const query = useQuery({
     queryKey: ["purchases", business?.id],
     queryFn: async () => {
@@ -142,32 +168,8 @@ export function usePurchases() {
         if (iError) throw iError;
       }
 
-      // Auto-update inventory if status is received
       if (purchase.status === "received") {
-        for (const item of items) {
-          const { data: existing } = await supabase
-            .from("inventory")
-            .select("id, quantity")
-            .eq("product_id", item.product_id)
-            .eq("location_id", purchase.location_id)
-            .maybeSingle();
-
-          if (existing) {
-            await supabase.from("inventory").update({ quantity: existing.quantity + item.quantity }).eq("id", existing.id);
-          } else {
-            await supabase.from("inventory").insert({ product_id: item.product_id, location_id: purchase.location_id, quantity: item.quantity });
-          }
-
-          // Record stock adjustment
-          await supabase.from("stock_adjustments").insert({
-            product_id: item.product_id,
-            location_id: purchase.location_id,
-            quantity_change: item.quantity,
-            reason: "Purchase received",
-            notes: `Purchase #${purchase.invoice_number || purchaseId.slice(0, 8)}`,
-            created_by: purchase.created_by,
-          });
-        }
+        await updateInventoryForItems(items, purchase.location_id, purchase.created_by, purchase.invoice_number || purchaseId.slice(0, 8));
       }
     },
     onSuccess: () => {
@@ -179,5 +181,70 @@ export function usePurchases() {
     onError: (e) => toast.error(e.message),
   });
 
-  return { query, createPurchase };
+  const updatePurchase = useMutation({
+    mutationFn: async ({
+      id,
+      purchase,
+      items,
+    }: {
+      id: string;
+      purchase: {
+        supplier_id: string | null;
+        location_id: string;
+        invoice_number?: string;
+        subtotal: number;
+        tax: number;
+        total: number;
+        payment_status: string;
+        status: string;
+        notes?: string;
+      };
+      items: PurchaseItem[];
+    }) => {
+      const { error: pError } = await supabase.from("purchases").update(purchase).eq("id", id);
+      if (pError) throw pError;
+
+      // Delete old items and re-insert
+      const { error: dError } = await supabase.from("purchase_items").delete().eq("purchase_id", id);
+      if (dError) throw dError;
+
+      if (items.length > 0) {
+        const { error: iError } = await supabase
+          .from("purchase_items")
+          .insert(items.map((i) => ({ purchase_id: id, product_id: i.product_id, quantity: i.quantity, unit_cost: i.unit_cost, total: i.total })));
+        if (iError) throw iError;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["purchases"] });
+      toast.success("Purchase updated");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const deletePurchase = useMutation({
+    mutationFn: async (id: string) => {
+      // Delete items first
+      const { error: iError } = await supabase.from("purchase_items").delete().eq("purchase_id", id);
+      if (iError) throw iError;
+      const { error } = await supabase.from("purchases").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["purchases"] });
+      toast.success("Purchase deleted");
+    },
+    onError: (e) => toast.error(e.message),
+  });
+
+  const getPurchaseItems = async (purchaseId: string) => {
+    const { data, error } = await supabase
+      .from("purchase_items")
+      .select("*, products(name)")
+      .eq("purchase_id", purchaseId);
+    if (error) throw error;
+    return data as PurchaseItem[];
+  };
+
+  return { query, createPurchase, updatePurchase, deletePurchase, getPurchaseItems };
 }
