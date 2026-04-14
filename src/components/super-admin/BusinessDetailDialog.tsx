@@ -388,7 +388,125 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
   );
 }
 
-function StatCard({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
+function ManualTierManager({
+  businessId, users, subscription, onUpdated,
+}: {
+  businessId: string;
+  users: any[];
+  subscription: any;
+  onUpdated: () => void;
+}) {
+  const [selectedTier, setSelectedTier] = useState<string>(subscription ? (subscription.product_id?.includes("pro") ? "pro" : "basic") : "basic");
+  const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  const ownerUserId = users[0]?.user_id || users[0]?.id;
+
+  const handleSetTier = async () => {
+    if (!ownerUserId) {
+      toast.error("No user found for this business");
+      return;
+    }
+    setSaving(true);
+    try {
+      const productId = selectedTier === "pro" ? "pro_plan" : "basic_plan";
+      const priceId = selectedTier === "pro" ? "pro_monthly" : "basic_monthly";
+      const now = new Date().toISOString();
+
+      if (subscription) {
+        // Update existing
+        const { error } = await supabase
+          .from("subscriptions")
+          .update({
+            product_id: productId,
+            price_id: priceId,
+            status: "active",
+            cancel_at_period_end: false,
+          })
+          .eq("id", subscription.id);
+        if (error) throw error;
+        toast.success(`Subscription updated to ${selectedTier.toUpperCase()}`);
+      } else {
+        // Create manual subscription
+        const { error } = await supabase
+          .from("subscriptions")
+          .insert({
+            user_id: ownerUserId,
+            paddle_subscription_id: `manual_${crypto.randomUUID().slice(0, 8)}`,
+            paddle_customer_id: `manual_${crypto.randomUUID().slice(0, 8)}`,
+            product_id: productId,
+            price_id: priceId,
+            status: "active",
+            environment: "sandbox",
+            current_period_start: now,
+          });
+        if (error) throw error;
+        toast.success(`Business upgraded to ${selectedTier.toUpperCase()} plan`);
+      }
+      onUpdated();
+    } catch (err: any) {
+      toast.error("Failed to update: " + err.message);
+    }
+    setSaving(false);
+  };
+
+  const handleRemoveSubscription = async () => {
+    if (!subscription) return;
+    setRemoving(true);
+    try {
+      const { error } = await supabase
+        .from("subscriptions")
+        .delete()
+        .eq("id", subscription.id);
+      if (error) throw error;
+      toast.success("Subscription removed — business is now on Free plan");
+      onUpdated();
+    } catch (err: any) {
+      toast.error("Failed to remove: " + err.message);
+    }
+    setRemoving(false);
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm font-medium flex items-center gap-2">
+          <ArrowUpCircle className="h-4 w-4" />
+          Manual Tier Management
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex items-end gap-3">
+          <div className="flex-1 space-y-2">
+            <Label>Set Plan</Label>
+            <Select value={selectedTier} onValueChange={setSelectedTier}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="basic">Basic — $15/mo</SelectItem>
+                <SelectItem value="pro">Pro — $39/mo</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={handleSetTier} disabled={saving}>
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {subscription ? "Update Plan" : "Activate Plan"}
+          </Button>
+          {subscription && (
+            <Button variant="destructive" size="icon" onClick={handleRemoveSubscription} disabled={removing} title="Remove subscription (downgrade to Free)">
+              {removing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            </Button>
+          )}
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">
+          This creates or updates a manual subscription record. Changes take effect immediately.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
   return (
     <Card>
       <CardContent className="pt-4 pb-3">
