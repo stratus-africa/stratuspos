@@ -4,15 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Banknote, Smartphone, CreditCard, Plus, Trash2 } from "lucide-react";
 import { PaymentEntry } from "@/hooks/usePOS";
+import { useBankAccounts } from "@/hooks/useBankAccounts";
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   total: number;
-  onConfirm: (payments: PaymentEntry[]) => void;
+  onConfirm: (payments: PaymentEntry[], bankAccountId: string | null) => void;
   processing: boolean;
 }
 
@@ -24,6 +25,8 @@ const METHODS = [
 
 export default function PaymentDialog({ open, onOpenChange, total, onConfirm, processing }: Props) {
   const [payments, setPayments] = useState<PaymentEntry[]>([{ method: "cash", amount: total, reference: "" }]);
+  const [bankAccountId, setBankAccountId] = useState<string>("none");
+  const { data: bankAccounts = [] } = useBankAccounts();
 
   const totalPaid = payments.reduce((s, p) => s + (p.amount || 0), 0);
   const change = Math.max(0, totalPaid - total);
@@ -41,9 +44,11 @@ export default function PaymentDialog({ open, onOpenChange, total, onConfirm, pr
     setPayments((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  // Reset when dialog opens
   const handleOpenChange = (v: boolean) => {
-    if (v) setPayments([{ method: "cash", amount: total, reference: "" }]);
+    if (v) {
+      setPayments([{ method: "cash", amount: total, reference: "" }]);
+      setBankAccountId("none");
+    }
     onOpenChange(v);
   };
 
@@ -106,6 +111,22 @@ export default function PaymentDialog({ open, onOpenChange, total, onConfirm, pr
 
           <Separator />
 
+          {/* Bank Account for reconciliation */}
+          <div className="space-y-2">
+            <Label className="text-muted-foreground text-xs">Deposit To (optional — links to Banking)</Label>
+            <Select value={bankAccountId} onValueChange={setBankAccountId}>
+              <SelectTrigger><SelectValue placeholder="No bank account linked" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">None</SelectItem>
+                {bankAccounts.map((a) => (
+                  <SelectItem key={a.id} value={a.id}>{a.name} ({a.account_type.replace("_", " ")})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Separator />
+
           <div className="text-sm space-y-1">
             <div className="flex justify-between"><span className="text-muted-foreground">Total Due</span><span className="font-semibold">KES {total.toLocaleString()}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Total Paid</span><span>KES {totalPaid.toLocaleString()}</span></div>
@@ -120,7 +141,7 @@ export default function PaymentDialog({ open, onOpenChange, total, onConfirm, pr
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => onConfirm(payments)} disabled={totalPaid <= 0 || processing}>
+          <Button onClick={() => onConfirm(payments, bankAccountId === "none" ? null : bankAccountId)} disabled={totalPaid <= 0 || processing}>
             {processing ? "Processing..." : "Complete Sale"}
           </Button>
         </DialogFooter>
