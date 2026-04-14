@@ -5,13 +5,16 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Shield, ShieldOff } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Shield, ShieldOff, Search } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
 interface UserRow {
   id: string;
   full_name: string | null;
+  email: string | null;
   phone: string | null;
   business_id: string | null;
   created_at: string;
@@ -20,11 +23,20 @@ interface UserRow {
   is_super_admin?: boolean;
 }
 
+interface BusinessOption {
+  id: string;
+  name: string;
+}
+
 export default function SuperAdminUsers() {
   const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [superAdminIds, setSuperAdminIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filterBusiness, setFilterBusiness] = useState("all");
+  const [filterRole, setFilterRole] = useState("all");
+  const [businesses, setBusinesses] = useState<BusinessOption[]>([]);
 
   const fetchUsers = async () => {
     const [profilesRes, superRes, rolesRes, bizRes] = await Promise.all([
@@ -37,10 +49,12 @@ export default function SuperAdminUsers() {
     const saIds = new Set((superRes.data || []).map((s) => s.user_id));
     setSuperAdminIds(saIds);
 
-    const bizMap = new Map((bizRes.data || []).map((b) => [b.id, b.name]));
+    const bizList = bizRes.data || [];
+    setBusinesses(bizList);
+    const bizMap = new Map(bizList.map((b) => [b.id, b.name]));
     const roleMap = new Map((rolesRes.data || []).map((r) => [r.user_id, r.role]));
 
-    const enriched: UserRow[] = (profilesRes.data || []).map((p) => ({
+    const enriched: UserRow[] = (profilesRes.data || []).map((p: any) => ({
       ...p,
       business_name: p.business_id ? bizMap.get(p.business_id) || "Unknown" : undefined,
       role: roleMap.get(p.id) || undefined,
@@ -71,6 +85,17 @@ export default function SuperAdminUsers() {
     fetchUsers();
   };
 
+  const filtered = users.filter((u) => {
+    const matchesSearch =
+      (u.full_name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (u.email || "").toLowerCase().includes(search.toLowerCase());
+    const matchesBiz = filterBusiness === "all" || u.business_id === filterBusiness;
+    const matchesRole =
+      filterRole === "all" ||
+      (filterRole === "super_admin" ? u.is_super_admin : u.role === filterRole);
+    return matchesSearch && matchesBiz && matchesRole;
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -86,12 +111,45 @@ export default function SuperAdminUsers() {
         <p className="text-muted-foreground">{users.length} registered users</p>
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name or email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Select value={filterBusiness} onValueChange={setFilterBusiness}>
+          <SelectTrigger className="w-[200px]"><SelectValue placeholder="All Businesses" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Businesses</SelectItem>
+            {businesses.map((b) => (
+              <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterRole} onValueChange={setFilterRole}>
+          <SelectTrigger className="w-[160px]"><SelectValue placeholder="All Roles" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Roles</SelectItem>
+            <SelectItem value="admin">Admin</SelectItem>
+            <SelectItem value="manager">Manager</SelectItem>
+            <SelectItem value="cashier">Cashier</SelectItem>
+            <SelectItem value="super_admin">Super Admin</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       <Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>Business</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
@@ -100,9 +158,10 @@ export default function SuperAdminUsers() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((u) => (
+              {filtered.map((u) => (
                 <TableRow key={u.id}>
                   <TableCell className="font-medium">{u.full_name || "Unnamed"}</TableCell>
+                  <TableCell className="text-muted-foreground text-sm">{u.email || "—"}</TableCell>
                   <TableCell>{u.business_name || <span className="text-muted-foreground">—</span>}</TableCell>
                   <TableCell>
                     {u.role ? (
@@ -138,6 +197,15 @@ export default function SuperAdminUsers() {
                   </TableCell>
                 </TableRow>
               ))}
+              {filtered.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    {search || filterBusiness !== "all" || filterRole !== "all"
+                      ? "No users match your filters"
+                      : "No users registered yet"}
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
