@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { format } from "date-fns";
 import { Search, Ban, CheckCircle2, Pencil, Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { BusinessDetailDialog } from "@/components/super-admin/BusinessDetailDialog";
 
 interface BusinessRow {
   id: string;
