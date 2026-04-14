@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { format } from "date-fns";
 import { Search, Ban, CheckCircle2, Pencil, Eye, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { BusinessDetailDialog } from "@/components/super-admin/BusinessDetailDialog";
 
 interface BusinessRow {
   id: string;
@@ -42,6 +43,9 @@ export default function SuperAdminBusinesses() {
 
   // Masquerade
   const [masquerading, setMasquerading] = useState<string | null>(null);
+
+  // Detail dialog
+  const [detailBiz, setDetailBiz] = useState<BusinessRow | null>(null);
 
   const fetchData = async () => {
     const [bizRes, salesRes] = await Promise.all([
@@ -192,7 +196,14 @@ export default function SuperAdminBusinesses() {
             <TableBody>
               {filtered.map((biz) => (
                 <TableRow key={biz.id} className={!biz.is_active ? "opacity-60" : ""}>
-                  <TableCell className="font-medium">{biz.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <button
+                      className="text-left hover:underline text-primary cursor-pointer"
+                      onClick={() => setDetailBiz(biz)}
+                    >
+                      {biz.name}
+                    </button>
+                  </TableCell>
                   <TableCell>
                     {biz.is_active ? (
                       <Badge variant="default" className="bg-emerald-500/10 text-emerald-600 border-emerald-200">Active</Badge>
@@ -307,6 +318,12 @@ export default function SuperAdminBusinesses() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BusinessDetailDialog
+        businessId={detailBiz?.id || null}
+        businessName={detailBiz?.name || ""}
+        onClose={() => setDetailBiz(null)}
+      />
     </div>
   );
 }
