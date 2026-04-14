@@ -109,7 +109,7 @@ export function usePOS() {
 
   // Complete sale
   const completeSale = async (payments: PaymentEntry[], bankAccountId?: string | null) => {
-    setProcessing(true);
+    if (!business || !currentLocation || !user || cart.length === 0) return null;
 
     try {
       const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
