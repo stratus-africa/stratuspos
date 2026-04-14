@@ -321,9 +321,23 @@ const Products = () => {
                               <Button size="icon" variant="ghost" onClick={() => handleEdit(p)}>
                                 <Pencil className="h-4 w-4" />
                               </Button>
-                              <Button size="icon" variant="ghost" onClick={() => deleteProduct.mutate(p.id)}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="icon" variant="ghost">
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete "{p.name}"?</AlertDialogTitle>
+                                    <AlertDialogDescription>This action cannot be undone. This product will be permanently removed.</AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => deleteProduct.mutate(p.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
                             </div>
                           </TableCell>
                         </TableRow>
