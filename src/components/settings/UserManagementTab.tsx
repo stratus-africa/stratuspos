@@ -50,9 +50,11 @@ export function UserManagementTab() {
   const [inviteRole, setInviteRole] = useState<string>("cashier");
   const [inviting, setInviting] = useState(false);
 
-  // Role edit state
+  // Edit state
   const [editMember, setEditMember] = useState<TeamMember | null>(null);
   const [editRole, setEditRole] = useState<AppRole>("cashier");
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
   const [saving, setSaving] = useState(false);
 
   const isAdmin = userRole === "admin";
