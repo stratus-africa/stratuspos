@@ -77,7 +77,7 @@ export function UserManagementTab() {
     const userIds = roles.map((r) => r.user_id);
     const { data: profiles } = await supabase
       .from("profiles")
-      .select("id, full_name")
+      .select("id, full_name, email, phone")
       .in("id", userIds);
 
     const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
@@ -87,6 +87,8 @@ export function UserManagementTab() {
         role_id: r.id,
         role: r.role as AppRole,
         full_name: profileMap.get(r.user_id)?.full_name || null,
+        email: profileMap.get(r.user_id)?.email || null,
+        phone: profileMap.get(r.user_id)?.phone || null,
       }))
     );
     setLoading(false);
