@@ -214,15 +214,28 @@ export function UserManagementTab() {
         </Table>
       </CardContent>
 
-      {/* Edit Role Dialog */}
+      {/* Edit User Dialog */}
       <Dialog open={!!editMember} onOpenChange={(open) => !open && setEditMember(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Change Role — {editMember?.full_name || "User"}</DialogTitle>
+            <DialogTitle>Edit User — {editMember?.full_name || "User"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>New Role</Label>
+              <Label>Full Name</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Full name" />
+            </div>
+            <div className="space-y-2">
+              <Label>Phone</Label>
+              <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="Phone number" />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input value={editMember?.email || ""} disabled className="bg-muted" />
+              <p className="text-xs text-muted-foreground">Email cannot be changed here.</p>
+            </div>
+            <div className="space-y-2">
+              <Label>Role</Label>
               <Select value={editRole} onValueChange={(v) => setEditRole(v as AppRole)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -232,15 +245,12 @@ export function UserManagementTab() {
                 </SelectContent>
               </Select>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Changing a user's role takes effect immediately. They may need to refresh their browser.
-            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditMember(null)}>Cancel</Button>
-            <Button onClick={handleSaveRole} disabled={saving || editRole === editMember?.role}>
+            <Button onClick={handleSaveUser} disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Role
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
