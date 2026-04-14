@@ -4,11 +4,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import {
   DollarSign, ShoppingCart, Users, MapPin, TrendingUp, Package,
-  BarChart3, CreditCard, Activity, Layers, CheckCircle2, XCircle
+  BarChart3, CreditCard, Activity, Layers, CheckCircle2, XCircle, Loader2, ArrowUpCircle, Trash2
 } from "lucide-react";
 
 interface BusinessDetailDialogProps {
