@@ -71,7 +71,6 @@ const financeNav: NavItem[] = [
 
 const systemNav: NavItem[] = [
   { title: "Reports", url: "/reports", icon: BarChart3, roles: ["admin"], requiredTier: "pro" },
-  { title: "Roles", url: "/roles", icon: ShieldCheck, roles: ["admin"] },
   { title: "Settings", url: "/settings", icon: Settings, roles: ["admin"] },
 ];
 
