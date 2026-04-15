@@ -531,6 +531,81 @@ export type Database = {
           },
         ]
       }
+      mpesa_transactions: {
+        Row: {
+          amount: number
+          business_id: string
+          checkout_request_id: string | null
+          conversation_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          merchant_request_id: string | null
+          mpesa_receipt_number: string | null
+          originator_conversation_id: string | null
+          phone_number: string
+          result_code: number | null
+          result_description: string | null
+          sale_id: string | null
+          status: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          business_id: string
+          checkout_request_id?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          merchant_request_id?: string | null
+          mpesa_receipt_number?: string | null
+          originator_conversation_id?: string | null
+          phone_number: string
+          result_code?: number | null
+          result_description?: string | null
+          sale_id?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          business_id?: string
+          checkout_request_id?: string | null
+          conversation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          merchant_request_id?: string | null
+          mpesa_receipt_number?: string | null
+          originator_conversation_id?: string | null
+          phone_number?: string
+          result_code?: number | null
+          result_description?: string | null
+          sale_id?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mpesa_transactions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mpesa_transactions_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       package_features: {
         Row: {
           created_at: string
