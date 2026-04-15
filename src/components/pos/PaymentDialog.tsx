@@ -126,11 +126,15 @@ export default function PaymentDialog({ open, onOpenChange, total, onConfirm, pr
         }
 
         try {
-          const { data: queryData } = await supabase.functions.invoke("mpesa?action=stk-query", {
-            body: { checkoutRequestId: data.checkoutRequestId },
-            headers: { "Content-Type": "application/json" },
+          const queryRes = await fetch(`${supabaseUrl}/functions/v1/mpesa?action=stk-query`, {
             method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${session?.access_token}`,
+            },
+            body: JSON.stringify({ checkoutRequestId: data.checkoutRequestId }),
           });
+          const queryData = await queryRes.json();
 
           if (queryData?.ResultCode === "0" || queryData?.ResultCode === 0) {
             if (pollRef.current) clearInterval(pollRef.current);
