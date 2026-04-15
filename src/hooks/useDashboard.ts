@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/contexts/BusinessContext";
-import { startOfDay, subDays, format, startOfWeek, startOfMonth } from "date-fns";
+import { startOfDay, subDays, format } from "date-fns";
 
 interface DailySales {
   date: string;
@@ -29,19 +29,28 @@ interface DashboardData {
   todayCount: number;
   todayProfit: number;
   todayExpenses: number;
+  totalPurchases: number;
+  purchaseDue: number;
+  invoiceDue: number;
   salesTrend: DailySales[];
   topProducts: TopProduct[];
   lowStockItems: LowStockItem[];
   loading: boolean;
+  dateFilter: string;
+  setDateFilter: (filter: string) => void;
 }
 
 export function useDashboard(): DashboardData {
   const { business, currentLocation } = useBusiness();
-  const [data, setData] = useState<DashboardData>({
+  const [dateFilter, setDateFilter] = useState("today");
+  const [data, setData] = useState<Omit<DashboardData, "dateFilter" | "setDateFilter">>({
     todaySales: 0,
     todayCount: 0,
     todayProfit: 0,
     todayExpenses: 0,
+    totalPurchases: 0,
+    purchaseDue: 0,
+    invoiceDue: 0,
     salesTrend: [],
     topProducts: [],
     lowStockItems: [],
@@ -55,14 +64,19 @@ export function useDashboard(): DashboardData {
       const today = startOfDay(new Date()).toISOString();
       const thirtyDaysAgo = subDays(new Date(), 30).toISOString();
 
-      // Parallel fetches
-      const [salesRes, saleItemsRes, expensesRes, inventoryRes] = await Promise.all([
+      // Determine date range based on filter
+      let filterStart = today;
+      if (dateFilter === "7days") filterStart = subDays(new Date(), 7).toISOString();
+      else if (dateFilter === "30days") filterStart = thirtyDaysAgo;
+      else if (dateFilter === "all") filterStart = "2000-01-01T00:00:00.000Z";
+
+      const [salesRes, saleItemsRes, expensesRes, inventoryRes, purchasesRes, unpaidSalesRes] = await Promise.all([
         supabase
           .from("sales")
           .select("id, total, subtotal, tax, discount, created_at")
           .eq("business_id", business.id)
           .eq("location_id", currentLocation.id)
-          .gte("created_at", thirtyDaysAgo)
+          .gte("created_at", filterStart)
           .eq("status", "final"),
         supabase
           .from("sale_items")
@@ -74,7 +88,7 @@ export function useDashboard(): DashboardData {
               .select("id")
               .eq("business_id", business.id)
               .eq("location_id", currentLocation.id)
-              .gte("created_at", thirtyDaysAgo)
+              .gte("created_at", filterStart)
               .eq("status", "final")
             ).data?.map((s) => s.id) || []
           ),
@@ -88,27 +102,48 @@ export function useDashboard(): DashboardData {
           .from("inventory")
           .select("product_id, quantity, low_stock_threshold, location_id, products(name), locations(name)")
           .eq("location_id", currentLocation.id),
+        supabase
+          .from("purchases")
+          .select("id, total, payment_status, created_at")
+          .eq("business_id", business.id)
+          .eq("location_id", currentLocation.id)
+          .gte("created_at", filterStart),
+        supabase
+          .from("sales")
+          .select("id, total, payment_status")
+          .eq("business_id", business.id)
+          .eq("location_id", currentLocation.id)
+          .eq("status", "final")
+          .eq("payment_status", "unpaid"),
       ]);
 
       const sales = salesRes.data || [];
       const saleItems = saleItemsRes.data || [];
       const expenses = expensesRes.data || [];
       const inventory = inventoryRes.data || [];
+      const purchases = purchasesRes.data || [];
+      const unpaidSales = unpaidSalesRes.data || [];
 
-      // Today's summary
-      const todaySales = sales.filter((s) => s.created_at >= today);
-      const todaySalesTotal = todaySales.reduce((sum, s) => sum + Number(s.total), 0);
-      const todayCount = todaySales.length;
+      // Sales totals
+      const todaySalesTotal = sales.reduce((sum, s) => sum + Number(s.total), 0);
+      const todayCount = sales.length;
 
-      // Today's profit: revenue - COGS
-      const todaySaleIds = new Set(todaySales.map((s) => s.id));
-      const todayItems = saleItems.filter((i) => todaySaleIds.has(i.sale_id));
-      const todayCOGS = todayItems.reduce((sum, i) => {
+      // Profit: revenue - COGS
+      const todayCOGS = saleItems.reduce((sum, i) => {
         const pp = (i.products as any)?.purchase_price || 0;
         return sum + pp * Number(i.quantity);
       }, 0);
       const todayExpensesTotal = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
       const todayProfit = todaySalesTotal - todayCOGS - todayExpensesTotal;
+
+      // Purchase totals
+      const totalPurchases = purchases.reduce((sum, p) => sum + Number(p.total), 0);
+      const purchaseDue = purchases
+        .filter((p) => p.payment_status === "unpaid")
+        .reduce((sum, p) => sum + Number(p.total), 0);
+
+      // Invoice due (unpaid sales)
+      const invoiceDue = unpaidSales.reduce((sum, s) => sum + Number(s.total), 0);
 
       // Sales trend (last 30 days)
       const trendMap = new Map<string, { total: number; count: number }>();
@@ -130,7 +165,7 @@ export function useDashboard(): DashboardData {
         count: v.count,
       }));
 
-      // Top products (by qty sold in last 30 days)
+      // Top products
       const prodMap = new Map<string, { name: string; qty: number; revenue: number }>();
       saleItems.forEach((item) => {
         const pid = item.product_id;
@@ -162,6 +197,9 @@ export function useDashboard(): DashboardData {
         todayCount,
         todayProfit,
         todayExpenses: todayExpensesTotal,
+        totalPurchases,
+        purchaseDue,
+        invoiceDue,
         salesTrend,
         topProducts,
         lowStockItems,
@@ -170,7 +208,7 @@ export function useDashboard(): DashboardData {
     };
 
     fetchAll();
-  }, [business?.id, currentLocation?.id]);
+  }, [business?.id, currentLocation?.id, dateFilter]);
 
-  return data;
+  return { ...data, dateFilter, setDateFilter };
 }
