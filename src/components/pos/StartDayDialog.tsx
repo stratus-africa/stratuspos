@@ -3,7 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Sunrise, Loader2 } from "lucide-react";
+import { Sunrise, Loader2, Landmark, Wallet } from "lucide-react";
+import { useBankAccounts, BankAccount } from "@/hooks/useBankAccounts";
 
 interface StartDayDialogProps {
   open: boolean;
@@ -14,6 +15,7 @@ interface StartDayDialogProps {
 export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartDayDialogProps) {
   const [openingFloat, setOpeningFloat] = useState("0");
   const [loading, setLoading] = useState(false);
+  const { data: bankAccounts = [] } = useBankAccounts();
 
   const handleConfirm = async () => {
     setLoading(true);
@@ -31,13 +33,42 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
             Start of Day
           </DialogTitle>
           <DialogDescription>
-            Open the register for today. Enter the starting cash float.
+            Open the register for today. Review account balances and enter the starting cash float.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Bank & Cash Account Balances */}
+          {bankAccounts.length > 0 && (
+            <div className="space-y-2">
+              <Label className="flex items-center gap-1.5">
+                <Landmark className="h-4 w-4 text-muted-foreground" />
+                Account Balances
+              </Label>
+              <div className="rounded-lg border bg-muted/50 divide-y">
+                {bankAccounts.map((acc: BankAccount) => (
+                  <div key={acc.id} className="flex items-center justify-between px-3 py-2 text-sm">
+                    <div className="flex items-center gap-2">
+                      {acc.account_type === "cash" ? (
+                        <Wallet className="h-3.5 w-3.5 text-emerald-500" />
+                      ) : (
+                        <Landmark className="h-3.5 w-3.5 text-blue-500" />
+                      )}
+                      <span>{acc.name}</span>
+                      <span className="text-xs text-muted-foreground capitalize">({acc.account_type})</span>
+                    </div>
+                    <span className="font-medium">KES {Number(acc.balance).toLocaleString()}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
-            <Label htmlFor="opening-float">Opening Cash Float (KES)</Label>
+            <Label htmlFor="opening-float" className="flex items-center gap-1.5">
+              <Wallet className="h-4 w-4 text-muted-foreground" />
+              Opening Cash Float (KES)
+            </Label>
             <Input
               id="opening-float"
               type="number"
@@ -50,7 +81,7 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
               autoFocus
             />
             <p className="text-xs text-muted-foreground">
-              Count the cash in the register before starting sales.
+              Count the physical cash in the register before starting sales.
             </p>
           </div>
         </div>
