@@ -98,26 +98,14 @@ const POS = () => {
                 Open the register to begin processing sales. You'll need to count and enter your starting cash float.
               </p>
             </div>
-            <div className="flex gap-2 justify-center">
-              <Button size="lg" onClick={() => setStartDayOpen(true)}>
-                <Sunrise className="mr-2 h-5 w-5" />
-                Start of Day
-              </Button>
-              <Button size="lg" variant="outline" onClick={() => setZReportOpen(true)}>
-                <FileText className="mr-2 h-5 w-5" />
-                Z Reports
-              </Button>
-            </div>
+            <Button size="lg" onClick={() => setStartDayOpen(true)}>
+              <Sunrise className="mr-2 h-5 w-5" />
+              Start of Day
+            </Button>
           </CardContent>
         </Card>
 
         <StartDayDialog open={startDayOpen} onOpenChange={setStartDayOpen} onConfirm={handleStartDay} />
-        <ZReportDialog
-          open={zReportOpen}
-          onOpenChange={setZReportOpen}
-          sessions={[]}
-          onLoadSessions={session.fetchSessionHistory}
-        />
       </div>
     );
   }
