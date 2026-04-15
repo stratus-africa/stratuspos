@@ -32,7 +32,7 @@ const Inventory = () => {
 
   const lowStockCount = inventory.filter((i) => i.quantity <= i.low_stock_threshold).length;
 
-  const handleAdjust = (data: { product_id: string; location_id: string; quantity_change: number; reason: string; notes?: string }) => {
+  const handleAdjust = (data: { items: { product_id: string; quantity_change: number }[]; location_id: string; reason: string; notes?: string }) => {
     if (!user) return;
     adjustStock.mutate({ ...data, created_by: user.id });
   };
