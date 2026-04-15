@@ -50,8 +50,9 @@ export function useSubscription() {
   // Listen for realtime changes
   useEffect(() => {
     if (!user) return;
+    const channelName = `subscription-changes-${user.id}-${Date.now()}`;
     const channel = supabase
-      .channel("subscription-changes")
+      .channel(channelName)
       .on(
         "postgres_changes",
         {
