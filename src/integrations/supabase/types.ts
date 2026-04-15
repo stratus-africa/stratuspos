@@ -566,6 +566,96 @@ export type Database = {
           },
         ]
       }
+      pos_sessions: {
+        Row: {
+          business_id: string
+          cash_difference: number | null
+          closed_at: string | null
+          closed_by: string | null
+          closing_cash: number | null
+          created_at: string
+          expected_cash: number | null
+          id: string
+          location_id: string
+          notes: string | null
+          opened_at: string
+          opened_by: string
+          opening_float: number
+          payments_card: number
+          payments_cash: number
+          payments_mpesa: number
+          payments_other: number
+          status: string
+          total_refunds: number
+          total_sales: number
+          total_transactions: number
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          cash_difference?: number | null
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_cash?: number | null
+          created_at?: string
+          expected_cash?: number | null
+          id?: string
+          location_id: string
+          notes?: string | null
+          opened_at?: string
+          opened_by: string
+          opening_float?: number
+          payments_card?: number
+          payments_cash?: number
+          payments_mpesa?: number
+          payments_other?: number
+          status?: string
+          total_refunds?: number
+          total_sales?: number
+          total_transactions?: number
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          cash_difference?: number | null
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_cash?: number | null
+          created_at?: string
+          expected_cash?: number | null
+          id?: string
+          location_id?: string
+          notes?: string | null
+          opened_at?: string
+          opened_by?: string
+          opening_float?: number
+          payments_card?: number
+          payments_cash?: number
+          payments_mpesa?: number
+          payments_other?: number
+          status?: string
+          total_refunds?: number
+          total_sales?: number
+          total_transactions?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pos_sessions_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sessions_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           barcode: string | null
