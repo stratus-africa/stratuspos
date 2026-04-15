@@ -1,13 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Banknote, Smartphone, CreditCard, Plus, Trash2 } from "lucide-react";
+import { Banknote, Smartphone, CreditCard, Plus, Trash2, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { PaymentEntry } from "@/hooks/usePOS";
 import { useBankAccounts } from "@/hooks/useBankAccounts";
+import { useBusiness } from "@/contexts/BusinessContext";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Props {
   open: boolean;
@@ -23,14 +26,32 @@ const METHODS = [
   { key: "card" as const, label: "Card", icon: CreditCard },
 ];
 
+type MpesaStatus = "idle" | "sending" | "waiting" | "completed" | "failed";
+
 export default function PaymentDialog({ open, onOpenChange, total, onConfirm, processing }: Props) {
   const [payments, setPayments] = useState<PaymentEntry[]>([{ method: "cash", amount: total, reference: "" }]);
   const [bankAccountId, setBankAccountId] = useState<string>("none");
   const { data: bankAccounts = [] } = useBankAccounts();
+  const { business } = useBusiness();
+
+  // M-Pesa STK Push state
+  const [mpesaPhone, setMpesaPhone] = useState("");
+  const [mpesaStatus, setMpesaStatus] = useState<MpesaStatus>("idle");
+  const [mpesaCheckoutId, setMpesaCheckoutId] = useState("");
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const totalPaid = payments.reduce((s, p) => s + (p.amount || 0), 0);
   const change = Math.max(0, totalPaid - total);
   const remaining = Math.max(0, total - totalPaid);
+
+  const hasMpesaPayment = payments.some(p => p.method === "mpesa");
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
 
   const addPayment = () => {
     setPayments((p) => [...p, { method: "cash", amount: remaining, reference: "" }]);
@@ -48,8 +69,88 @@ export default function PaymentDialog({ open, onOpenChange, total, onConfirm, pr
     if (v) {
       setPayments([{ method: "cash", amount: total, reference: "" }]);
       setBankAccountId("none");
+      setMpesaStatus("idle");
+      setMpesaPhone("");
+      setMpesaCheckoutId("");
+      if (pollRef.current) clearInterval(pollRef.current);
     }
     onOpenChange(v);
+  };
+
+  const sendSTKPush = async () => {
+    if (!mpesaPhone || !business) return;
+
+    const mpesaPayment = payments.find(p => p.method === "mpesa");
+    if (!mpesaPayment || !mpesaPayment.amount) {
+      toast.error("Set M-Pesa payment amount first");
+      return;
+    }
+
+    setMpesaStatus("sending");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("mpesa", {
+        body: {
+          phoneNumber: mpesaPhone,
+          amount: mpesaPayment.amount,
+          businessId: business.id,
+          accountReference: "POS Sale",
+        },
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
+      });
+
+      // Handle edge function returning query params
+      const params = new URLSearchParams("action=stk-push");
+
+      if (error) throw new Error(error.message || "STK Push failed");
+      if (data?.error) throw new Error(data.error);
+
+      setMpesaCheckoutId(data.checkoutRequestId);
+      setMpesaStatus("waiting");
+      toast.success("STK Push sent! Check your phone.");
+
+      // Poll for completion
+      let attempts = 0;
+      pollRef.current = setInterval(async () => {
+        attempts++;
+        if (attempts > 30) {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setMpesaStatus("failed");
+          toast.error("M-Pesa payment timed out");
+          return;
+        }
+
+        try {
+          const { data: queryData } = await supabase.functions.invoke("mpesa?action=stk-query", {
+            body: { checkoutRequestId: data.checkoutRequestId },
+            headers: { "Content-Type": "application/json" },
+            method: "POST",
+          });
+
+          if (queryData?.ResultCode === "0" || queryData?.ResultCode === 0) {
+            if (pollRef.current) clearInterval(pollRef.current);
+            setMpesaStatus("completed");
+
+            // Auto-fill M-Pesa reference
+            const mpesaIdx = payments.findIndex(p => p.method === "mpesa");
+            if (mpesaIdx >= 0) {
+              updatePayment(mpesaIdx, { reference: data.checkoutRequestId });
+            }
+            toast.success("M-Pesa payment confirmed!");
+          } else if (queryData?.ResultCode && queryData.ResultCode !== "0") {
+            if (pollRef.current) clearInterval(pollRef.current);
+            setMpesaStatus("failed");
+            toast.error(queryData.ResultDesc || "M-Pesa payment failed");
+          }
+        } catch {
+          // Keep polling
+        }
+      }, 5000);
+    } catch (e: any) {
+      setMpesaStatus("failed");
+      toast.error(e.message || "Failed to send STK Push");
+    }
   };
 
   return (
@@ -91,13 +192,24 @@ export default function PaymentDialog({ open, onOpenChange, total, onConfirm, pr
                     onChange={(e) => updatePayment(idx, { amount: parseFloat(e.target.value) || 0 })}
                   />
                 </div>
-                {payment.method !== "cash" && (
+                {payment.method !== "cash" && payment.method !== "mpesa" && (
                   <div>
-                    <Label>{payment.method === "mpesa" ? "M-Pesa Code" : "Reference"}</Label>
+                    <Label>Reference</Label>
                     <Input
                       value={payment.reference}
                       onChange={(e) => updatePayment(idx, { reference: e.target.value })}
-                      placeholder={payment.method === "mpesa" ? "e.g. SBK12345" : "Ref #"}
+                      placeholder="Ref #"
+                    />
+                  </div>
+                )}
+                {payment.method === "mpesa" && (
+                  <div>
+                    <Label>M-Pesa Code</Label>
+                    <Input
+                      value={payment.reference}
+                      onChange={(e) => updatePayment(idx, { reference: e.target.value })}
+                      placeholder="Auto-filled on STK"
+                      readOnly={mpesaStatus === "completed"}
                     />
                   </div>
                 )}
@@ -105,13 +217,60 @@ export default function PaymentDialog({ open, onOpenChange, total, onConfirm, pr
             </div>
           ))}
 
+          {/* M-Pesa STK Push section */}
+          {hasMpesaPayment && (
+            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-3">
+              <div className="flex items-center gap-2">
+                <Smartphone className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">M-Pesa STK Push</span>
+                {mpesaStatus === "completed" && <CheckCircle2 className="h-4 w-4 text-green-600" />}
+                {mpesaStatus === "failed" && <XCircle className="h-4 w-4 text-destructive" />}
+              </div>
+
+              {mpesaStatus !== "completed" && (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Phone (07XX or 254...)"
+                    value={mpesaPhone}
+                    onChange={(e) => setMpesaPhone(e.target.value)}
+                    disabled={mpesaStatus === "waiting" || mpesaStatus === "sending"}
+                  />
+                  <Button
+                    size="sm"
+                    onClick={sendSTKPush}
+                    disabled={!mpesaPhone || mpesaStatus === "waiting" || mpesaStatus === "sending"}
+                  >
+                    {mpesaStatus === "sending" && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                    {mpesaStatus === "waiting" && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                    {mpesaStatus === "idle" || mpesaStatus === "failed" ? "Send" : "Waiting..."}
+                  </Button>
+                </div>
+              )}
+
+              {mpesaStatus === "waiting" && (
+                <p className="text-xs text-muted-foreground">
+                  Waiting for customer to enter PIN on their phone...
+                </p>
+              )}
+              {mpesaStatus === "completed" && (
+                <p className="text-xs text-green-600 font-medium">
+                  ✓ Payment received successfully
+                </p>
+              )}
+              {mpesaStatus === "failed" && (
+                <p className="text-xs text-destructive">
+                  Payment failed or was cancelled. You can try again or enter the M-Pesa code manually.
+                </p>
+              )}
+            </div>
+          )}
+
           <Button variant="outline" size="sm" onClick={addPayment} className="w-full">
             <Plus className="h-4 w-4 mr-1" /> Split Payment
           </Button>
 
           <Separator />
 
-          {/* Bank Account for reconciliation */}
           <div className="space-y-2">
             <Label className="text-muted-foreground text-xs">Deposit To (optional — links to Banking)</Label>
             <Select value={bankAccountId} onValueChange={setBankAccountId}>
