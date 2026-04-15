@@ -89,22 +89,26 @@ export default function PaymentDialog({ open, onOpenChange, total, onConfirm, pr
     setMpesaStatus("sending");
 
     try {
-      const { data, error } = await supabase.functions.invoke("mpesa", {
-        body: {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const session = (await supabase.auth.getSession()).data.session;
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/mpesa?action=stk-push`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
           phoneNumber: mpesaPhone,
           amount: mpesaPayment.amount,
           businessId: business.id,
           accountReference: "POS Sale",
-        },
-        headers: { "Content-Type": "application/json" },
-        method: "POST",
+        }),
       });
 
-      // Handle edge function returning query params
-      const params = new URLSearchParams("action=stk-push");
-
-      if (error) throw new Error(error.message || "STK Push failed");
-      if (data?.error) throw new Error(data.error);
+      const data = await res.json();
+      if (!res.ok || data?.error) throw new Error(data?.error || "STK Push failed");
 
       setMpesaCheckoutId(data.checkoutRequestId);
       setMpesaStatus("waiting");
