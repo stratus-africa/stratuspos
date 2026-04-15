@@ -531,6 +531,41 @@ export type Database = {
           },
         ]
       }
+      package_features: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          feature_key: string
+          feature_label: string
+          id: string
+          package_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          feature_key: string
+          feature_label: string
+          id?: string
+          package_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          feature_key?: string
+          feature_label?: string
+          id?: string
+          package_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_features_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
@@ -1069,6 +1104,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      subscription_packages: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          max_locations: number
+          max_products: number
+          max_users: number
+          monthly_price: number
+          name: string
+          paddle_monthly_price_id: string | null
+          paddle_product_id: string | null
+          paddle_yearly_price_id: string | null
+          sort_order: number
+          trial_days: number
+          updated_at: string
+          yearly_price: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          max_locations?: number
+          max_products?: number
+          max_users?: number
+          monthly_price?: number
+          name: string
+          paddle_monthly_price_id?: string | null
+          paddle_product_id?: string | null
+          paddle_yearly_price_id?: string | null
+          sort_order?: number
+          trial_days?: number
+          updated_at?: string
+          yearly_price?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          max_locations?: number
+          max_products?: number
+          max_users?: number
+          monthly_price?: number
+          name?: string
+          paddle_monthly_price_id?: string | null
+          paddle_product_id?: string | null
+          paddle_yearly_price_id?: string | null
+          sort_order?: number
+          trial_days?: number
+          updated_at?: string
+          yearly_price?: number
+        }
+        Relationships: []
       }
       subscriptions: {
         Row: {
