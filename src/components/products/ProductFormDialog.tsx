@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { useCategories, useBrands, useUnits, type ProductFormData, type Product } from "@/hooks/useProducts";
+import { useTaxRates } from "@/hooks/useTaxRates";
 
 interface Props {
   open: boolean;
@@ -19,6 +20,7 @@ export function ProductFormDialog({ open, onOpenChange, onSubmit, product, isLoa
   const { query: categoriesQuery } = useCategories();
   const { query: brandsQuery } = useBrands();
   const { query: unitsQuery } = useUnits();
+  const { query: taxRatesQuery } = useTaxRates();
 
   const [form, setForm] = useState<ProductFormData>({
     name: "",
@@ -32,6 +34,8 @@ export function ProductFormDialog({ open, onOpenChange, onSubmit, product, isLoa
     tax_rate: 16,
     is_active: true,
   });
+
+  const [selectedTaxRateId, setSelectedTaxRateId] = useState<string>("manual");
 
   useEffect(() => {
     if (product) {
@@ -47,13 +51,27 @@ export function ProductFormDialog({ open, onOpenChange, onSubmit, product, isLoa
         tax_rate: product.tax_rate ?? 16,
         is_active: product.is_active,
       });
+      // Try to match existing tax rate
+      const matched = taxRatesQuery.data?.find((tr) => tr.rate === (product.tax_rate ?? 16));
+      setSelectedTaxRateId(matched?.id || "manual");
     } else {
       setForm({
         name: "", sku: "", barcode: "", category_id: null, brand_id: null, unit_id: null,
         purchase_price: 0, selling_price: 0, tax_rate: 16, is_active: true,
       });
+      // Default to first standard rate if available
+      const defaultRate = taxRatesQuery.data?.find((tr) => tr.type === "standard");
+      setSelectedTaxRateId(defaultRate?.id || "manual");
     }
-  }, [product, open]);
+  }, [product, open, taxRatesQuery.data]);
+
+  const handleTaxRateChange = (taxRateId: string) => {
+    setSelectedTaxRateId(taxRateId);
+    if (taxRateId !== "manual") {
+      const tr = taxRatesQuery.data?.find((t) => t.id === taxRateId);
+      if (tr) setForm({ ...form, tax_rate: tr.rate });
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,6 +81,9 @@ export function ProductFormDialog({ open, onOpenChange, onSubmit, product, isLoa
   const margin = form.selling_price > 0 && form.purchase_price > 0
     ? (((form.selling_price - form.purchase_price) / form.purchase_price) * 100).toFixed(1)
     : "0.0";
+
+  const taxRates = taxRatesQuery.data || [];
+  const selectedTaxRate = taxRates.find((t) => t.id === selectedTaxRateId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -145,8 +166,28 @@ export function ProductFormDialog({ open, onOpenChange, onSubmit, product, isLoa
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Tax Rate (%)</Label>
-              <Input type="number" min={0} step={0.01} value={form.tax_rate} onChange={(e) => setForm({ ...form, tax_rate: parseFloat(e.target.value) || 0 })} />
+              <Label>Tax Rate</Label>
+              {taxRates.length > 0 ? (
+                <Select value={selectedTaxRateId} onValueChange={handleTaxRateChange}>
+                  <SelectTrigger><SelectValue placeholder="Select tax rate" /></SelectTrigger>
+                  <SelectContent>
+                    {taxRates.map((tr) => (
+                      <SelectItem key={tr.id} value={tr.id}>
+                        {tr.name} ({tr.rate}%){tr.exempt_reason ? ` — ${tr.exempt_reason}` : ""}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="manual">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input type="number" min={0} step={0.01} value={form.tax_rate} onChange={(e) => setForm({ ...form, tax_rate: parseFloat(e.target.value) || 0 })} />
+              )}
+              {selectedTaxRateId === "manual" && taxRates.length > 0 && (
+                <Input type="number" min={0} step={0.01} value={form.tax_rate} onChange={(e) => setForm({ ...form, tax_rate: parseFloat(e.target.value) || 0 })} placeholder="Custom rate %" className="mt-1" />
+              )}
+              {selectedTaxRate?.type === "exempt" && selectedTaxRate.exempt_reason && (
+                <p className="text-xs text-muted-foreground mt-1">Exempt: {selectedTaxRate.exempt_reason}</p>
+              )}
             </div>
             <div className="flex items-center gap-3 pt-6">
               <Switch checked={form.is_active} onCheckedChange={(checked) => setForm({ ...form, is_active: checked })} />

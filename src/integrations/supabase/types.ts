@@ -1180,6 +1180,53 @@ export type Database = {
           },
         ]
       }
+      tax_rates: {
+        Row: {
+          business_id: string
+          created_at: string
+          exempt_reason: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          rate: number
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          exempt_reason?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          rate?: number
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          exempt_reason?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          rate?: number
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_rates_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       units: {
         Row: {
           abbreviation: string | null
