@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/contexts/BusinessContext";
-import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 
 export interface InventoryItem {
@@ -47,49 +46,57 @@ export function useInventory(locationId?: string) {
   });
 
   const adjustStock = useMutation({
-    mutationFn: async (adj: {
-      product_id: string;
+    mutationFn: async (batch: {
+      items: { product_id: string; quantity_change: number }[];
       location_id: string;
-      quantity_change: number;
       reason: string;
       notes?: string;
       created_by: string;
     }) => {
-      // Insert adjustment record
-      const { error: adjError } = await supabase
-        .from("stock_adjustments")
-        .insert(adj);
-      if (adjError) throw adjError;
-
-      // Upsert inventory
-      const { data: existing } = await supabase
-        .from("inventory")
-        .select("id, quantity")
-        .eq("product_id", adj.product_id)
-        .eq("location_id", adj.location_id)
-        .maybeSingle();
-
-      if (existing) {
-        const { error } = await supabase
-          .from("inventory")
-          .update({ quantity: existing.quantity + adj.quantity_change })
-          .eq("id", existing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from("inventory")
+      for (const item of batch.items) {
+        // Insert adjustment record
+        const { error: adjError } = await supabase
+          .from("stock_adjustments")
           .insert({
-            product_id: adj.product_id,
-            location_id: adj.location_id,
-            quantity: adj.quantity_change,
+            product_id: item.product_id,
+            location_id: batch.location_id,
+            quantity_change: item.quantity_change,
+            reason: batch.reason,
+            notes: batch.notes || null,
+            created_by: batch.created_by,
           });
-        if (error) throw error;
+        if (adjError) throw adjError;
+
+        // Upsert inventory
+        const { data: existing } = await supabase
+          .from("inventory")
+          .select("id, quantity")
+          .eq("product_id", item.product_id)
+          .eq("location_id", batch.location_id)
+          .maybeSingle();
+
+        if (existing) {
+          const { error } = await supabase
+            .from("inventory")
+            .update({ quantity: existing.quantity + item.quantity_change })
+            .eq("id", existing.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from("inventory")
+            .insert({
+              product_id: item.product_id,
+              location_id: batch.location_id,
+              quantity: item.quantity_change,
+            });
+          if (error) throw error;
+        }
       }
     },
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       queryClient.invalidateQueries({ queryKey: ["inventory"] });
       queryClient.invalidateQueries({ queryKey: ["stock_adjustments"] });
-      toast.success("Stock adjusted");
+      toast.success(`Stock adjusted for ${vars.items.length} product(s)`);
     },
     onError: (e) => toast.error(e.message),
   });
