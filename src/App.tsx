@@ -25,10 +25,12 @@ import ChartOfAccounts from "./pages/ChartOfAccounts";
 import Banking from "./pages/Banking";
 
 import NotFound from "./pages/NotFound";
+import Landing from "./pages/Landing";
 import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
 import SuperAdminBusinesses from "./pages/super-admin/SuperAdminBusinesses";
 import SuperAdminUsers from "./pages/super-admin/SuperAdminUsers";
 import SuperAdminActivity from "./pages/super-admin/SuperAdminActivity";
+import SuperAdminPackages from "./pages/super-admin/SuperAdminPackages";
 
 const queryClient = new QueryClient();
 
