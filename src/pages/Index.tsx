@@ -1,234 +1,102 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useBusiness } from "@/contexts/BusinessContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useDashboard } from "@/hooks/useDashboard";
-import { DollarSign, ShoppingCart, Package, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, BarChart, Bar, ResponsiveContainer } from "recharts";
-import { format, parseISO } from "date-fns";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-
-const chartConfig = {
-  total: { label: "Sales (KES)", color: "hsl(var(--primary))" },
-  revenue: { label: "Revenue (KES)", color: "hsl(var(--primary))" },
-};
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DashboardStatCards } from "@/components/dashboard/DashboardStatCards";
+import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
+import { DashboardBottomRow } from "@/components/dashboard/DashboardBottomRow";
+import { CalendarDays } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const Dashboard = () => {
-  const { business, currentLocation } = useBusiness();
-  const { todaySales, todayCount, todayProfit, todayExpenses, salesTrend, topProducts, lowStockItems, loading } =
-    useDashboard();
+  const { business, currentLocation, locations, setCurrentLocation } = useBusiness();
+  const { user } = useAuth();
+  const dashboardData = useDashboard();
+  const { loading, dateFilter, setDateFilter } = dashboardData;
 
-  const stats = [
-    {
-      title: "Today's Sales",
-      value: `KES ${todaySales.toLocaleString()}`,
-      icon: DollarSign,
-      sub: `${todayCount} transactions`,
-      color: "text-blue-500",
-    },
-    {
-      title: "Items Sold",
-      value: `${todayCount}`,
-      icon: ShoppingCart,
-      sub: "Today",
-      color: "text-green-500",
-    },
-    {
-      title: "Low Stock Items",
-      value: `${lowStockItems.length}`,
-      icon: Package,
-      sub: lowStockItems.length > 0 ? `${lowStockItems.length} alerts` : "All stocked",
-      color: lowStockItems.length > 0 ? "text-orange-500" : "text-green-500",
-    },
-    {
-      title: "Profit Today",
-      value: `KES ${todayProfit.toLocaleString()}`,
-      icon: todayProfit >= 0 ? TrendingUp : TrendingDown,
-      sub: `Expenses: KES ${todayExpenses.toLocaleString()}`,
-      color: todayProfit >= 0 ? "text-green-500" : "text-red-500",
-    },
-  ];
+  const userName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Admin";
 
   if (loading) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Loading...</p>
+        <div className="bg-primary rounded-xl p-6">
+          <Skeleton className="h-8 w-64 bg-primary-foreground/20" />
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i}>
-              <CardHeader className="pb-2"><Skeleton className="h-4 w-24" /></CardHeader>
-              <CardContent><Skeleton className="h-8 w-32" /></CardContent>
-            </Card>
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+            <Skeleton key={i} className="h-24 rounded-xl" />
           ))}
         </div>
       </div>
     );
   }
 
+  const filterLabels: Record<string, string> = {
+    today: "Today",
+    "7days": "Last 7 Days",
+    "30days": "Last 30 Days",
+    all: "All Time",
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">
-          {business?.name} — {currentLocation?.name}
-        </p>
+      {/* Welcome Header */}
+      <div className="bg-primary rounded-xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-primary-foreground">
+            Welcome {userName}, 👋
+          </h1>
+          <p className="text-sm text-primary-foreground/70">
+            {business?.name} — {currentLocation?.name}
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          {locations.length > 1 && (
+            <Select
+              value={currentLocation?.id}
+              onValueChange={(val) => {
+                const loc = locations.find((l) => l.id === val);
+                if (loc) setCurrentLocation(loc);
+              }}
+            >
+              <SelectTrigger className="w-[180px] bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground">
+                <SelectValue placeholder="Select location" />
+              </SelectTrigger>
+              <SelectContent>
+                {locations.map((loc) => (
+                  <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20">
+                <CalendarDays className="h-4 w-4 mr-2" />
+                {filterLabels[dateFilter]}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {Object.entries(filterLabels).map(([key, label]) => (
+                <DropdownMenuItem key={key} onClick={() => setDateFilter(key)}>
+                  {label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <Card key={stat.title}>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground">{stat.sub}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* Stat Cards */}
+      <DashboardStatCards data={dashboardData} />
 
-      {/* Charts Row */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Sales Trend */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Sales Trend (30 Days)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {salesTrend.length > 0 ? (
-              <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                <AreaChart data={salesTrend}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis
-                    dataKey="date"
-                    tickFormatter={(v) => format(parseISO(v), "dd MMM")}
-                    tick={{ fontSize: 11 }}
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
-                  <ChartTooltip
-                    content={
-                      <ChartTooltipContent
-                        labelFormatter={(v) => format(parseISO(v as string), "dd MMM yyyy")}
-                      />
-                    }
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="total"
-                    stroke="var(--color-total)"
-                    fill="var(--color-total)"
-                    fillOpacity={0.15}
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ChartContainer>
-            ) : (
-              <p className="text-sm text-muted-foreground">No sales data yet.</p>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Top Selling Products */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Top Selling Products</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {topProducts.length > 0 ? (
-              <ChartContainer config={chartConfig} className="h-[250px] w-full">
-                <BarChart data={topProducts} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis type="number" tickFormatter={(v) => `KES ${v.toLocaleString()}`} tick={{ fontSize: 11 }} />
-                  <YAxis
-                    type="category"
-                    dataKey="product_name"
-                    width={100}
-                    tick={{ fontSize: 11 }}
-                  />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="total_revenue" name="Revenue" fill="var(--color-revenue)" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ChartContainer>
-            ) : (
-              <p className="text-sm text-muted-foreground">No product sales yet. Make your first sale!</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Charts */}
+      <DashboardCharts salesTrend={dashboardData.salesTrend} topProducts={dashboardData.topProducts} />
 
       {/* Bottom Row */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* P&L Summary */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Profit & Loss (Today)</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Sales Revenue</span>
-              <span className="font-medium">KES {todaySales.toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Expenses</span>
-              <span className="font-medium text-red-500">- KES {todayExpenses.toLocaleString()}</span>
-            </div>
-            <div className="border-t pt-2 flex justify-between">
-              <span className="text-sm font-medium">Net Profit</span>
-              <span className={`font-bold ${todayProfit >= 0 ? "text-green-500" : "text-red-500"}`}>
-                KES {todayProfit.toLocaleString()}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Low Stock Alerts */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg">Low Stock Alerts</CardTitle>
-            {lowStockItems.length > 0 && (
-              <Badge variant="destructive" className="gap-1">
-                <AlertTriangle className="h-3 w-3" /> {lowStockItems.length}
-              </Badge>
-            )}
-          </CardHeader>
-          <CardContent>
-            {lowStockItems.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead className="text-right">Stock</TableHead>
-                    <TableHead className="text-right">Threshold</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {lowStockItems.slice(0, 5).map((item) => (
-                    <TableRow key={item.product_id}>
-                      <TableCell className="font-medium">{item.product_name}</TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant={item.quantity === 0 ? "destructive" : "secondary"}>
-                          {item.quantity}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground">{item.threshold}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <p className="text-sm text-muted-foreground">All products are well stocked.</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      <DashboardBottomRow data={dashboardData} />
     </div>
   );
 };
