@@ -70,8 +70,12 @@ const POS = () => {
   };
 
   const handleEndDay = async (closingCash: number, notes?: string) => {
-    await session.endDay(closingCash, notes);
+    const closedSession = await session.endDay(closingCash, notes);
     setEndDayOpen(false);
+    if (closedSession) {
+      // Auto-open Z Report after closing
+      setZReportOpen(true);
+    }
   };
 
   // Show loading while checking session
