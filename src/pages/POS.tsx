@@ -8,19 +8,24 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, Pause, Play, X,
-  User, List, LayoutGrid,
+  User, List, LayoutGrid, Sunrise, Sunset, FileText, Clock,
 } from "lucide-react";
 import { useProducts, useCategories } from "@/hooks/useProducts";
 import { useCustomers } from "@/hooks/useSales";
 import { usePOS, CartItem, PaymentEntry } from "@/hooks/usePOS";
+import { usePOSSession } from "@/hooks/usePOSSession";
 import PaymentDialog from "@/components/pos/PaymentDialog";
 import ReceiptDialog from "@/components/pos/ReceiptDialog";
+import StartDayDialog from "@/components/pos/StartDayDialog";
+import EndDayDialog from "@/components/pos/EndDayDialog";
+import ZReportDialog from "@/components/pos/ZReportDialog";
 
 const POS = () => {
   const { productsQuery } = useProducts();
   const { query: categoriesQuery } = useCategories();
   const { query: customersQuery } = useCustomers();
   const pos = usePOS();
+  const session = usePOSSession();
 
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -28,6 +33,9 @@ const POS = () => {
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [receiptData, setReceiptData] = useState<any>(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
+  const [startDayOpen, setStartDayOpen] = useState(false);
+  const [endDayOpen, setEndDayOpen] = useState(false);
+  const [zReportOpen, setZReportOpen] = useState(false);
 
   const products = productsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
@@ -56,8 +64,82 @@ const POS = () => {
     }
   };
 
+  const handleStartDay = async (openingFloat: number) => {
+    await session.startDay(openingFloat);
+    setStartDayOpen(false);
+  };
+
+  const handleEndDay = async (closingCash: number, notes?: string) => {
+    await session.endDay(closingCash, notes);
+    setEndDayOpen(false);
+  };
+
+  // Show loading while checking session
+  if (session.loading) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-6rem)]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+
+  // No active session — show Start of Day prompt
+  if (!session.activeSession) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-6rem)]">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-8 pb-6 text-center space-y-4">
+            <div className="mx-auto w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center">
+              <Sunrise className="h-8 w-8 text-amber-500" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">Start Your Day</h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Open the register to begin processing sales. You'll need to count and enter your starting cash float.
+              </p>
+            </div>
+            <div className="flex gap-2 justify-center">
+              <Button size="lg" onClick={() => setStartDayOpen(true)}>
+                <Sunrise className="mr-2 h-5 w-5" />
+                Start of Day
+              </Button>
+              <Button size="lg" variant="outline" onClick={() => setZReportOpen(true)}>
+                <FileText className="mr-2 h-5 w-5" />
+                Z Reports
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <StartDayDialog open={startDayOpen} onOpenChange={setStartDayOpen} onConfirm={handleStartDay} />
+        <ZReportDialog
+          open={zReportOpen}
+          onOpenChange={setZReportOpen}
+          sessions={[]}
+          onLoadSessions={session.fetchSessionHistory}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-6rem)]">
+      {/* Session status bar */}
+      <div className="absolute top-16 right-4 z-10 flex items-center gap-2">
+        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-200 gap-1">
+          <Clock className="h-3 w-3" />
+          Register Open since {new Date(session.activeSession.opened_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </Badge>
+        <Button size="sm" variant="outline" onClick={() => setZReportOpen(true)}>
+          <FileText className="h-3.5 w-3.5 mr-1" />
+          Z Report
+        </Button>
+        <Button size="sm" variant="destructive" onClick={() => setEndDayOpen(true)}>
+          <Sunset className="h-3.5 w-3.5 mr-1" />
+          End Day
+        </Button>
+      </div>
+
       {/* Left: Product selection */}
       <div className="flex-1 flex flex-col min-h-0">
         {/* Search & filters */}
@@ -239,6 +321,22 @@ const POS = () => {
         open={receiptOpen}
         onOpenChange={setReceiptOpen}
         data={receiptData}
+      />
+
+      {session.activeSession && (
+        <EndDayDialog
+          open={endDayOpen}
+          onOpenChange={setEndDayOpen}
+          session={session.activeSession}
+          onConfirm={handleEndDay}
+        />
+      )}
+
+      <ZReportDialog
+        open={zReportOpen}
+        onOpenChange={setZReportOpen}
+        sessions={[]}
+        onLoadSessions={session.fetchSessionHistory}
       />
     </div>
   );
