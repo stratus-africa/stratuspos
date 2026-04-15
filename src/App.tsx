@@ -138,6 +138,7 @@ const App = () => (
         <AuthProvider>
           <BusinessProvider>
             <Routes>
+              <Route path="/landing" element={<Landing />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/super-admin/*" element={<SuperAdminRoutes />} />
               <Route path="/*" element={<ProtectedRoutes />} />
