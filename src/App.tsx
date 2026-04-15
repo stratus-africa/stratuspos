@@ -23,6 +23,7 @@ import Reports from "./pages/Reports";
 import SettingsPage from "./pages/SettingsPage";
 import ChartOfAccounts from "./pages/ChartOfAccounts";
 import Banking from "./pages/Banking";
+import RolesManagement from "./pages/RolesManagement";
 import NotFound from "./pages/NotFound";
 import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
 import SuperAdminBusinesses from "./pages/super-admin/SuperAdminBusinesses";
@@ -119,6 +120,7 @@ const ProtectedRoutes = () => {
         <Route path="/banking" element={guard(["admin"], <FeatureGate requiredTier="pro"><Banking /></FeatureGate>)} />
         <Route path="/reports" element={guard(["admin"], <FeatureGate requiredTier="pro"><Reports /></FeatureGate>)} />
         <Route path="/settings" element={guard(["admin"], <SettingsPage />)} />
+        <Route path="/roles" element={guard(["admin"], <RolesManagement />)} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AppLayout>
