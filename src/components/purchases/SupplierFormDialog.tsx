@@ -27,7 +27,7 @@ export function SupplierFormDialog({ open, onOpenChange, onSubmit, supplier, isL
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ name: form.name, phone: form.phone || null, email: form.email || null, address: form.address || null });
+    onSubmit({ name: form.name, phone: form.phone || null, email: form.email || null, address: form.address || null, kra_pin: form.kra_pin || null });
     onOpenChange(false);
   };
 
@@ -51,6 +51,10 @@ export function SupplierFormDialog({ open, onOpenChange, onSubmit, supplier, isL
               <Label>Email</Label>
               <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label>KRA PIN</Label>
+            <Input value={form.kra_pin} onChange={(e) => setForm({ ...form, kra_pin: e.target.value })} placeholder="e.g. P051234567Z" />
           </div>
           <div className="space-y-2">
             <Label>Address</Label>
