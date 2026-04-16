@@ -9,10 +9,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Package, Plus, Search, Pencil, Trash2, Tag, Layers, Ruler, Download, Upload, FileDown, Lock } from "lucide-react";
+import { Package, Plus, Search, Pencil, Trash2, Tag, Layers, Ruler, Download, Upload, FileDown, Lock, ScanLine } from "lucide-react";
 import { useProducts, useCategories, useBrands, useUnits, type ProductFormData, type Product } from "@/hooks/useProducts";
 import { ProductFormDialog } from "@/components/products/ProductFormDialog";
 import { QuickAddDialog } from "@/components/products/QuickAddDialog";
+import ProductDetailDialog from "@/components/products/ProductDetailDialog";
+import BarcodeScanner from "@/components/BarcodeScanner";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -40,6 +42,18 @@ const Products = () => {
   const [importing, setImporting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [detailProduct, setDetailProduct] = useState<Product | null>(null);
+
+  const handleScanned = (code: string) => {
+    setSearch(code);
+    const match = products.find((p) => p.barcode === code || p.sku === code);
+    if (match) {
+      setDetailProduct(match);
+    } else {
+      toast.info(`No product found for "${code}". Search filtered.`);
+    }
+  };
 
   const products = productsQuery.data || [];
   const atProductLimit = maxProducts !== Infinity && products.length >= maxProducts;
@@ -191,6 +205,9 @@ const Products = () => {
         <h1 className="text-2xl font-bold">Products</h1>
         <div className="flex gap-2">
           <input ref={fileInputRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} />
+          <Button variant="outline" onClick={() => setScannerOpen(true)}>
+            <ScanLine className="mr-2 h-4 w-4" /> Scan
+          </Button>
           <Button variant="outline" size="sm" onClick={downloadTemplate}>
             <FileDown className="mr-2 h-4 w-4" /> Template
           </Button>
@@ -313,7 +330,14 @@ const Products = () => {
                           <TableCell>
                             <Checkbox checked={selectedIds.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} />
                           </TableCell>
-                          <TableCell className="font-medium">{p.name}</TableCell>
+                          <TableCell className="font-medium">
+                            <button
+                              onClick={() => setDetailProduct(p)}
+                              className="text-left hover:text-primary hover:underline"
+                            >
+                              {p.name}
+                            </button>
+                          </TableCell>
                           <TableCell className="text-muted-foreground">{p.sku || "—"}</TableCell>
                           <TableCell>{p.categories?.name || "—"}</TableCell>
                           <TableCell className="text-right">{formatKES(p.purchase_price)}</TableCell>
@@ -442,6 +466,13 @@ const Products = () => {
       <QuickAddDialog open={catDialogOpen} onOpenChange={setCatDialogOpen} title="Add Category" label="Category Name" onSubmit={(name) => createCategory.mutate(name)} isLoading={createCategory.isPending} />
       <QuickAddDialog open={brandDialogOpen} onOpenChange={setBrandDialogOpen} title="Add Brand" label="Brand Name" onSubmit={(name) => createBrand.mutate(name)} isLoading={createBrand.isPending} />
       <QuickAddDialog open={unitDialogOpen} onOpenChange={setUnitDialogOpen} title="Add Unit" label="Unit Name (e.g. Pieces)" onSubmit={(name) => createUnit.mutate({ name })} isLoading={createUnit.isPending} />
+
+      <BarcodeScanner open={scannerOpen} onOpenChange={setScannerOpen} onDetected={handleScanned} />
+      <ProductDetailDialog
+        product={detailProduct}
+        open={!!detailProduct}
+        onOpenChange={(o) => { if (!o) setDetailProduct(null); }}
+      />
     </div>
   );
 };
