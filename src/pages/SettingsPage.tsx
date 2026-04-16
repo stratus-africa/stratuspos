@@ -11,17 +11,6 @@ import { PaymentAccountsTab } from "@/components/settings/PaymentAccountsTab";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { useSearchParams } from "react-router-dom";
 
-const tabs = [
-  { value: "business", label: "Business", icon: Building2 },
-  { value: "locations", label: "Locations", icon: MapPin },
-  { value: "tax", label: "Tax", icon: Percent },
-  { value: "users", label: "Users", icon: Users },
-  { value: "roles", label: "Roles", icon: ShieldCheck },
-  { value: "payments", label: "Payments", icon: Wallet },
-  { value: "receipt", label: "Receipt", icon: Receipt },
-  { value: "subscription", label: "Plan", icon: CreditCard },
-];
-
 const SettingsPage = () => {
   const [searchParams] = useSearchParams();
   const defaultTab = searchParams.get("tab") || "business";
@@ -30,30 +19,50 @@ const SettingsPage = () => {
     <div className="space-y-4">
       <PaymentTestModeBanner />
       <h1 className="text-2xl font-bold">Settings</h1>
-      <Tabs defaultValue={defaultTab} orientation="vertical" className="flex gap-6">
-        <TabsList className="flex flex-col h-auto w-48 shrink-0 bg-muted/50 p-1.5 rounded-lg">
-          {tabs.map((tab) => (
-            <TabsTrigger
-              key={tab.value}
-              value={tab.value}
-              className="w-full justify-start gap-2 px-3 py-2 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm"
-            >
-              <tab.icon className="h-4 w-4" />
-              {tab.label}
-            </TabsTrigger>
-          ))}
+      <Tabs defaultValue={defaultTab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-8">
+          <TabsTrigger value="business" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <Building2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Business</span>
+          </TabsTrigger>
+          <TabsTrigger value="locations" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <MapPin className="h-4 w-4" />
+            <span className="hidden sm:inline">Locations</span>
+          </TabsTrigger>
+          <TabsTrigger value="tax" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <Percent className="h-4 w-4" />
+            <span className="hidden sm:inline">Tax</span>
+          </TabsTrigger>
+          <TabsTrigger value="users" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <Users className="h-4 w-4" />
+            <span className="hidden sm:inline">Users</span>
+          </TabsTrigger>
+          <TabsTrigger value="roles" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <ShieldCheck className="h-4 w-4" />
+            <span className="hidden sm:inline">Roles</span>
+          </TabsTrigger>
+          <TabsTrigger value="payments" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <Wallet className="h-4 w-4" />
+            <span className="hidden sm:inline">Payments</span>
+          </TabsTrigger>
+          <TabsTrigger value="receipt" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <Receipt className="h-4 w-4" />
+            <span className="hidden sm:inline">Receipt</span>
+          </TabsTrigger>
+          <TabsTrigger value="subscription" className="flex items-center gap-1.5 text-xs sm:text-sm">
+            <CreditCard className="h-4 w-4" />
+            <span className="hidden sm:inline">Plan</span>
+          </TabsTrigger>
         </TabsList>
 
-        <div className="flex-1 min-w-0">
-          <TabsContent value="business" className="mt-0"><BusinessProfileTab /></TabsContent>
-          <TabsContent value="locations" className="mt-0"><LocationsTab /></TabsContent>
-          <TabsContent value="tax" className="mt-0"><TaxSettingsTab /></TabsContent>
-          <TabsContent value="users" className="mt-0"><UserManagementTab /></TabsContent>
-          <TabsContent value="roles" className="mt-0"><RolesPermissionsTab /></TabsContent>
-          <TabsContent value="payments" className="mt-0"><PaymentAccountsTab /></TabsContent>
-          <TabsContent value="receipt" className="mt-0"><ReceiptSettingsTab /></TabsContent>
-          <TabsContent value="subscription" className="mt-0"><SubscriptionTab /></TabsContent>
-        </div>
+        <TabsContent value="business"><BusinessProfileTab /></TabsContent>
+        <TabsContent value="locations"><LocationsTab /></TabsContent>
+        <TabsContent value="tax"><TaxSettingsTab /></TabsContent>
+        <TabsContent value="users"><UserManagementTab /></TabsContent>
+        <TabsContent value="roles"><RolesPermissionsTab /></TabsContent>
+        <TabsContent value="payments"><PaymentAccountsTab /></TabsContent>
+        <TabsContent value="receipt"><ReceiptSettingsTab /></TabsContent>
+        <TabsContent value="subscription"><SubscriptionTab /></TabsContent>
       </Tabs>
     </div>
   );
