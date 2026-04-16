@@ -207,18 +207,6 @@ const POS = () => {
               <ShoppingCart className="h-5 w-5" /> Cart
               {pos.cart.length > 0 && <Badge variant="secondary">{pos.cart.length}</Badge>}
             </CardTitle>
-            <div className="flex gap-1">
-              {pos.cart.length > 0 && (
-                <>
-                  <Button size="sm" variant="outline" onClick={pos.holdSale}>
-                    <Pause className="h-4 w-4 mr-1" /> Hold
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={pos.clearCart}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </>
-              )}
-            </div>
           </div>
           {/* Customer selector */}
           <Select
