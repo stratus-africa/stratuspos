@@ -10,6 +10,7 @@ export interface Supplier {
   phone: string | null;
   email: string | null;
   address: string | null;
+  kra_pin: string | null;
   balance: number;
 }
 

@@ -15,19 +15,19 @@ interface Props {
 }
 
 export function SupplierFormDialog({ open, onOpenChange, onSubmit, supplier, isLoading }: Props) {
-  const [form, setForm] = useState({ name: "", phone: "", email: "", address: "" });
+  const [form, setForm] = useState({ name: "", phone: "", email: "", address: "", kra_pin: "" });
 
   useEffect(() => {
     if (supplier) {
-      setForm({ name: supplier.name, phone: supplier.phone || "", email: supplier.email || "", address: supplier.address || "" });
+      setForm({ name: supplier.name, phone: supplier.phone || "", email: supplier.email || "", address: supplier.address || "", kra_pin: supplier.kra_pin || "" });
     } else {
-      setForm({ name: "", phone: "", email: "", address: "" });
+      setForm({ name: "", phone: "", email: "", address: "", kra_pin: "" });
     }
   }, [supplier, open]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ name: form.name, phone: form.phone || null, email: form.email || null, address: form.address || null });
+    onSubmit({ name: form.name, phone: form.phone || null, email: form.email || null, address: form.address || null, kra_pin: form.kra_pin || null });
     onOpenChange(false);
   };
 
@@ -51,6 +51,10 @@ export function SupplierFormDialog({ open, onOpenChange, onSubmit, supplier, isL
               <Label>Email</Label>
               <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label>KRA PIN</Label>
+            <Input value={form.kra_pin} onChange={(e) => setForm({ ...form, kra_pin: e.target.value })} placeholder="e.g. P051234567Z" />
           </div>
           <div className="space-y-2">
             <Label>Address</Label>
