@@ -269,7 +269,7 @@ const POS = () => {
               </Button>
               <Button
                 variant="outline"
-                className="flex flex-col items-center gap-0.5 h-auto py-3 border-emerald-500 text-emerald-600 hover:bg-emerald-50"
+                className="flex flex-col items-center gap-0.5 h-auto py-3 bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700"
                 disabled={pos.cart.length === 0}
                 onClick={() => { setPaymentOpen(true); }}
               >
@@ -280,7 +280,7 @@ const POS = () => {
             <div className="grid grid-cols-3 gap-1.5">
               <Button
                 variant="outline"
-                className="flex flex-col items-center gap-0.5 h-auto py-2 border-blue-500 text-blue-600 hover:bg-blue-50"
+                className="flex flex-col items-center gap-0.5 h-auto py-2 bg-orange-500 text-white border-orange-500 hover:bg-orange-600"
                 disabled={pos.cart.length === 0}
                 onClick={() => { setPaymentOpen(true); }}
               >
@@ -289,7 +289,7 @@ const POS = () => {
               </Button>
               <Button
                 variant="outline"
-                className="flex flex-col items-center gap-0.5 h-auto py-2"
+                className="flex flex-col items-center gap-0.5 h-auto py-2 bg-yellow-500 text-white border-yellow-500 hover:bg-yellow-600"
                 disabled={pos.cart.length === 0}
                 onClick={pos.holdSale}
               >
