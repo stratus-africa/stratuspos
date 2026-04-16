@@ -200,7 +200,7 @@ const POS = () => {
       </div>
 
       {/* Right: Cart */}
-      <Card className="w-full lg:w-96 flex flex-col min-h-0">
+      <Card className="w-full lg:w-[28rem] flex flex-col min-h-0">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-lg flex items-center gap-2">
