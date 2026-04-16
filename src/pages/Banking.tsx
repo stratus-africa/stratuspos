@@ -121,7 +121,61 @@ export default function Banking() {
     fetchData();
   };
 
-  const filteredTxns = selectedAccount === "all"
+  const handleTransfer = async () => {
+    if (!business || !user) return;
+    const { from_account_id, to_account_id, amount: amtStr, date, reference, description } = transferForm;
+
+    if (!from_account_id || !to_account_id) { toast.error("Select both source and destination accounts"); return; }
+    if (from_account_id === to_account_id) { toast.error("Source and destination must be different"); return; }
+
+    const amount = parseFloat(amtStr);
+    if (isNaN(amount) || amount <= 0) { toast.error("Enter a valid amount"); return; }
+
+    const fromAcc = accounts.find((a) => a.id === from_account_id);
+    const toAcc = accounts.find((a) => a.id === to_account_id);
+    if (!fromAcc || !toAcc) { toast.error("Invalid account selection"); return; }
+
+    if (Number(fromAcc.balance) < amount) {
+      toast.error(`Insufficient balance in ${fromAcc.name} (KES ${Number(fromAcc.balance).toLocaleString()})`);
+      return;
+    }
+
+    setTransferLoading(true);
+    try {
+      const transferRef = reference?.trim() || `TRF-${Date.now()}`;
+      const desc = description?.trim() || `Transfer from ${fromAcc.name} to ${toAcc.name}`;
+
+      // Insert two linked transactions
+      const { error: txnError } = await supabase.from("bank_transactions").insert([
+        {
+          business_id: business.id, bank_account_id: from_account_id, type: "transfer_out",
+          amount, date, reference: transferRef, description: desc,
+          category: "Transfer", contact_name: toAcc.name, created_by: user.id,
+        },
+        {
+          business_id: business.id, bank_account_id: to_account_id, type: "transfer_in",
+          amount, date, reference: transferRef, description: desc,
+          category: "Transfer", contact_name: fromAcc.name, created_by: user.id,
+        },
+      ]);
+      if (txnError) throw txnError;
+
+      // Update both balances in parallel
+      await Promise.all([
+        supabase.from("bank_accounts").update({ balance: Number(fromAcc.balance) - amount }).eq("id", fromAcc.id),
+        supabase.from("bank_accounts").update({ balance: Number(toAcc.balance) + amount }).eq("id", toAcc.id),
+      ]);
+
+      toast.success(`Transferred KES ${amount.toLocaleString()} from ${fromAcc.name} to ${toAcc.name}`);
+      setTransferDialogOpen(false);
+      setTransferForm({ from_account_id: "", to_account_id: "", amount: "", date: format(new Date(), "yyyy-MM-dd"), reference: "", description: "" });
+      fetchData();
+    } catch (err: any) {
+      toast.error(`Transfer failed: ${err.message}`);
+    } finally {
+      setTransferLoading(false);
+    }
+  };
     ? transactions
     : transactions.filter((t) => t.bank_account_id === selectedAccount);
 
