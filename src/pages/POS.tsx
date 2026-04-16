@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, Pause, Play, X,
-  User, List, LayoutGrid, Sunrise, Sunset, FileText, Clock,
+  User, List, LayoutGrid, Sunrise, Banknote, Smartphone, CreditCard,
 } from "lucide-react";
 import { useProducts, useCategories } from "@/hooks/useProducts";
 import { useCustomers } from "@/hooks/useSales";
@@ -17,8 +17,6 @@ import { usePOSSession } from "@/hooks/usePOSSession";
 import PaymentDialog from "@/components/pos/PaymentDialog";
 import ReceiptDialog from "@/components/pos/ReceiptDialog";
 import StartDayDialog from "@/components/pos/StartDayDialog";
-import EndDayDialog from "@/components/pos/EndDayDialog";
-import ZReportDialog from "@/components/pos/ZReportDialog";
 
 const POS = () => {
   const { productsQuery } = useProducts();
@@ -34,8 +32,6 @@ const POS = () => {
   const [receiptData, setReceiptData] = useState<any>(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [startDayOpen, setStartDayOpen] = useState(false);
-  const [endDayOpen, setEndDayOpen] = useState(false);
-  const [zReportOpen, setZReportOpen] = useState(false);
 
   const products = productsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
@@ -69,14 +65,6 @@ const POS = () => {
     setStartDayOpen(false);
   };
 
-  const handleEndDay = async (closingCash: number, notes?: string) => {
-    const closedSession = await session.endDay(closingCash, notes);
-    setEndDayOpen(false);
-    if (closedSession) {
-      // Auto-open Z Report after closing
-      setZReportOpen(true);
-    }
-  };
 
   // Show loading while checking session
   if (session.loading) {
@@ -116,21 +104,6 @@ const POS = () => {
 
   return (
     <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-6rem)]">
-      {/* Session status bar */}
-      <div className="absolute top-16 right-4 z-10 flex items-center gap-2">
-        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-200 gap-1">
-          <Clock className="h-3 w-3" />
-          Register Open since {new Date(session.activeSession.opened_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </Badge>
-        <Button size="sm" variant="outline" onClick={() => setZReportOpen(true)}>
-          <FileText className="h-3.5 w-3.5 mr-1" />
-          Z Report
-        </Button>
-        <Button size="sm" variant="destructive" onClick={() => setEndDayOpen(true)}>
-          <Sunset className="h-3.5 w-3.5 mr-1" />
-          End Day
-        </Button>
-      </div>
 
       {/* Left: Product selection */}
       <div className="flex-1 flex flex-col min-h-0">
@@ -234,18 +207,6 @@ const POS = () => {
               <ShoppingCart className="h-5 w-5" /> Cart
               {pos.cart.length > 0 && <Badge variant="secondary">{pos.cart.length}</Badge>}
             </CardTitle>
-            <div className="flex gap-1">
-              {pos.cart.length > 0 && (
-                <>
-                  <Button size="sm" variant="outline" onClick={pos.holdSale}>
-                    <Pause className="h-4 w-4 mr-1" /> Hold
-                  </Button>
-                  <Button size="sm" variant="ghost" onClick={pos.clearCart}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </>
-              )}
-            </div>
           </div>
           {/* Customer selector */}
           <Select
@@ -287,17 +248,63 @@ const POS = () => {
             )}
           </ScrollArea>
 
-          {pos.cart.length > 0 && (
-            <div className="pt-3 border-t mt-2 space-y-1">
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>KES {pos.cartSubtotal.toLocaleString()}</span></div>
-              <div className="flex justify-between text-sm"><span className="text-muted-foreground">VAT (incl.)</span><span>KES {Math.round(pos.cartTax).toLocaleString()}</span></div>
-              <Separator />
-              <div className="flex justify-between font-bold text-lg"><span>Total</span><span>KES {pos.cartTotal.toLocaleString()}</span></div>
-              <Button className="w-full mt-2" size="lg" onClick={() => setPaymentOpen(true)}>
-                Charge KES {pos.cartTotal.toLocaleString()}
+          <div className="pt-3 border-t mt-2 space-y-2">
+            {pos.cart.length > 0 && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>KES {pos.cartSubtotal.toLocaleString()}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">VAT (incl.)</span><span>KES {Math.round(pos.cartTax).toLocaleString()}</span></div>
+                <Separator />
+                <div className="flex justify-between font-bold text-lg"><span>Total</span><span>KES {pos.cartTotal.toLocaleString()}</span></div>
+              </div>
+            )}
+            <div className="grid grid-cols-5 gap-1.5">
+              <Button
+                variant="default"
+                className="flex flex-col items-center gap-0.5 h-auto py-2"
+                disabled={pos.cart.length === 0}
+                onClick={() => { setPaymentOpen(true); }}
+              >
+                <Banknote className="h-4 w-4" />
+                <span className="text-[10px] font-medium">Cash</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="flex flex-col items-center gap-0.5 h-auto py-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50"
+                disabled={pos.cart.length === 0}
+                onClick={() => { setPaymentOpen(true); }}
+              >
+                <Smartphone className="h-4 w-4" />
+                <span className="text-[10px] font-medium">M-Pesa</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="flex flex-col items-center gap-0.5 h-auto py-2"
+                disabled={pos.cart.length === 0}
+                onClick={pos.holdSale}
+              >
+                <Pause className="h-4 w-4" />
+                <span className="text-[10px] font-medium">Suspend</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="flex flex-col items-center gap-0.5 h-auto py-2 border-blue-500 text-blue-600 hover:bg-blue-50"
+                disabled={pos.cart.length === 0}
+                onClick={() => { setPaymentOpen(true); }}
+              >
+                <CreditCard className="h-4 w-4" />
+                <span className="text-[10px] font-medium">Credit</span>
+              </Button>
+              <Button
+                variant="outline"
+                className="flex flex-col items-center gap-0.5 h-auto py-2 border-destructive text-destructive hover:bg-destructive/10"
+                disabled={pos.cart.length === 0}
+                onClick={pos.clearCart}
+              >
+                <Trash2 className="h-4 w-4" />
+                <span className="text-[10px] font-medium">Clear</span>
               </Button>
             </div>
-          )}
+          </div>
         </CardContent>
       </Card>
 
@@ -315,21 +322,6 @@ const POS = () => {
         data={receiptData}
       />
 
-      {session.activeSession && (
-        <EndDayDialog
-          open={endDayOpen}
-          onOpenChange={setEndDayOpen}
-          session={session.activeSession}
-          onConfirm={handleEndDay}
-        />
-      )}
-
-      <ZReportDialog
-        open={zReportOpen}
-        onOpenChange={setZReportOpen}
-        sessions={[]}
-        onLoadSessions={session.fetchSessionHistory}
-      />
     </div>
   );
 };
