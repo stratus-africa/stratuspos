@@ -8,8 +8,9 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, Pause, Play, X,
-  User, List, LayoutGrid, Sunrise, Banknote, Smartphone, CreditCard,
+  User, List, LayoutGrid, Sunrise, Banknote, Smartphone, CreditCard, ScanLine,
 } from "lucide-react";
+import { toast } from "sonner";
 import { useProducts, useCategories } from "@/hooks/useProducts";
 import { useCustomers } from "@/hooks/useSales";
 import { usePOS, CartItem, PaymentEntry } from "@/hooks/usePOS";
@@ -17,6 +18,7 @@ import { usePOSSession } from "@/hooks/usePOSSession";
 import PaymentDialog from "@/components/pos/PaymentDialog";
 import ReceiptDialog from "@/components/pos/ReceiptDialog";
 import StartDayDialog from "@/components/pos/StartDayDialog";
+import BarcodeScanner from "@/components/BarcodeScanner";
 
 const POS = () => {
   const { productsQuery } = useProducts();
@@ -33,6 +35,19 @@ const POS = () => {
   const [receiptData, setReceiptData] = useState<any>(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [startDayOpen, setStartDayOpen] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
+
+  const handleScanned = (code: string) => {
+    const match = (productsQuery.data ?? []).find(
+      (p) => p.is_active && (p.barcode === code || p.sku === code)
+    );
+    if (match) {
+      pos.addToCart(match);
+    } else {
+      setSearch(code);
+      toast.warning(`No product matches "${code}"`);
+    }
+  };
 
   const products = productsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
@@ -120,6 +135,9 @@ const POS = () => {
               autoFocus
             />
           </div>
+          <Button size="icon" variant="outline" onClick={() => setScannerOpen(true)} title="Scan barcode">
+            <ScanLine className="h-4 w-4" />
+          </Button>
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
             <SelectTrigger className="w-40">
               <SelectValue placeholder="Category" />
@@ -325,6 +343,8 @@ const POS = () => {
         onOpenChange={setReceiptOpen}
         data={receiptData}
       />
+
+      <BarcodeScanner open={scannerOpen} onOpenChange={setScannerOpen} onDetected={handleScanned} />
 
     </div>
   );
