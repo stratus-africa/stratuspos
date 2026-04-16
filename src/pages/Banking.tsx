@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Building2, Wallet, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { Plus, Building2, Wallet, ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -58,6 +58,14 @@ export default function Banking() {
     bank_account_id: "", type: "payment_received", amount: "", date: format(new Date(), "yyyy-MM-dd"),
     reference: "", description: "", category: "", contact_name: "",
   });
+
+  // Transfer dialog
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [transferForm, setTransferForm] = useState({
+    from_account_id: "", to_account_id: "", amount: "",
+    date: format(new Date(), "yyyy-MM-dd"), reference: "", description: "",
+  });
+  const [transferLoading, setTransferLoading] = useState(false);
 
   const fetchData = async () => {
     if (!business) return;
@@ -111,6 +119,62 @@ export default function Banking() {
     setTxnDialogOpen(false);
     setTxnForm({ bank_account_id: "", type: "payment_received", amount: "", date: format(new Date(), "yyyy-MM-dd"), reference: "", description: "", category: "", contact_name: "" });
     fetchData();
+  };
+
+  const handleTransfer = async () => {
+    if (!business || !user) return;
+    const { from_account_id, to_account_id, amount: amtStr, date, reference, description } = transferForm;
+
+    if (!from_account_id || !to_account_id) { toast.error("Select both source and destination accounts"); return; }
+    if (from_account_id === to_account_id) { toast.error("Source and destination must be different"); return; }
+
+    const amount = parseFloat(amtStr);
+    if (isNaN(amount) || amount <= 0) { toast.error("Enter a valid amount"); return; }
+
+    const fromAcc = accounts.find((a) => a.id === from_account_id);
+    const toAcc = accounts.find((a) => a.id === to_account_id);
+    if (!fromAcc || !toAcc) { toast.error("Invalid account selection"); return; }
+
+    if (Number(fromAcc.balance) < amount) {
+      toast.error(`Insufficient balance in ${fromAcc.name} (KES ${Number(fromAcc.balance).toLocaleString()})`);
+      return;
+    }
+
+    setTransferLoading(true);
+    try {
+      const transferRef = reference?.trim() || `TRF-${Date.now()}`;
+      const desc = description?.trim() || `Transfer from ${fromAcc.name} to ${toAcc.name}`;
+
+      // Insert two linked transactions
+      const { error: txnError } = await supabase.from("bank_transactions").insert([
+        {
+          business_id: business.id, bank_account_id: from_account_id, type: "transfer_out",
+          amount, date, reference: transferRef, description: desc,
+          category: "Transfer", contact_name: toAcc.name, created_by: user.id,
+        },
+        {
+          business_id: business.id, bank_account_id: to_account_id, type: "transfer_in",
+          amount, date, reference: transferRef, description: desc,
+          category: "Transfer", contact_name: fromAcc.name, created_by: user.id,
+        },
+      ]);
+      if (txnError) throw txnError;
+
+      // Update both balances in parallel
+      await Promise.all([
+        supabase.from("bank_accounts").update({ balance: Number(fromAcc.balance) - amount }).eq("id", fromAcc.id),
+        supabase.from("bank_accounts").update({ balance: Number(toAcc.balance) + amount }).eq("id", toAcc.id),
+      ]);
+
+      toast.success(`Transferred KES ${amount.toLocaleString()} from ${fromAcc.name} to ${toAcc.name}`);
+      setTransferDialogOpen(false);
+      setTransferForm({ from_account_id: "", to_account_id: "", amount: "", date: format(new Date(), "yyyy-MM-dd"), reference: "", description: "" });
+      fetchData();
+    } catch (err: any) {
+      toast.error(`Transfer failed: ${err.message}`);
+    } finally {
+      setTransferLoading(false);
+    }
   };
 
   const filteredTxns = selectedAccount === "all"
@@ -228,6 +292,110 @@ export default function Banking() {
               </div>
             </DialogContent>
           </Dialog>
+
+          <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline">
+                <ArrowLeftRight className="mr-2 h-4 w-4" /> Transfer
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Inter-Account Transfer</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>From Account</Label>
+                    <Select
+                      value={transferForm.from_account_id}
+                      onValueChange={(v) => setTransferForm({ ...transferForm, from_account_id: v })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Source" /></SelectTrigger>
+                      <SelectContent>
+                        {accounts.map((a) => (
+                          <SelectItem key={a.id} value={a.id} disabled={a.id === transferForm.to_account_id}>
+                            {a.name} (KES {Number(a.balance).toLocaleString()})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>To Account</Label>
+                    <Select
+                      value={transferForm.to_account_id}
+                      onValueChange={(v) => setTransferForm({ ...transferForm, to_account_id: v })}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Destination" /></SelectTrigger>
+                      <SelectContent>
+                        {accounts.map((a) => (
+                          <SelectItem key={a.id} value={a.id} disabled={a.id === transferForm.from_account_id}>
+                            {a.name} (KES {Number(a.balance).toLocaleString()})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Amount (KES)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={transferForm.amount}
+                      onChange={(e) => setTransferForm({ ...transferForm, amount: e.target.value })}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Date</Label>
+                    <Input
+                      type="date"
+                      value={transferForm.date}
+                      onChange={(e) => setTransferForm({ ...transferForm, date: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Reference</Label>
+                  <Input
+                    value={transferForm.reference}
+                    onChange={(e) => setTransferForm({ ...transferForm, reference: e.target.value })}
+                    placeholder="Auto-generated if blank"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Input
+                    value={transferForm.description}
+                    onChange={(e) => setTransferForm({ ...transferForm, description: e.target.value })}
+                    placeholder="Optional notes"
+                  />
+                </div>
+
+                {transferForm.from_account_id && transferForm.to_account_id && parseFloat(transferForm.amount) > 0 && (
+                  <div className="rounded-lg border bg-muted/40 p-3 text-sm">
+                    <p className="font-medium">
+                      Move <span className="font-bold">KES {parseFloat(transferForm.amount).toLocaleString()}</span> from{" "}
+                      <span className="font-bold">{getAccountName(transferForm.from_account_id)}</span> to{" "}
+                      <span className="font-bold">{getAccountName(transferForm.to_account_id)}</span>
+                    </p>
+                  </div>
+                )}
+
+                <Button onClick={handleTransfer} className="w-full" disabled={transferLoading}>
+                  <ArrowLeftRight className="mr-2 h-4 w-4" />
+                  {transferLoading ? "Processing..." : "Confirm Transfer"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -291,24 +459,32 @@ export default function Banking() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTxns.map((txn) => (
-                  <TableRow key={txn.id}>
-                    <TableCell>{format(new Date(txn.date), "dd MMM yyyy")}</TableCell>
-                    <TableCell>
-                      <Badge variant={txn.type === "payment_received" ? "default" : "destructive"} className="gap-1">
-                        {txn.type === "payment_received" ? <ArrowDownLeft className="h-3 w-3" /> : <ArrowUpRight className="h-3 w-3" />}
-                        {txn.type === "payment_received" ? "Received" : "Paid"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{getAccountName(txn.bank_account_id)}</TableCell>
-                    <TableCell>{txn.contact_name || "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">{txn.description || "—"}</TableCell>
-                    <TableCell className="font-mono text-sm">{txn.reference || "—"}</TableCell>
-                    <TableCell className={`text-right font-medium ${txn.type === "payment_received" ? "text-green-600" : "text-red-500"}`}>
-                      {txn.type === "payment_received" ? "+" : "-"} {Number(txn.amount).toLocaleString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {filteredTxns.map((txn) => {
+                  const isIn = txn.type === "payment_received" || txn.type === "transfer_in";
+                  const isTransfer = txn.type === "transfer_in" || txn.type === "transfer_out";
+                  const label = isTransfer
+                    ? (txn.type === "transfer_in" ? "Transfer In" : "Transfer Out")
+                    : (txn.type === "payment_received" ? "Received" : "Paid");
+                  const variant = isTransfer ? "secondary" : (isIn ? "default" : "destructive");
+                  return (
+                    <TableRow key={txn.id}>
+                      <TableCell>{format(new Date(txn.date), "dd MMM yyyy")}</TableCell>
+                      <TableCell>
+                        <Badge variant={variant} className="gap-1">
+                          {isTransfer ? <ArrowLeftRight className="h-3 w-3" /> : (isIn ? <ArrowDownLeft className="h-3 w-3" /> : <ArrowUpRight className="h-3 w-3" />)}
+                          {label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{getAccountName(txn.bank_account_id)}</TableCell>
+                      <TableCell>{txn.contact_name || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground">{txn.description || "—"}</TableCell>
+                      <TableCell className="font-mono text-sm">{txn.reference || "—"}</TableCell>
+                      <TableCell className={`text-right font-medium ${isIn ? "text-green-600" : "text-red-500"}`}>
+                        {isIn ? "+" : "-"} {Number(txn.amount).toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
