@@ -43,12 +43,12 @@ const Dashboard = () => {
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
-      <div className="bg-primary rounded-xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="bg-sidebar rounded-xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-primary-foreground">
+          <h1 className="text-2xl font-bold text-sidebar-foreground">
             Welcome {userName}, 👋
           </h1>
-          <p className="text-sm text-primary-foreground/70">
+          <p className="text-sm text-sidebar-foreground/70">
             {business?.name} — {currentLocation?.name}
           </p>
         </div>
@@ -61,7 +61,7 @@ const Dashboard = () => {
                 if (loc) setCurrentLocation(loc);
               }}
             >
-              <SelectTrigger className="w-[180px] bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground">
+              <SelectTrigger className="w-[180px] bg-sidebar-accent border-sidebar-border text-sidebar-foreground">
                 <SelectValue placeholder="Select location" />
               </SelectTrigger>
               <SelectContent>
@@ -73,7 +73,7 @@ const Dashboard = () => {
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/20">
+              <Button variant="outline" className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-foreground">
                 <CalendarDays className="h-4 w-4 mr-2" />
                 {filterLabels[dateFilter]}
               </Button>
