@@ -29,6 +29,7 @@ const POS = () => {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [initialPaymentMethod, setInitialPaymentMethod] = useState<"cash" | "mpesa" | "card">("cash");
   const [receiptData, setReceiptData] = useState<any>(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [startDayOpen, setStartDayOpen] = useState(false);
@@ -262,7 +263,7 @@ const POS = () => {
                 variant="default"
                 className="flex flex-col items-center gap-0.5 h-auto py-3"
                 disabled={pos.cart.length === 0}
-                onClick={() => { setPaymentOpen(true); }}
+                onClick={() => { setInitialPaymentMethod("cash"); setPaymentOpen(true); }}
               >
                 <Banknote className="h-5 w-5" />
                 <span className="text-xs font-medium">Cash</span>
@@ -271,7 +272,7 @@ const POS = () => {
                 variant="outline"
                 className="flex flex-col items-center gap-0.5 h-auto py-3 bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700"
                 disabled={pos.cart.length === 0}
-                onClick={() => { setPaymentOpen(true); }}
+                onClick={() => { setInitialPaymentMethod("mpesa"); setPaymentOpen(true); }}
               >
                 <Smartphone className="h-5 w-5" />
                 <span className="text-xs font-medium">M-Pesa</span>
@@ -282,7 +283,7 @@ const POS = () => {
                 variant="outline"
                 className="flex flex-col items-center gap-0.5 h-auto py-2 bg-orange-500 text-white border-orange-500 hover:bg-orange-600"
                 disabled={pos.cart.length === 0}
-                onClick={() => { setPaymentOpen(true); }}
+                onClick={() => { setInitialPaymentMethod("card"); setPaymentOpen(true); }}
               >
                 <CreditCard className="h-4 w-4" />
                 <span className="text-[10px] font-medium">Credit Sale</span>
@@ -316,6 +317,7 @@ const POS = () => {
         total={pos.cartTotal}
         onConfirm={handlePaymentConfirm}
         processing={pos.processing}
+        initialMethod={initialPaymentMethod}
       />
 
       <ReceiptDialog
