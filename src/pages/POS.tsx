@@ -257,7 +257,7 @@ const POS = () => {
                 <div className="flex justify-between font-bold text-lg"><span>Total</span><span>KES {pos.cartTotal.toLocaleString()}</span></div>
               </div>
             )}
-            <div className="grid grid-cols-5 gap-1.5">
+            <div className="grid grid-cols-3 gap-1.5">
               <Button
                 variant="default"
                 className="flex flex-col items-center gap-0.5 h-auto py-2"
