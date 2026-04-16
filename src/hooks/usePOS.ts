@@ -163,31 +163,41 @@ export function usePOS() {
         }
       }
 
-      // Deduct inventory
-      for (const item of cart) {
-        const { data: inv } = await supabase
-          .from("inventory")
-          .select("id, quantity")
-          .eq("product_id", item.product.id)
-          .eq("location_id", currentLocation.id)
-          .maybeSingle();
-
-        if (inv) {
-          await supabase
+      // Batch deduct inventory and create adjustments
+      const inventoryUpdates = await Promise.all(
+        cart.map(async (item) => {
+          const { data: inv } = await supabase
             .from("inventory")
-            .update({ quantity: inv.quantity - item.quantity })
-            .eq("id", inv.id);
-        }
+            .select("id, quantity")
+            .eq("product_id", item.product.id)
+            .eq("location_id", currentLocation.id)
+            .maybeSingle();
+          return { item, inv };
+        })
+      );
 
-        await supabase.from("stock_adjustments").insert({
-          product_id: item.product.id,
-          location_id: currentLocation.id,
-          quantity_change: -item.quantity,
-          reason: "sale",
-          notes: `Sale ${invoiceNumber}`,
-          created_by: user.id,
-        });
-      }
+      // Update inventory quantities
+      await Promise.all(
+        inventoryUpdates
+          .filter(({ inv }) => inv)
+          .map(({ item, inv }) =>
+            supabase
+              .from("inventory")
+              .update({ quantity: inv!.quantity - item.quantity })
+              .eq("id", inv!.id)
+          )
+      );
+
+      // Batch insert stock adjustments
+      const adjustments = cart.map((item) => ({
+        product_id: item.product.id,
+        location_id: currentLocation.id,
+        quantity_change: -item.quantity,
+        reason: "sale",
+        notes: `Sale ${invoiceNumber}`,
+        created_by: user.id,
+      }));
+      await supabase.from("stock_adjustments").insert(adjustments);
 
       // Auto-create linked bank transaction for the sale
       if (bankAccountId) {
