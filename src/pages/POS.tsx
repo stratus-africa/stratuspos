@@ -29,6 +29,7 @@ const POS = () => {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [initialPaymentMethod, setInitialPaymentMethod] = useState<"cash" | "mpesa" | "card">("cash");
   const [receiptData, setReceiptData] = useState<any>(null);
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [startDayOpen, setStartDayOpen] = useState(false);
@@ -316,6 +317,7 @@ const POS = () => {
         total={pos.cartTotal}
         onConfirm={handlePaymentConfirm}
         processing={pos.processing}
+        initialMethod={initialPaymentMethod}
       />
 
       <ReceiptDialog
