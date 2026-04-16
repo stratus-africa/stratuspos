@@ -15,13 +15,13 @@ interface Props {
 }
 
 export function SupplierFormDialog({ open, onOpenChange, onSubmit, supplier, isLoading }: Props) {
-  const [form, setForm] = useState({ name: "", phone: "", email: "", address: "" });
+  const [form, setForm] = useState({ name: "", phone: "", email: "", address: "", kra_pin: "" });
 
   useEffect(() => {
     if (supplier) {
-      setForm({ name: supplier.name, phone: supplier.phone || "", email: supplier.email || "", address: supplier.address || "" });
+      setForm({ name: supplier.name, phone: supplier.phone || "", email: supplier.email || "", address: supplier.address || "", kra_pin: supplier.kra_pin || "" });
     } else {
-      setForm({ name: "", phone: "", email: "", address: "" });
+      setForm({ name: "", phone: "", email: "", address: "", kra_pin: "" });
     }
   }, [supplier, open]);
 
