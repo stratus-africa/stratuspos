@@ -18,6 +18,7 @@ interface Props {
   total: number;
   onConfirm: (payments: PaymentEntry[], bankAccountId: string | null) => void;
   processing: boolean;
+  initialMethod?: "cash" | "mpesa" | "card";
 }
 
 const METHODS = [
@@ -28,8 +29,8 @@ const METHODS = [
 
 type MpesaStatus = "idle" | "sending" | "waiting" | "completed" | "failed";
 
-export default function PaymentDialog({ open, onOpenChange, total, onConfirm, processing }: Props) {
-  const [payments, setPayments] = useState<PaymentEntry[]>([{ method: "cash", amount: total, reference: "" }]);
+export default function PaymentDialog({ open, onOpenChange, total, onConfirm, processing, initialMethod = "cash" }: Props) {
+  const [payments, setPayments] = useState<PaymentEntry[]>([{ method: initialMethod, amount: total, reference: "" }]);
   const [bankAccountId, setBankAccountId] = useState<string>("none");
   const { data: bankAccounts = [] } = useBankAccounts();
   const { business } = useBusiness();
@@ -67,7 +68,7 @@ export default function PaymentDialog({ open, onOpenChange, total, onConfirm, pr
 
   const handleOpenChange = (v: boolean) => {
     if (v) {
-      setPayments([{ method: "cash", amount: total, reference: "" }]);
+      setPayments([{ method: initialMethod, amount: total, reference: "" }]);
       setBankAccountId("none");
       setMpesaStatus("idle");
       setMpesaPhone("");
