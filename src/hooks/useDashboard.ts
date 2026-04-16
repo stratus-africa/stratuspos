@@ -70,28 +70,24 @@ export function useDashboard(): DashboardData {
       else if (dateFilter === "30days") filterStart = thirtyDaysAgo;
       else if (dateFilter === "all") filterStart = "2000-01-01T00:00:00.000Z";
 
-      const [salesRes, saleItemsRes, expensesRes, inventoryRes, purchasesRes, unpaidSalesRes] = await Promise.all([
-        supabase
-          .from("sales")
-          .select("id, total, subtotal, tax, discount, created_at")
-          .eq("business_id", business.id)
-          .eq("location_id", currentLocation.id)
-          .gte("created_at", filterStart)
-          .eq("status", "final"),
-        supabase
-          .from("sale_items")
-          .select("product_id, quantity, unit_price, total, sale_id, products(name, purchase_price)")
-          .in(
-            "sale_id",
-            (await supabase
-              .from("sales")
-              .select("id")
-              .eq("business_id", business.id)
-              .eq("location_id", currentLocation.id)
-              .gte("created_at", filterStart)
-              .eq("status", "final")
-            ).data?.map((s) => s.id) || []
-          ),
+      // Fetch sales first, then use IDs for sale_items
+      const salesRes = await supabase
+        .from("sales")
+        .select("id, total, subtotal, tax, discount, created_at")
+        .eq("business_id", business.id)
+        .eq("location_id", currentLocation.id)
+        .gte("created_at", filterStart)
+        .eq("status", "final");
+
+      const saleIds = salesRes.data?.map((s) => s.id) || [];
+
+      const [saleItemsRes, expensesRes, inventoryRes, purchasesRes, unpaidSalesRes] = await Promise.all([
+        saleIds.length > 0
+          ? supabase
+              .from("sale_items")
+              .select("product_id, quantity, unit_price, total, sale_id, products(name, purchase_price)")
+              .in("sale_id", saleIds)
+          : Promise.resolve({ data: [], error: null }),
         supabase
           .from("expenses")
           .select("amount, date")
