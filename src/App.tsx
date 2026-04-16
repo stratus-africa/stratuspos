@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -10,30 +11,46 @@ import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { SuperAdminLayout } from "@/components/super-admin/SuperAdminLayout";
 import { FeatureGate } from "@/components/FeatureGate";
 
-import Auth from "./pages/Auth";
-import Onboarding from "./pages/Onboarding";
-import Index from "./pages/Index";
-import POS from "./pages/POS";
-import Products from "./pages/Products";
-import Inventory from "./pages/Inventory";
-import Sales from "./pages/Sales";
-import Purchases from "./pages/Purchases";
-import Expenses from "./pages/Expenses";
-import Reports from "./pages/Reports";
-import SettingsPage from "./pages/SettingsPage";
-import ChartOfAccounts from "./pages/ChartOfAccounts";
-import Banking from "./pages/Banking";
+// Lazy-loaded pages
+const Auth = lazy(() => import("./pages/Auth"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
+const Index = lazy(() => import("./pages/Index"));
+const POS = lazy(() => import("./pages/POS"));
+const Products = lazy(() => import("./pages/Products"));
+const Inventory = lazy(() => import("./pages/Inventory"));
+const Sales = lazy(() => import("./pages/Sales"));
+const Purchases = lazy(() => import("./pages/Purchases"));
+const Expenses = lazy(() => import("./pages/Expenses"));
+const Reports = lazy(() => import("./pages/Reports"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const ChartOfAccounts = lazy(() => import("./pages/ChartOfAccounts"));
+const Banking = lazy(() => import("./pages/Banking"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const Landing = lazy(() => import("./pages/Landing"));
 
-import NotFound from "./pages/NotFound";
-import Landing from "./pages/Landing";
-import SuperAdminDashboard from "./pages/super-admin/SuperAdminDashboard";
-import SuperAdminBusinesses from "./pages/super-admin/SuperAdminBusinesses";
-import SuperAdminUsers from "./pages/super-admin/SuperAdminUsers";
-import SuperAdminActivity from "./pages/super-admin/SuperAdminActivity";
-import SuperAdminPackages from "./pages/super-admin/SuperAdminPackages";
-import SuperAdminLanding from "./pages/super-admin/SuperAdminLanding";
+const SuperAdminDashboard = lazy(() => import("./pages/super-admin/SuperAdminDashboard"));
+const SuperAdminBusinesses = lazy(() => import("./pages/super-admin/SuperAdminBusinesses"));
+const SuperAdminUsers = lazy(() => import("./pages/super-admin/SuperAdminUsers"));
+const SuperAdminActivity = lazy(() => import("./pages/super-admin/SuperAdminActivity"));
+const SuperAdminPackages = lazy(() => import("./pages/super-admin/SuperAdminPackages"));
+const SuperAdminLanding = lazy(() => import("./pages/super-admin/SuperAdminLanding"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 2 * 60 * 1000, // 2 minutes
+      gcTime: 5 * 60 * 1000, // 5 minutes
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
+const PageLoader = () => (
+  <div className="flex min-h-[40vh] items-center justify-center">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+  </div>
+);
 
 const AccessDenied = () => (
   <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -46,28 +63,23 @@ const SuperAdminRoutes = () => {
   const { user, loading: authLoading } = useAuth();
   const { isSuperAdmin, loading: saLoading } = useSuperAdmin();
 
-  if (authLoading || saLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
-
+  if (authLoading || saLoading) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
   if (!isSuperAdmin) return <Navigate to="/" replace />;
 
   return (
     <SuperAdminLayout>
-      <Routes>
-        <Route path="/" element={<SuperAdminDashboard />} />
-        <Route path="/businesses" element={<SuperAdminBusinesses />} />
-        <Route path="/users" element={<SuperAdminUsers />} />
-        <Route path="/packages" element={<SuperAdminPackages />} />
-        <Route path="/landing" element={<SuperAdminLanding />} />
-        <Route path="/activity" element={<SuperAdminActivity />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/" element={<SuperAdminDashboard />} />
+          <Route path="/businesses" element={<SuperAdminBusinesses />} />
+          <Route path="/users" element={<SuperAdminUsers />} />
+          <Route path="/packages" element={<SuperAdminPackages />} />
+          <Route path="/landing" element={<SuperAdminLanding />} />
+          <Route path="/activity" element={<SuperAdminActivity />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </SuperAdminLayout>
   );
 };
@@ -92,17 +104,10 @@ const ProtectedRoutes = () => {
   const { user, loading: authLoading } = useAuth();
   const { needsOnboarding, loading: bizLoading, hasAccess, userRole, isSuspended } = useBusiness();
 
-  if (authLoading || bizLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
-
+  if (authLoading || bizLoading) return <PageLoader />;
   if (!user) return <Navigate to="/auth" replace />;
   if (isSuspended) return <BusinessSuspended />;
-  if (needsOnboarding) return <Onboarding />;
+  if (needsOnboarding) return <Suspense fallback={<PageLoader />}><Onboarding /></Suspense>;
 
   // Default redirect based on role - cashiers go to POS
   if (userRole === "cashier") return <Navigate to="/pos" replace />;
@@ -112,21 +117,23 @@ const ProtectedRoutes = () => {
 
   return (
     <AppLayout>
-      <Routes>
-        <Route path="/" element={guard(["admin", "manager"], <Index />)} />
-        <Route path="/pos" element={guard(["admin", "manager", "cashier"], <POS />)} />
-        <Route path="/products" element={guard(["admin", "manager"], <Products />)} />
-        <Route path="/inventory" element={guard(["admin", "manager"], <Inventory />)} />
-        <Route path="/sales" element={guard(["admin", "manager"], <Sales />)} />
-        <Route path="/purchases" element={guard(["admin", "manager"], <Purchases />)} />
-        <Route path="/expenses" element={guard(["admin"], <Expenses />)} />
-        <Route path="/chart-of-accounts" element={guard(["admin"], <FeatureGate requiredTier="pro"><ChartOfAccounts /></FeatureGate>)} />
-        <Route path="/banking" element={guard(["admin"], <FeatureGate requiredTier="pro"><Banking /></FeatureGate>)} />
-        <Route path="/reports" element={guard(["admin"], <FeatureGate requiredTier="pro"><Reports /></FeatureGate>)} />
-        <Route path="/settings" element={guard(["admin"], <SettingsPage />)} />
-        <Route path="/roles" element={<Navigate to="/settings?tab=roles" replace />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
+          <Route path="/" element={guard(["admin", "manager"], <Index />)} />
+          <Route path="/pos" element={guard(["admin", "manager", "cashier"], <POS />)} />
+          <Route path="/products" element={guard(["admin", "manager"], <Products />)} />
+          <Route path="/inventory" element={guard(["admin", "manager"], <Inventory />)} />
+          <Route path="/sales" element={guard(["admin", "manager"], <Sales />)} />
+          <Route path="/purchases" element={guard(["admin", "manager"], <Purchases />)} />
+          <Route path="/expenses" element={guard(["admin"], <Expenses />)} />
+          <Route path="/chart-of-accounts" element={guard(["admin"], <FeatureGate requiredTier="pro"><ChartOfAccounts /></FeatureGate>)} />
+          <Route path="/banking" element={guard(["admin"], <FeatureGate requiredTier="pro"><Banking /></FeatureGate>)} />
+          <Route path="/reports" element={guard(["admin"], <FeatureGate requiredTier="pro"><Reports /></FeatureGate>)} />
+          <Route path="/settings" element={guard(["admin"], <SettingsPage />)} />
+          <Route path="/roles" element={<Navigate to="/settings?tab=roles" replace />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </AppLayout>
   );
 };
@@ -139,12 +146,14 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <BusinessProvider>
-            <Routes>
-              <Route path="/landing" element={<Landing />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/super-admin/*" element={<SuperAdminRoutes />} />
-              <Route path="/*" element={<ProtectedRoutes />} />
-            </Routes>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/landing" element={<Landing />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/super-admin/*" element={<SuperAdminRoutes />} />
+                <Route path="/*" element={<ProtectedRoutes />} />
+              </Routes>
+            </Suspense>
           </BusinessProvider>
         </AuthProvider>
       </BrowserRouter>
