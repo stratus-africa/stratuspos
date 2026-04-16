@@ -20,7 +20,7 @@ const SettingsPage = () => {
       <PaymentTestModeBanner />
       <h1 className="text-2xl font-bold">Settings</h1>
       <Tabs defaultValue={defaultTab} orientation="vertical" className="flex gap-6">
-        <TabsList className="flex flex-col h-auto w-52 bg-muted rounded-lg p-1.5 shrink-0">
+        <TabsList className="text-muted-foreground flex-col h-auto w-52 bg-muted rounded-lg p-1.5 shrink-0 flex items-start justify-start">
           <TabsTrigger value="business" className="w-full justify-start gap-2 text-sm px-3 py-2.5">
             <Building2 className="h-4 w-4" />
             Business
