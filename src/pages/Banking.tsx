@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Building2, Wallet, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { Plus, Building2, Wallet, ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -58,6 +58,14 @@ export default function Banking() {
     bank_account_id: "", type: "payment_received", amount: "", date: format(new Date(), "yyyy-MM-dd"),
     reference: "", description: "", category: "", contact_name: "",
   });
+
+  // Transfer dialog
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [transferForm, setTransferForm] = useState({
+    from_account_id: "", to_account_id: "", amount: "",
+    date: format(new Date(), "yyyy-MM-dd"), reference: "", description: "",
+  });
+  const [transferLoading, setTransferLoading] = useState(false);
 
   const fetchData = async () => {
     if (!business) return;
