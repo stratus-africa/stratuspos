@@ -19,50 +19,52 @@ const SettingsPage = () => {
     <div className="space-y-4">
       <PaymentTestModeBanner />
       <h1 className="text-2xl font-bold">Settings</h1>
-      <Tabs defaultValue={defaultTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-8">
-          <TabsTrigger value="business" className="flex items-center gap-1.5 text-xs sm:text-sm">
+      <Tabs defaultValue={defaultTab} orientation="vertical" className="flex gap-6">
+        <TabsList className="flex flex-col h-auto w-52 bg-muted rounded-lg p-1.5 shrink-0">
+          <TabsTrigger value="business" className="w-full justify-start gap-2 text-sm px-3 py-2.5">
             <Building2 className="h-4 w-4" />
-            <span className="hidden sm:inline">Business</span>
+            Business
           </TabsTrigger>
-          <TabsTrigger value="locations" className="flex items-center gap-1.5 text-xs sm:text-sm">
+          <TabsTrigger value="locations" className="w-full justify-start gap-2 text-sm px-3 py-2.5">
             <MapPin className="h-4 w-4" />
-            <span className="hidden sm:inline">Locations</span>
+            Locations
           </TabsTrigger>
-          <TabsTrigger value="tax" className="flex items-center gap-1.5 text-xs sm:text-sm">
+          <TabsTrigger value="tax" className="w-full justify-start gap-2 text-sm px-3 py-2.5">
             <Percent className="h-4 w-4" />
-            <span className="hidden sm:inline">Tax</span>
+            Tax
           </TabsTrigger>
-          <TabsTrigger value="users" className="flex items-center gap-1.5 text-xs sm:text-sm">
+          <TabsTrigger value="users" className="w-full justify-start gap-2 text-sm px-3 py-2.5">
             <Users className="h-4 w-4" />
-            <span className="hidden sm:inline">Users</span>
+            Users
           </TabsTrigger>
-          <TabsTrigger value="roles" className="flex items-center gap-1.5 text-xs sm:text-sm">
+          <TabsTrigger value="roles" className="w-full justify-start gap-2 text-sm px-3 py-2.5">
             <ShieldCheck className="h-4 w-4" />
-            <span className="hidden sm:inline">Roles</span>
+            Roles
           </TabsTrigger>
-          <TabsTrigger value="payments" className="flex items-center gap-1.5 text-xs sm:text-sm">
+          <TabsTrigger value="payments" className="w-full justify-start gap-2 text-sm px-3 py-2.5">
             <Wallet className="h-4 w-4" />
-            <span className="hidden sm:inline">Payments</span>
+            Payments
           </TabsTrigger>
-          <TabsTrigger value="receipt" className="flex items-center gap-1.5 text-xs sm:text-sm">
+          <TabsTrigger value="receipt" className="w-full justify-start gap-2 text-sm px-3 py-2.5">
             <Receipt className="h-4 w-4" />
-            <span className="hidden sm:inline">Receipt</span>
+            Receipt
           </TabsTrigger>
-          <TabsTrigger value="subscription" className="flex items-center gap-1.5 text-xs sm:text-sm">
+          <TabsTrigger value="subscription" className="w-full justify-start gap-2 text-sm px-3 py-2.5">
             <CreditCard className="h-4 w-4" />
-            <span className="hidden sm:inline">Plan</span>
+            Plan
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="business"><BusinessProfileTab /></TabsContent>
-        <TabsContent value="locations"><LocationsTab /></TabsContent>
-        <TabsContent value="tax"><TaxSettingsTab /></TabsContent>
-        <TabsContent value="users"><UserManagementTab /></TabsContent>
-        <TabsContent value="roles"><RolesPermissionsTab /></TabsContent>
-        <TabsContent value="payments"><PaymentAccountsTab /></TabsContent>
-        <TabsContent value="receipt"><ReceiptSettingsTab /></TabsContent>
-        <TabsContent value="subscription"><SubscriptionTab /></TabsContent>
+        <div className="flex-1 min-w-0">
+          <TabsContent value="business" className="mt-0"><BusinessProfileTab /></TabsContent>
+          <TabsContent value="locations" className="mt-0"><LocationsTab /></TabsContent>
+          <TabsContent value="tax" className="mt-0"><TaxSettingsTab /></TabsContent>
+          <TabsContent value="users" className="mt-0"><UserManagementTab /></TabsContent>
+          <TabsContent value="roles" className="mt-0"><RolesPermissionsTab /></TabsContent>
+          <TabsContent value="payments" className="mt-0"><PaymentAccountsTab /></TabsContent>
+          <TabsContent value="receipt" className="mt-0"><ReceiptSettingsTab /></TabsContent>
+          <TabsContent value="subscription" className="mt-0"><SubscriptionTab /></TabsContent>
+        </div>
       </Tabs>
     </div>
   );
