@@ -178,37 +178,61 @@ export type Database = {
       }
       businesses: {
         Row: {
+          accountant_email: string | null
+          accountant_name: string | null
+          accountant_phone: string | null
+          address: string | null
           created_at: string
           currency: string
+          email: string | null
           id: string
           is_active: boolean
+          kra_pin: string | null
           logo_url: string | null
           name: string
+          phone: string | null
           tax_rate: number | null
           timezone: string
           updated_at: string
+          vat_enabled: boolean
         }
         Insert: {
+          accountant_email?: string | null
+          accountant_name?: string | null
+          accountant_phone?: string | null
+          address?: string | null
           created_at?: string
           currency?: string
+          email?: string | null
           id?: string
           is_active?: boolean
+          kra_pin?: string | null
           logo_url?: string | null
           name: string
+          phone?: string | null
           tax_rate?: number | null
           timezone?: string
           updated_at?: string
+          vat_enabled?: boolean
         }
         Update: {
+          accountant_email?: string | null
+          accountant_name?: string | null
+          accountant_phone?: string | null
+          address?: string | null
           created_at?: string
           currency?: string
+          email?: string | null
           id?: string
           is_active?: boolean
+          kra_pin?: string | null
           logo_url?: string | null
           name?: string
+          phone?: string | null
           tax_rate?: number | null
           timezone?: string
           updated_at?: string
+          vat_enabled?: boolean
         }
         Relationships: []
       }
@@ -490,6 +514,42 @@ export type Database = {
           },
         ]
       }
+      landing_content: {
+        Row: {
+          content: Json | null
+          created_at: string
+          id: string
+          is_visible: boolean
+          section_key: string
+          sort_order: number
+          subtitle: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          section_key: string
+          sort_order?: number
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string
+          id?: string
+          is_visible?: boolean
+          section_key?: string
+          sort_order?: number
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       locations: {
         Row: {
           address: string | null
@@ -637,6 +697,48 @@ export type Database = {
             columns: ["package_id"]
             isOneToOne: false
             referencedRelation: "subscription_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_method_accounts: {
+        Row: {
+          bank_account_id: string | null
+          business_id: string
+          created_at: string
+          id: string
+          payment_method: string
+          updated_at: string
+        }
+        Insert: {
+          bank_account_id?: string | null
+          business_id: string
+          created_at?: string
+          id?: string
+          payment_method: string
+          updated_at?: string
+        }
+        Update: {
+          bank_account_id?: string | null
+          business_id?: string
+          created_at?: string
+          id?: string
+          payment_method?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_method_accounts_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_method_accounts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
         ]

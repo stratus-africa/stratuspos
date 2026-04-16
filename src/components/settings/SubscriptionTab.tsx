@@ -1,78 +1,28 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSubscription, type SubscriptionTier } from "@/hooks/useSubscription";
+import { useSubscription } from "@/hooks/useSubscription";
 import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
 import { supabase } from "@/integrations/supabase/client";
 import { getPaddleEnvironment } from "@/lib/paddle";
 import { toast } from "sonner";
 import { Check, Crown, Zap, Building2, Loader2, ExternalLink } from "lucide-react";
 
-const plans: {
-  id: SubscriptionTier;
+interface PkgDisplay {
+  id: string;
   name: string;
-  price: string;
-  priceId?: string;
-  yearlyPriceId?: string;
-  yearlyPrice?: string;
-  description: string;
+  description: string | null;
+  monthly_price: number;
+  yearly_price: number;
+  max_locations: number;
+  max_products: number;
+  max_users: number;
+  paddle_monthly_price_id: string | null;
+  paddle_yearly_price_id: string | null;
   features: string[];
-}[] = [
-  {
-    id: "free",
-    name: "Free",
-    price: "KES 0/mo",
-    description: "Get started with basic POS features",
-    features: [
-      "Up to 20 products",
-      "Single location",
-      "Basic POS",
-      "Sales tracking",
-    ],
-  },
-  {
-    id: "basic",
-    name: "Basic",
-    price: "$15/mo",
-    yearlyPrice: "$150/yr",
-    priceId: "basic_monthly",
-    yearlyPriceId: "basic_yearly",
-    description: "Full POS features for growing businesses",
-    features: [
-      "Unlimited products",
-      "Single location",
-      "Full POS features",
-      "Inventory management",
-      "Customer management",
-      "Expense tracking",
-    ],
-  },
-  {
-    id: "pro",
-    name: "Pro",
-    price: "$39/mo",
-    yearlyPrice: "$390/yr",
-    priceId: "pro_monthly",
-    yearlyPriceId: "pro_yearly",
-    description: "Everything you need for multi-location retail",
-    features: [
-      "Everything in Basic",
-      "Multi-location support",
-      "Advanced reports",
-      "Bank reconciliation",
-      "Chart of accounts",
-      "Priority support",
-    ],
-  },
-];
-
-const tierIcons: Record<SubscriptionTier, React.ReactNode> = {
-  free: <Zap className="h-5 w-5" />,
-  basic: <Building2 className="h-5 w-5" />,
-  pro: <Crown className="h-5 w-5" />,
-};
+}
 
 export function SubscriptionTab() {
   const { user } = useAuth();
@@ -80,6 +30,47 @@ export function SubscriptionTab() {
   const { openCheckout, loading: checkoutLoading } = usePaddleCheckout();
   const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
   const [portalLoading, setPortalLoading] = useState(false);
+  const [packages, setPackages] = useState<PkgDisplay[]>([]);
+  const [loadingPkgs, setLoadingPkgs] = useState(true);
+
+  useEffect(() => {
+    const fetchPkgs = async () => {
+      const { data: pkgs } = await supabase
+        .from("subscription_packages")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order");
+
+      if (!pkgs || pkgs.length === 0) {
+        setLoadingPkgs(false);
+        return;
+      }
+
+      const { data: feats } = await supabase
+        .from("package_features")
+        .select("*")
+        .eq("enabled", true);
+
+      const result: PkgDisplay[] = (pkgs as any[]).map(p => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        monthly_price: p.monthly_price,
+        yearly_price: p.yearly_price,
+        max_locations: p.max_locations,
+        max_products: p.max_products,
+        max_users: p.max_users,
+        paddle_monthly_price_id: p.paddle_monthly_price_id,
+        paddle_yearly_price_id: p.paddle_yearly_price_id,
+        features: (feats as any[] || [])
+          .filter(f => f.package_id === p.id)
+          .map(f => f.feature_label),
+      }));
+      setPackages(result);
+      setLoadingPkgs(false);
+    };
+    fetchPkgs();
+  }, []);
 
   const handleSubscribe = (priceId: string) => {
     if (!user) return;
@@ -107,7 +98,10 @@ export function SubscriptionTab() {
     }
   };
 
-  if (isLoading) {
+  const formatKES = (amount: number) =>
+    new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", minimumFractionDigits: 0 }).format(amount);
+
+  if (isLoading || loadingPkgs) {
     return (
       <Card>
         <CardContent className="flex items-center justify-center py-12">
@@ -123,26 +117,24 @@ export function SubscriptionTab() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            {tierIcons[tier]}
-            Current Plan: {plans.find((p) => p.id === tier)?.name || "Free"}
+            <Crown className="h-5 w-5" />
+            Current Plan: {tier === "free" ? "Free" : packages.find(p => p.paddle_monthly_price_id === subscription?.price_id || p.paddle_yearly_price_id === subscription?.price_id)?.name || tier}
           </CardTitle>
           <CardDescription>
             {isActive && subscription ? (
-              <>
-                {isCanceling ? (
-                  <span className="text-orange-600">
-                    Canceling — access until{" "}
-                    {new Date(subscription.current_period_end!).toLocaleDateString()}
-                  </span>
-                ) : (
-                  <span>
-                    Next billing:{" "}
-                    {subscription.current_period_end
-                      ? new Date(subscription.current_period_end).toLocaleDateString()
-                      : "—"}
-                  </span>
-                )}
-              </>
+              isCanceling ? (
+                <span className="text-orange-600">
+                  Canceling — access until{" "}
+                  {new Date(subscription.current_period_end!).toLocaleDateString()}
+                </span>
+              ) : (
+                <span>
+                  Next billing:{" "}
+                  {subscription.current_period_end
+                    ? new Date(subscription.current_period_end).toLocaleDateString()
+                    : "—"}
+                </span>
+              )
             ) : (
               "You're on the free plan. Upgrade to unlock more features."
             )}
@@ -178,62 +170,63 @@ export function SubscriptionTab() {
       </div>
 
       {/* Plans Grid */}
-      <div className="grid gap-4 md:grid-cols-3">
-        {plans.map((plan) => {
-          const isCurrent = plan.id === tier;
-          const priceId =
-            billingInterval === "yearly" && plan.yearlyPriceId
-              ? plan.yearlyPriceId
-              : plan.priceId;
-          const displayPrice =
-            billingInterval === "yearly" && plan.yearlyPrice
-              ? plan.yearlyPrice
-              : plan.price;
+      {packages.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            No subscription plans available yet.
+          </CardContent>
+        </Card>
+      ) : (
+        <div className={`grid gap-4 ${packages.length >= 3 ? "md:grid-cols-3" : packages.length === 2 ? "md:grid-cols-2 max-w-3xl mx-auto" : "max-w-md mx-auto"}`}>
+          {packages.map((pkg, i) => {
+            const priceId = billingInterval === "yearly" ? pkg.paddle_yearly_price_id : pkg.paddle_monthly_price_id;
+            const displayPrice = billingInterval === "yearly" ? pkg.yearly_price : pkg.monthly_price;
+            const isPopular = i === 1 && packages.length >= 3;
 
-          return (
-            <Card
-              key={plan.id}
-              className={`relative ${isCurrent ? "border-primary ring-2 ring-primary/20" : ""}`}
-            >
-              {isCurrent && (
-                <Badge className="absolute -top-2.5 left-4">Current Plan</Badge>
-              )}
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  {tierIcons[plan.id]}
-                  <CardTitle className="text-lg">{plan.name}</CardTitle>
-                </div>
-                <div className="text-2xl font-bold">{displayPrice}</div>
-                <CardDescription>{plan.description}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <ul className="space-y-2">
-                  {plan.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm">
-                      <Check className="h-4 w-4 text-emerald-500 mt-0.5 shrink-0" />
-                      {f}
+            return (
+              <Card key={pkg.id} className={`relative ${isPopular ? "border-primary ring-2 ring-primary/20" : ""}`}>
+                {isPopular && <Badge className="absolute -top-2.5 left-4">Most Popular</Badge>}
+                <CardHeader>
+                  <CardTitle className="text-lg">{pkg.name}</CardTitle>
+                  <div className="text-2xl font-bold">{formatKES(displayPrice)}<span className="text-sm font-normal text-muted-foreground">/{billingInterval === "monthly" ? "mo" : "yr"}</span></div>
+                  {pkg.description && <CardDescription>{pkg.description}</CardDescription>}
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <ul className="space-y-2">
+                    <li className="flex items-center gap-2 text-sm">
+                      <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                      {pkg.max_locations} location{pkg.max_locations > 1 ? "s" : ""}
                     </li>
-                  ))}
-                </ul>
-                {plan.id === "free" ? (
-                  <Button variant="outline" className="w-full" disabled>
-                    {isCurrent ? "Current Plan" : "Downgrade"}
-                  </Button>
-                ) : (
+                    <li className="flex items-center gap-2 text-sm">
+                      <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                      {pkg.max_products} products
+                    </li>
+                    <li className="flex items-center gap-2 text-sm">
+                      <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                      {pkg.max_users} team member{pkg.max_users > 1 ? "s" : ""}
+                    </li>
+                    {pkg.features.map(f => (
+                      <li key={f} className="flex items-center gap-2 text-sm">
+                        <Check className="h-4 w-4 text-emerald-500 shrink-0" />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
                   <Button
                     className="w-full"
-                    disabled={isCurrent || checkoutLoading || !priceId}
+                    variant={isPopular ? "default" : "outline"}
+                    disabled={checkoutLoading || !priceId}
                     onClick={() => priceId && handleSubscribe(priceId)}
                   >
                     {checkoutLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    {isCurrent ? "Current Plan" : "Subscribe"}
+                    Subscribe
                   </Button>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

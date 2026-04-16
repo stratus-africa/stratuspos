@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { Shield, Building2, Users, BarChart3, LogOut, ArrowLeft, Activity, Package } from "lucide-react";
+import { Shield, Building2, Users, BarChart3, LogOut, ArrowLeft, Activity, Package, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -9,6 +9,7 @@ const navItems = [
   { title: "Businesses", url: "/super-admin/businesses", icon: Building2 },
   { title: "Users", url: "/super-admin/users", icon: Users },
   { title: "Packages", url: "/super-admin/packages", icon: Package },
+  { title: "Landing Page", url: "/super-admin/landing", icon: Globe },
   { title: "Activity", url: "/super-admin/activity", icon: Activity },
 ];
 
