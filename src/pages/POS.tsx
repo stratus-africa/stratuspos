@@ -257,24 +257,35 @@ const POS = () => {
                 <div className="flex justify-between font-bold text-lg"><span>Total</span><span>KES {pos.cartTotal.toLocaleString()}</span></div>
               </div>
             )}
-            <div className="grid grid-cols-3 gap-1.5">
+            <div className="grid grid-cols-2 gap-1.5">
               <Button
                 variant="default"
-                className="flex flex-col items-center gap-0.5 h-auto py-2"
+                className="flex flex-col items-center gap-0.5 h-auto py-3"
                 disabled={pos.cart.length === 0}
                 onClick={() => { setPaymentOpen(true); }}
               >
-                <Banknote className="h-4 w-4" />
-                <span className="text-[10px] font-medium">Cash</span>
+                <Banknote className="h-5 w-5" />
+                <span className="text-xs font-medium">Cash</span>
               </Button>
               <Button
                 variant="outline"
-                className="flex flex-col items-center gap-0.5 h-auto py-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50"
+                className="flex flex-col items-center gap-0.5 h-auto py-3 border-emerald-500 text-emerald-600 hover:bg-emerald-50"
                 disabled={pos.cart.length === 0}
                 onClick={() => { setPaymentOpen(true); }}
               >
-                <Smartphone className="h-4 w-4" />
-                <span className="text-[10px] font-medium">M-Pesa</span>
+                <Smartphone className="h-5 w-5" />
+                <span className="text-xs font-medium">M-Pesa</span>
+              </Button>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5">
+              <Button
+                variant="outline"
+                className="flex flex-col items-center gap-0.5 h-auto py-2 border-blue-500 text-blue-600 hover:bg-blue-50"
+                disabled={pos.cart.length === 0}
+                onClick={() => { setPaymentOpen(true); }}
+              >
+                <CreditCard className="h-4 w-4" />
+                <span className="text-[10px] font-medium">Credit Sale</span>
               </Button>
               <Button
                 variant="outline"
@@ -283,16 +294,7 @@ const POS = () => {
                 onClick={pos.holdSale}
               >
                 <Pause className="h-4 w-4" />
-                <span className="text-[10px] font-medium">Suspend</span>
-              </Button>
-              <Button
-                variant="outline"
-                className="flex flex-col items-center gap-0.5 h-auto py-2 border-blue-500 text-blue-600 hover:bg-blue-50"
-                disabled={pos.cart.length === 0}
-                onClick={() => { setPaymentOpen(true); }}
-              >
-                <CreditCard className="h-4 w-4" />
-                <span className="text-[10px] font-medium">Credit</span>
+                <span className="text-[10px] font-medium">Suspend Sale</span>
               </Button>
               <Button
                 variant="outline"
