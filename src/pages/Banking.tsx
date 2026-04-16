@@ -176,6 +176,8 @@ export default function Banking() {
       setTransferLoading(false);
     }
   };
+
+  const filteredTxns = selectedAccount === "all"
     ? transactions
     : transactions.filter((t) => t.bank_account_id === selectedAccount);
 
