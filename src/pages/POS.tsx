@@ -116,21 +116,6 @@ const POS = () => {
 
   return (
     <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-6rem)]">
-      {/* Session status bar */}
-      <div className="absolute top-16 right-4 z-10 flex items-center gap-2">
-        <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-200 gap-1">
-          <Clock className="h-3 w-3" />
-          Register Open since {new Date(session.activeSession.opened_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </Badge>
-        <Button size="sm" variant="outline" onClick={() => setZReportOpen(true)}>
-          <FileText className="h-3.5 w-3.5 mr-1" />
-          Z Report
-        </Button>
-        <Button size="sm" variant="destructive" onClick={() => setEndDayOpen(true)}>
-          <Sunset className="h-3.5 w-3.5 mr-1" />
-          End Day
-        </Button>
-      </div>
 
       {/* Left: Product selection */}
       <div className="flex-1 flex flex-col min-h-0">
