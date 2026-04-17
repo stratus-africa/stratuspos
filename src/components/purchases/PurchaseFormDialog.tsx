@@ -44,12 +44,16 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
   const { locations, currentLocation, business } = useBusiness();
   const { user } = useAuth();
 
+  const orgVatEnabled = (business as any)?.vat_enabled ?? true;
+
   const [supplierId, setSupplierId] = useState<string>("none");
   const [locationId, setLocationId] = useState(currentLocation?.id || "");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("unpaid");
   const [status, setStatus] = useState("received");
-  const [vatEnabled, setVatEnabled] = useState(true);
+  // Per-purchase toggle is only used when the org allows VAT. When the org has VAT off, this is forced false.
+  const [vatEnabledLocal, setVatEnabledLocal] = useState(true);
+  const vatEnabled = orgVatEnabled && vatEnabledLocal;
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [addProductId, setAddProductId] = useState("");
@@ -61,7 +65,7 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
       setInvoiceNumber(editingPurchase.invoice_number || "");
       setPaymentStatus(editingPurchase.payment_status);
       setStatus(editingPurchase.status);
-      setVatEnabled(editingPurchase.vat_enabled ?? true);
+      setVatEnabledLocal(editingPurchase.vat_enabled ?? true);
       setNotes(editingPurchase.notes || "");
       setItems(editingItems || []);
     } else {
@@ -70,7 +74,7 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
       setInvoiceNumber("");
       setPaymentStatus("unpaid");
       setStatus("received");
-      setVatEnabled(true);
+      setVatEnabledLocal(true);
       setNotes("");
       setItems([]);
     }
@@ -206,10 +210,18 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
               <div>
                 <Label className="text-sm font-semibold">VAT on this purchase</Label>
                 <p className="text-xs text-muted-foreground">
-                  {vatEnabled ? `Tax (${taxRate}%) will be applied. Supplier KRA PIN required.` : "No VAT applied to this purchase."}
+                  {!orgVatEnabled
+                    ? "VAT is disabled organization-wide in Settings → Business."
+                    : vatEnabled
+                      ? `Tax (${taxRate}%) will be applied. Supplier KRA PIN required.`
+                      : "No VAT applied to this purchase."}
                 </p>
               </div>
-              <Switch checked={vatEnabled} onCheckedChange={setVatEnabled} />
+              <Switch
+                checked={vatEnabled}
+                onCheckedChange={setVatEnabledLocal}
+                disabled={!orgVatEnabled}
+              />
             </div>
             {vatEnabled && noSupplierWithVat && (
               <div className="flex items-start gap-2 text-xs text-destructive bg-destructive/10 rounded p-2">
