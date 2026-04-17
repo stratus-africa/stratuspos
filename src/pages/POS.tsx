@@ -329,7 +329,14 @@ const POS = () => {
                 variant="outline"
                 className="flex flex-col items-center gap-0.5 h-auto py-2 bg-orange-500 text-white border-orange-500 hover:bg-orange-600"
                 disabled={pos.cart.length === 0}
-                onClick={() => { setInitialPaymentMethod("card"); setPaymentOpen(true); }}
+                onClick={() => {
+                  if (!pos.customerId) {
+                    toast.error("Credit Sale requires a customer. Select a customer above (walk-in is not allowed).");
+                    return;
+                  }
+                  setInitialPaymentMethod("card");
+                  setPaymentOpen(true);
+                }}
               >
                 <CreditCard className="h-4 w-4" />
                 <span className="text-[10px] font-medium">Credit Sale</span>
