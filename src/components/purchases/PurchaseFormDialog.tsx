@@ -5,8 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 import { useSuppliers, type PurchaseItem, type Purchase } from "@/hooks/usePurchases";
 import { useProducts } from "@/hooks/useProducts";
 import { useBusiness } from "@/contexts/BusinessContext";
@@ -25,6 +27,7 @@ interface Props {
       total: number;
       payment_status: string;
       status: string;
+      vat_enabled: boolean;
       notes?: string;
       created_by: string;
     };
@@ -46,6 +49,7 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("unpaid");
   const [status, setStatus] = useState("received");
+  const [vatEnabled, setVatEnabled] = useState(true);
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [addProductId, setAddProductId] = useState("");
@@ -57,6 +61,7 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
       setInvoiceNumber(editingPurchase.invoice_number || "");
       setPaymentStatus(editingPurchase.payment_status);
       setStatus(editingPurchase.status);
+      setVatEnabled(editingPurchase.vat_enabled ?? true);
       setNotes(editingPurchase.notes || "");
       setItems(editingItems || []);
     } else {
@@ -65,12 +70,16 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
       setInvoiceNumber("");
       setPaymentStatus("unpaid");
       setStatus("received");
+      setVatEnabled(true);
       setNotes("");
       setItems([]);
     }
   }, [editingPurchase, editingItems, currentLocation?.id]);
 
   const taxRate = business?.tax_rate ?? 16;
+  const selectedSupplier = supplierId === "none" ? null : suppliersQuery.data?.find((s) => s.id === supplierId);
+  const supplierMissingPin = vatEnabled && selectedSupplier && !selectedSupplier.kra_pin?.trim();
+  const noSupplierWithVat = vatEnabled && supplierId === "none";
 
   const addItem = () => {
     if (!addProductId) return;
@@ -96,12 +105,22 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
   const removeItem = (idx: number) => setItems(items.filter((_, i) => i !== idx));
 
   const subtotal = items.reduce((s, i) => s + i.total, 0);
-  const tax = subtotal * (taxRate / 100);
+  const tax = vatEnabled ? subtotal * (taxRate / 100) : 0;
   const total = subtotal + tax;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || items.length === 0) return;
+    if (vatEnabled) {
+      if (supplierId === "none") {
+        toast.error("VAT-enabled purchases require a supplier with a KRA PIN");
+        return;
+      }
+      if (supplierMissingPin) {
+        toast.error(`Supplier "${selectedSupplier?.name}" has no KRA PIN. Add it before saving a VAT purchase.`);
+        return;
+      }
+    }
     onSubmit({
       purchase: {
         supplier_id: supplierId === "none" ? null : supplierId,
@@ -110,6 +129,7 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
         subtotal, tax, total,
         payment_status: paymentStatus,
         status,
+        vat_enabled: vatEnabled,
         notes: notes || undefined,
         created_by: user.id,
       },
