@@ -9,12 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, Pause, Play, X,
   User, List, LayoutGrid, Sunrise, Banknote, Smartphone, CreditCard, ScanLine,
+  ChevronUp, ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useProducts, useCategories } from "@/hooks/useProducts";
 import { useCustomers } from "@/hooks/useSales";
 import { usePOS, CartItem, PaymentEntry } from "@/hooks/usePOS";
 import { usePOSSession } from "@/hooks/usePOSSession";
+import { useIsMobile } from "@/hooks/use-mobile";
 import PaymentDialog from "@/components/pos/PaymentDialog";
 import ReceiptDialog from "@/components/pos/ReceiptDialog";
 import StartDayDialog from "@/components/pos/StartDayDialog";
@@ -27,6 +29,8 @@ const POS = () => {
   const pos = usePOS();
   const session = usePOSSession();
 
+  const isMobile = useIsMobile();
+
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
@@ -36,6 +40,7 @@ const POS = () => {
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [startDayOpen, setStartDayOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [mobileCartExpanded, setMobileCartExpanded] = useState(false);
 
   const handleScanned = (code: string) => {
     const match = (productsQuery.data ?? []).find(
