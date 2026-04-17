@@ -177,6 +177,51 @@ export default function ChartOfAccounts() {
       </div>
 
       <Card>
+        <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Wallet className="h-4 w-4" /> Bank & Cash Accounts
+              <Badge variant="outline" className="text-[10px]">Asset</Badge>
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Managed in Banking. These accounts are part of your Chart of Accounts under Assets.
+            </p>
+          </div>
+          <Link to="/banking">
+            <Button variant="outline" size="sm"><Building2 className="h-4 w-4 mr-1" /> Manage in Banking</Button>
+          </Link>
+        </CardHeader>
+        <CardContent>
+          {bankAccounts.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-2">No bank or cash accounts yet. Add one in Banking.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Account</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Bank / Number</TableHead>
+                  <TableHead className="text-right">Balance</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {bankAccounts.map((b) => (
+                  <TableRow key={b.id}>
+                    <TableCell className="font-medium">{b.name}</TableCell>
+                    <TableCell><Badge variant="secondary" className="capitalize">{b.account_type.replace("_", " ")}</Badge></TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {[b.bank_name, b.account_number].filter(Boolean).join(" • ") || "—"}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">KES {Number(b.balance).toLocaleString()}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
         <CardHeader className="pb-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
