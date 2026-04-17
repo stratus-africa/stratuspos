@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Wallet, Building2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 const ACCOUNT_TYPES = ["asset", "liability", "equity", "revenue", "expense"] as const;
@@ -24,9 +25,19 @@ interface Account {
   description: string | null;
 }
 
+interface BankAccountSummary {
+  id: string;
+  name: string;
+  account_type: string;
+  bank_name: string | null;
+  account_number: string | null;
+  balance: number;
+}
+
 export default function ChartOfAccounts() {
   const { business } = useBusiness();
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccountSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -35,12 +46,13 @@ export default function ChartOfAccounts() {
 
   const fetchAccounts = async () => {
     if (!business) return;
-    const { data } = await supabase
-      .from("chart_of_accounts")
-      .select("*")
-      .eq("business_id", business.id)
-      .order("code");
-    setAccounts((data as Account[]) || []);
+    const [accRes, bankRes] = await Promise.all([
+      supabase.from("chart_of_accounts").select("*").eq("business_id", business.id).order("code"),
+      supabase.from("bank_accounts").select("id, name, account_type, bank_name, account_number, balance")
+        .eq("business_id", business.id).eq("is_active", true).order("name"),
+    ]);
+    setAccounts((accRes.data as Account[]) || []);
+    setBankAccounts((bankRes.data as BankAccountSummary[]) || []);
     setLoading(false);
   };
 
