@@ -45,32 +45,33 @@ interface NavItem {
   url: string;
   icon: any;
   roles: AppRole[];
-  requiredTier?: "basic" | "pro";
+  /** Feature key from package_features. Item is locked when the user's plan doesn't have it. */
+  featureKey?: string;
 }
 
 const mainNav: NavItem[] = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard, roles: ["admin", "manager"] },
-  { title: "POS", url: "/pos", icon: ShoppingCart, roles: ["admin", "manager", "cashier"] },
+  { title: "Dashboard", url: "/", icon: LayoutDashboard, roles: ["admin", "manager"], featureKey: "dashboard" },
+  { title: "POS", url: "/pos", icon: ShoppingCart, roles: ["admin", "manager", "cashier"], featureKey: "pos" },
 ];
 
 const inventoryNav: NavItem[] = [
-  { title: "Products", url: "/products", icon: Package, roles: ["admin", "manager"] },
-  { title: "Inventory", url: "/inventory", icon: Warehouse, roles: ["admin", "manager"] },
+  { title: "Products", url: "/products", icon: Package, roles: ["admin", "manager"], featureKey: "products" },
+  { title: "Inventory", url: "/inventory", icon: Warehouse, roles: ["admin", "manager"], featureKey: "inventory" },
 ];
 
 const transactionNav: NavItem[] = [
-  { title: "Sales", url: "/sales", icon: Receipt, roles: ["admin", "manager"] },
-  { title: "Purchases", url: "/purchases", icon: TruckIcon, roles: ["admin", "manager"] },
-  { title: "Expenses", url: "/expenses", icon: CreditCard, roles: ["admin"] },
+  { title: "Sales", url: "/sales", icon: Receipt, roles: ["admin", "manager"], featureKey: "sales" },
+  { title: "Purchases", url: "/purchases", icon: TruckIcon, roles: ["admin", "manager"], featureKey: "purchases" },
+  { title: "Expenses", url: "/expenses", icon: CreditCard, roles: ["admin"], featureKey: "expenses" },
 ];
 
 const financeNav: NavItem[] = [
-  { title: "Accountant", url: "/chart-of-accounts", icon: BookOpen, roles: ["admin"], requiredTier: "pro" },
-  { title: "Banking", url: "/banking", icon: Landmark, roles: ["admin"], requiredTier: "pro" },
+  { title: "Accountant", url: "/chart-of-accounts", icon: BookOpen, roles: ["admin"], featureKey: "chart_of_accounts" },
+  { title: "Banking", url: "/banking", icon: Landmark, roles: ["admin"], featureKey: "banking" },
 ];
 
 const systemNav: NavItem[] = [
-  { title: "Reports", url: "/reports", icon: BarChart3, roles: ["admin"], requiredTier: "pro" },
+  { title: "Reports", url: "/reports", icon: BarChart3, roles: ["admin"], featureKey: "reports" },
   { title: "Settings", url: "/settings", icon: Settings, roles: ["admin"] },
 ];
 
@@ -81,7 +82,7 @@ export function AppSidebar() {
   const { signOut } = useAuth();
   const { business, userRole } = useBusiness();
   const { isSuperAdmin } = useSuperAdmin();
-  const { tier } = useFeatureLimit();
+  const { hasFeatureKey } = useFeatureLimit();
   const currentPath = location.pathname;
 
   const filterByRole = (items: NavItem[]) =>
@@ -91,16 +92,13 @@ export function AppSidebar() {
     const filtered = filterByRole(items);
     if (filtered.length === 0) return null;
 
-    const tierLevel: Record<string, number> = { free: 0, basic: 1, pro: 2 };
-    const currentTierLevel = tierLevel[tier] ?? 0;
-
     return (
       <SidebarGroup>
         <SidebarGroupLabel>{label}</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
             {filtered.map((item) => {
-              const locked = item.requiredTier && currentTierLevel < (tierLevel[item.requiredTier] ?? 0);
+              const locked = item.featureKey ? !hasFeatureKey(item.featureKey) : false;
               return (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={currentPath === item.url}>

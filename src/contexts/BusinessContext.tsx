@@ -10,6 +10,7 @@ interface Business {
   logo_url: string | null;
   tax_rate: number;
   is_active: boolean;
+  vat_enabled: boolean;
 }
 
 interface Location {

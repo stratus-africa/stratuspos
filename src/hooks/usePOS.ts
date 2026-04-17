@@ -68,11 +68,14 @@ export function usePOS() {
   }, []);
 
   const cartSubtotal = cart.reduce((sum, i) => sum + i.unit_price * i.quantity - i.discount, 0);
-  const cartTax = cart.reduce((sum, i) => {
-    const lineTotal = i.unit_price * i.quantity - i.discount;
-    const rate = (i.product.tax_rate ?? business?.tax_rate ?? 16) / 100;
-    return sum + lineTotal * rate / (1 + rate);
-  }, 0);
+  const vatEnabled = (business as any)?.vat_enabled ?? true;
+  const cartTax = vatEnabled
+    ? cart.reduce((sum, i) => {
+        const lineTotal = i.unit_price * i.quantity - i.discount;
+        const rate = (i.product.tax_rate ?? business?.tax_rate ?? 16) / 100;
+        return sum + (lineTotal * rate) / (1 + rate);
+      }, 0)
+    : 0;
   const cartTotal = cartSubtotal;
 
   // Hold current sale
