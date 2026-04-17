@@ -55,12 +55,15 @@ export function useFeatureLimit() {
     tier,
   } = useSubscription();
 
+  // Convention: 0 or negative in the package row means "unlimited".
+  const toLimit = (n: number, fallback: number) => (n > 0 ? n : fallback);
+
   return {
     isLoading,
     currentPackage,
-    maxProducts: maxProducts || Infinity,
-    maxLocations: maxLocations || 1,
-    maxUsers: maxUsers || 1,
+    maxProducts: toLimit(maxProducts, Infinity),
+    maxLocations: toLimit(maxLocations, Infinity),
+    maxUsers: toLimit(maxUsers, Infinity),
     canAccessReports: hasFeatureKey("reports"),
     canAccessBanking: hasFeatureKey("banking"),
     canAccessChartOfAccounts: hasFeatureKey("chart_of_accounts"),
