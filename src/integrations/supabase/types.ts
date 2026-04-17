@@ -1053,6 +1053,7 @@ export type Database = {
           tax: number
           total: number
           updated_at: string
+          vat_enabled: boolean
         }
         Insert: {
           business_id: string
@@ -1069,6 +1070,7 @@ export type Database = {
           tax?: number
           total?: number
           updated_at?: string
+          vat_enabled?: boolean
         }
         Update: {
           business_id?: string
@@ -1085,6 +1087,7 @@ export type Database = {
           tax?: number
           total?: number
           updated_at?: string
+          vat_enabled?: boolean
         }
         Relationships: [
           {
