@@ -5,21 +5,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Clock, FileText, Sunset } from "lucide-react";
+import { MapPin, Clock, FileText, Sunset, Receipt } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import { usePOSSession } from "@/hooks/usePOSSession";
 import { useState } from "react";
 import ZReportDialog from "@/components/pos/ZReportDialog";
 import EndDayDialog from "@/components/pos/EndDayDialog";
+import { ExpenseFormDialog } from "@/components/expenses/ExpenseFormDialog";
+import { useExpenses } from "@/hooks/useExpenses";
 
 export function TopBar() {
   const { business, locations, currentLocation, setCurrentLocation } = useBusiness();
   const { user } = useAuth();
   const location = useLocation();
   const session = usePOSSession();
+  const { create: createExpense } = useExpenses();
 
   const [zReportOpen, setZReportOpen] = useState(false);
   const [endDayOpen, setEndDayOpen] = useState(false);
+  const [expenseOpen, setExpenseOpen] = useState(false);
 
   const isPOS = location.pathname === "/pos";
 
@@ -74,6 +78,10 @@ export function TopBar() {
                 <Clock className="h-3 w-3" />
                 Register Open since {new Date(session.activeSession.opened_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </Badge>
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setExpenseOpen(true)}>
+                <Receipt className="h-3.5 w-3.5 mr-1" />
+                Expense
+              </Button>
               <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setZReportOpen(true)}>
                 <FileText className="h-3.5 w-3.5 mr-1" />
                 Z Report
@@ -105,6 +113,15 @@ export function TopBar() {
             onLoadSessions={session.fetchSessionHistory}
           />
         </>
+      )}
+
+      {isPOS && (
+        <ExpenseFormDialog
+          open={expenseOpen}
+          onOpenChange={setExpenseOpen}
+          onSubmit={(data) => createExpense.mutate(data)}
+          isLoading={createExpense.isPending}
+        />
       )}
     </>
   );
