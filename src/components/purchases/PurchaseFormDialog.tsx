@@ -273,7 +273,7 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
           <div className="flex justify-end">
             <div className="space-y-1 text-right text-sm">
               <div>Subtotal: <span className="font-medium">{formatKES(subtotal)}</span></div>
-              <div>Tax ({taxRate}%): <span className="font-medium">{formatKES(tax)}</span></div>
+              <div>Tax {vatEnabled ? `(${taxRate}%)` : "(VAT off)"}: <span className="font-medium">{formatKES(tax)}</span></div>
               <div className="text-base font-bold">Total: {formatKES(total)}</div>
             </div>
           </div>
@@ -285,7 +285,7 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={isLoading || items.length === 0}>
+            <Button type="submit" disabled={isLoading || items.length === 0 || !!supplierMissingPin || noSupplierWithVat}>
               {isLoading ? "Saving..." : editingPurchase ? "Update Purchase" : "Create Purchase"}
             </Button>
           </div>
