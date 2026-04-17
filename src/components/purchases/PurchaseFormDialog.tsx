@@ -201,6 +201,30 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
             </div>
           </div>
 
+          <div className="rounded-lg border p-3 space-y-2 bg-muted/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label className="text-sm font-semibold">VAT on this purchase</Label>
+                <p className="text-xs text-muted-foreground">
+                  {vatEnabled ? `Tax (${taxRate}%) will be applied. Supplier KRA PIN required.` : "No VAT applied to this purchase."}
+                </p>
+              </div>
+              <Switch checked={vatEnabled} onCheckedChange={setVatEnabled} />
+            </div>
+            {vatEnabled && noSupplierWithVat && (
+              <div className="flex items-start gap-2 text-xs text-destructive bg-destructive/10 rounded p-2">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>Select a supplier with a KRA PIN to enable VAT.</span>
+              </div>
+            )}
+            {vatEnabled && supplierMissingPin && (
+              <div className="flex items-start gap-2 text-xs text-destructive bg-destructive/10 rounded p-2">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>Supplier "{selectedSupplier?.name}" has no KRA PIN. Edit the supplier to add one, or disable VAT.</span>
+              </div>
+            )}
+          </div>
+
           <div className="flex gap-2">
             <Select value={addProductId} onValueChange={setAddProductId}>
               <SelectTrigger className="flex-1"><SelectValue placeholder="Select product to add..." /></SelectTrigger>
