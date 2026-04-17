@@ -5,24 +5,29 @@ import { Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface FeatureGateProps {
-  requiredTier: SubscriptionTier;
+  /** Backwards-compat tier prop (rarely used now) */
+  requiredTier?: SubscriptionTier;
+  /** Preferred: gate by feature key from package_features (e.g. "reports", "banking") */
+  featureKey?: string;
   children: React.ReactNode;
   fallback?: React.ReactNode;
 }
 
-export function FeatureGate({ requiredTier, children, fallback }: FeatureGateProps) {
-  const { hasFeature, isLoading } = useSubscription();
+export function FeatureGate({ requiredTier, featureKey, children, fallback }: FeatureGateProps) {
+  const { hasFeature, hasFeatureKey, isLoading, currentPackage } = useSubscription();
   const navigate = useNavigate();
 
   if (isLoading) return <>{children}</>;
 
-  if (!hasFeature(requiredTier)) {
+  const allowed = featureKey ? hasFeatureKey(featureKey) : requiredTier ? hasFeature(requiredTier) : true;
+
+  if (!allowed) {
     return fallback || (
       <div className="flex flex-col items-center justify-center py-12 text-center gap-3">
         <Lock className="h-10 w-10 text-muted-foreground" />
         <h3 className="text-lg font-semibold">Upgrade Required</h3>
         <p className="text-sm text-muted-foreground max-w-sm">
-          This feature requires the {requiredTier.charAt(0).toUpperCase() + requiredTier.slice(1)} plan or higher.
+          This feature isn't included in your current{currentPackage ? ` ${currentPackage.name}` : ""} plan. Upgrade to unlock it.
         </p>
         <Button onClick={() => navigate("/settings?tab=subscription")}>
           View Plans
@@ -34,14 +39,33 @@ export function FeatureGate({ requiredTier, children, fallback }: FeatureGatePro
   return <>{children}</>;
 }
 
+/**
+ * Returns plan-driven feature limits and access flags.
+ * Limits and access come directly from the user's resolved subscription_package
+ * + its package_features rows.
+ */
 export function useFeatureLimit() {
-  const { tier } = useSubscription();
+  const {
+    currentPackage,
+    maxProducts,
+    maxLocations,
+    maxUsers,
+    hasFeatureKey,
+    isLoading,
+    tier,
+  } = useSubscription();
 
-  const maxProducts = tier === "free" ? 20 : Infinity;
-  const maxLocations = tier === "pro" ? Infinity : 1;
-  const canAccessReports = tier === "pro";
-  const canAccessBanking = tier === "pro";
-  const canAccessChartOfAccounts = tier === "pro";
-
-  return { maxProducts, maxLocations, canAccessReports, canAccessBanking, canAccessChartOfAccounts, tier };
+  return {
+    isLoading,
+    currentPackage,
+    maxProducts: maxProducts || Infinity,
+    maxLocations: maxLocations || 1,
+    maxUsers: maxUsers || 1,
+    canAccessReports: hasFeatureKey("reports"),
+    canAccessBanking: hasFeatureKey("banking"),
+    canAccessChartOfAccounts: hasFeatureKey("chart_of_accounts"),
+    canUseMultiLocation: hasFeatureKey("multi_location"),
+    hasFeatureKey,
+    tier,
+  };
 }

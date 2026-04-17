@@ -20,17 +20,30 @@ interface Subscription {
   environment: string;
 }
 
-const productTierMap: Record<string, SubscriptionTier> = {
-  basic_plan: "basic",
-  pro_plan: "pro",
-};
+interface SubscriptionPackage {
+  id: string;
+  name: string;
+  max_locations: number;
+  max_products: number;
+  max_users: number;
+  paddle_product_id: string | null;
+  paddle_monthly_price_id: string | null;
+  paddle_yearly_price_id: string | null;
+  sort_order: number;
+}
+
+interface PackageFeature {
+  package_id: string;
+  feature_key: string;
+  enabled: boolean;
+}
 
 export function useSubscription() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const environment = getPaddleEnvironment();
 
-  const { data: subscription, isLoading } = useQuery({
+  const { data: subscription, isLoading: subLoading } = useQuery({
     queryKey: ["subscription", user?.id, environment],
     queryFn: async () => {
       if (!user) return null;
@@ -47,7 +60,23 @@ export function useSubscription() {
     enabled: !!user,
   });
 
-  // Listen for realtime changes
+  // Load all active packages + their features (small dataset, cache long)
+  const { data: packagesData, isLoading: pkgLoading } = useQuery({
+    queryKey: ["subscription_packages_with_features"],
+    queryFn: async () => {
+      const [{ data: pkgs }, { data: feats }] = await Promise.all([
+        supabase.from("subscription_packages").select("*").eq("is_active", true).order("sort_order"),
+        supabase.from("package_features").select("package_id, feature_key, enabled"),
+      ]);
+      return {
+        packages: (pkgs || []) as SubscriptionPackage[],
+        features: (feats || []) as PackageFeature[],
+      };
+    },
+    staleTime: 60_000,
+  });
+
+  // Listen for realtime changes to subscription
   useEffect(() => {
     if (!user) return;
     const channelName = `subscription-changes-${user.id}-${Date.now()}`;
@@ -75,21 +104,51 @@ export function useSubscription() {
       (!subscription.current_period_end || new Date(subscription.current_period_end) > new Date())
     : false;
 
-  const tier: SubscriptionTier = subscription && isActive
-    ? productTierMap[subscription.product_id] || "free"
-    : "free";
+  const packages = packagesData?.packages ?? [];
+  const features = packagesData?.features ?? [];
 
-  const hasFeature = (requiredTier: SubscriptionTier): boolean => {
-    const tierLevel: Record<SubscriptionTier, number> = { free: 0, basic: 1, pro: 2 };
-    return tierLevel[tier] >= tierLevel[requiredTier];
+  // Resolve current package: matched by paddle_product_id when active subscription exists,
+  // otherwise fall back to the lowest sort_order package (the entry-level "free/starter" tier).
+  const currentPackage: SubscriptionPackage | null = (() => {
+    if (isActive && subscription) {
+      const byProduct = packages.find(p => p.paddle_product_id === subscription.product_id);
+      if (byProduct) return byProduct;
+      const byPrice = packages.find(p =>
+        p.paddle_monthly_price_id === subscription.price_id ||
+        p.paddle_yearly_price_id === subscription.price_id
+      );
+      if (byPrice) return byPrice;
+    }
+    return packages[0] ?? null;
+  })();
+
+  const enabledFeatureKeys = new Set(
+    features.filter(f => f.package_id === currentPackage?.id && f.enabled).map(f => f.feature_key)
+  );
+
+  const hasFeatureKey = (key: string): boolean => {
+    if (!currentPackage) return false;
+    return enabledFeatureKeys.has(key);
+  };
+
+  // Legacy tier mapping kept for backwards-compat callers
+  const tier: SubscriptionTier = isActive ? "pro" : "free";
+  const hasFeature = (_requiredTier: SubscriptionTier): boolean => {
+    // Deprecated tier API — defer to package features when possible
+    return isActive;
   };
 
   return {
     subscription,
-    isLoading,
+    isLoading: subLoading || pkgLoading,
     isActive,
     tier,
     hasFeature,
+    hasFeatureKey,
+    currentPackage,
+    maxProducts: currentPackage?.max_products ?? 0,
+    maxLocations: currentPackage?.max_locations ?? 1,
+    maxUsers: currentPackage?.max_users ?? 1,
     isCanceling: subscription?.cancel_at_period_end ?? false,
   };
 }
