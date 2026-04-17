@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Wallet, Building2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
 const ACCOUNT_TYPES = ["asset", "liability", "equity", "revenue", "expense"] as const;
@@ -24,9 +25,19 @@ interface Account {
   description: string | null;
 }
 
+interface BankAccountSummary {
+  id: string;
+  name: string;
+  account_type: string;
+  bank_name: string | null;
+  account_number: string | null;
+  balance: number;
+}
+
 export default function ChartOfAccounts() {
   const { business } = useBusiness();
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccountSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -35,12 +46,13 @@ export default function ChartOfAccounts() {
 
   const fetchAccounts = async () => {
     if (!business) return;
-    const { data } = await supabase
-      .from("chart_of_accounts")
-      .select("*")
-      .eq("business_id", business.id)
-      .order("code");
-    setAccounts((data as Account[]) || []);
+    const [accRes, bankRes] = await Promise.all([
+      supabase.from("chart_of_accounts").select("*").eq("business_id", business.id).order("code"),
+      supabase.from("bank_accounts").select("id, name, account_type, bank_name, account_number, balance")
+        .eq("business_id", business.id).eq("is_active", true).order("name"),
+    ]);
+    setAccounts((accRes.data as Account[]) || []);
+    setBankAccounts((bankRes.data as BankAccountSummary[]) || []);
     setLoading(false);
   };
 
@@ -163,6 +175,51 @@ export default function ChartOfAccounts() {
           </DialogContent>
         </Dialog>
       </div>
+
+      <Card>
+        <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Wallet className="h-4 w-4" /> Bank & Cash Accounts
+              <Badge variant="outline" className="text-[10px]">Asset</Badge>
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Managed in Banking. These accounts are part of your Chart of Accounts under Assets.
+            </p>
+          </div>
+          <Link to="/banking">
+            <Button variant="outline" size="sm"><Building2 className="h-4 w-4 mr-1" /> Manage in Banking</Button>
+          </Link>
+        </CardHeader>
+        <CardContent>
+          {bankAccounts.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-2">No bank or cash accounts yet. Add one in Banking.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Account</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Bank / Number</TableHead>
+                  <TableHead className="text-right">Balance</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {bankAccounts.map((b) => (
+                  <TableRow key={b.id}>
+                    <TableCell className="font-medium">{b.name}</TableCell>
+                    <TableCell><Badge variant="secondary" className="capitalize">{b.account_type.replace("_", " ")}</Badge></TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {[b.bank_name, b.account_number].filter(Boolean).join(" • ") || "—"}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">KES {Number(b.balance).toLocaleString()}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="pb-3">

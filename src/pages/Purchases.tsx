@@ -81,6 +81,7 @@ const Purchases = () => {
       total: number;
       payment_status: string;
       status: string;
+      vat_enabled: boolean;
       notes?: string;
       created_by: string;
     };

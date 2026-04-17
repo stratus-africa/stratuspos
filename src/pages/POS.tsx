@@ -9,12 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   ShoppingCart, Search, Plus, Minus, Trash2, Pause, Play, X,
   User, List, LayoutGrid, Sunrise, Banknote, Smartphone, CreditCard, ScanLine,
+  ChevronUp, ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useProducts, useCategories } from "@/hooks/useProducts";
 import { useCustomers } from "@/hooks/useSales";
 import { usePOS, CartItem, PaymentEntry } from "@/hooks/usePOS";
 import { usePOSSession } from "@/hooks/usePOSSession";
+import { useIsMobile } from "@/hooks/use-mobile";
 import PaymentDialog from "@/components/pos/PaymentDialog";
 import ReceiptDialog from "@/components/pos/ReceiptDialog";
 import StartDayDialog from "@/components/pos/StartDayDialog";
@@ -27,6 +29,8 @@ const POS = () => {
   const pos = usePOS();
   const session = usePOSSession();
 
+  const isMobile = useIsMobile();
+
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
@@ -36,6 +40,7 @@ const POS = () => {
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [startDayOpen, setStartDayOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [mobileCartExpanded, setMobileCartExpanded] = useState(false);
 
   const handleScanned = (code: string) => {
     const match = (productsQuery.data ?? []).find(
@@ -220,55 +225,78 @@ const POS = () => {
 
       {/* Right: Cart */}
       <Card className="w-full lg:w-[28rem] flex flex-col min-h-0">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5" /> Cart
-              {pos.cart.length > 0 && <Badge variant="secondary">{pos.cart.length}</Badge>}
-            </CardTitle>
-          </div>
-          {/* Customer selector */}
-          <Select
-            value={pos.customerId || "walkin"}
-            onValueChange={(v) => {
-              if (v === "walkin") {
-                pos.setCustomerId(null);
-                pos.setCustomerName(null);
-              } else {
-                const cust = customers.find((c) => c.id === v);
-                pos.setCustomerId(v);
-                pos.setCustomerName(cust?.name || null);
-              }
-            }}
-          >
-            <SelectTrigger className="mt-1">
-              <User className="h-4 w-4 mr-1 text-muted-foreground" />
-              <SelectValue placeholder="Walk-in Customer" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="walkin">Walk-in Customer</SelectItem>
-              {customers.map((c) => (
-                <SelectItem key={c.id} value={c.id}>{c.name} {c.phone ? `(${c.phone})` : ""}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardHeader>
+        {(!isMobile || mobileCartExpanded) && (
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ShoppingCart className="h-5 w-5" /> Cart
+                {pos.cart.length > 0 && <Badge variant="secondary">{pos.cart.length}</Badge>}
+              </CardTitle>
+              {isMobile && (
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setMobileCartExpanded(false)}>
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+            {/* Customer selector */}
+            <Select
+              value={pos.customerId || "walkin"}
+              onValueChange={(v) => {
+                if (v === "walkin") {
+                  pos.setCustomerId(null);
+                  pos.setCustomerName(null);
+                } else {
+                  const cust = customers.find((c) => c.id === v);
+                  pos.setCustomerId(v);
+                  pos.setCustomerName(cust?.name || null);
+                }
+              }}
+            >
+              <SelectTrigger className="mt-1">
+                <User className="h-4 w-4 mr-1 text-muted-foreground" />
+                <SelectValue placeholder="Walk-in Customer" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="walkin">Walk-in Customer</SelectItem>
+                {customers.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>{c.name} {c.phone ? `(${c.phone})` : ""}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardHeader>
+        )}
 
         <CardContent className="flex-1 flex flex-col min-h-0 p-3">
-          <ScrollArea className="flex-1">
-            {pos.cart.length === 0 ? (
-              <p className="text-center py-10 text-muted-foreground text-sm">Add products to start a sale</p>
-            ) : (
-              <div className="space-y-2">
-                {pos.cart.map((item) => (
-                  <CartItemRow key={item.product.id} item={item} onUpdate={pos.updateCartItem} onRemove={pos.removeFromCart} />
-                ))}
-              </div>
-            )}
-          </ScrollArea>
+          {(!isMobile || mobileCartExpanded) && (
+            <ScrollArea className="flex-1">
+              {pos.cart.length === 0 ? (
+                <p className="text-center py-10 text-muted-foreground text-sm">Add products to start a sale</p>
+              ) : (
+                <div className="space-y-2">
+                  {pos.cart.map((item) => (
+                    <CartItemRow key={item.product.id} item={item} onUpdate={pos.updateCartItem} onRemove={pos.removeFromCart} />
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          )}
 
-          <div className="pt-3 border-t mt-2 space-y-2">
-            {pos.cart.length > 0 && (
+          <div className={`${(!isMobile || mobileCartExpanded) ? "pt-3 border-t mt-2" : ""} space-y-2`}>
+            {isMobile && !mobileCartExpanded && pos.cart.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setMobileCartExpanded(true)}
+                className="flex items-center justify-between w-full px-2 py-1 rounded hover:bg-accent"
+              >
+                <span className="flex items-center gap-2 text-sm font-medium">
+                  <ShoppingCart className="h-4 w-4" />
+                  {pos.cart.length} item{pos.cart.length === 1 ? "" : "s"}
+                  <ChevronUp className="h-3 w-3 text-muted-foreground" />
+                </span>
+                <span className="font-bold text-base">KES {pos.cartTotal.toLocaleString()}</span>
+              </button>
+            )}
+            {(!isMobile || mobileCartExpanded) && pos.cart.length > 0 && (
               <div className="space-y-1">
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>KES {pos.cartSubtotal.toLocaleString()}</span></div>
                 <div className="flex justify-between text-sm"><span className="text-muted-foreground">VAT (incl.)</span><span>KES {Math.round(pos.cartTax).toLocaleString()}</span></div>
