@@ -83,7 +83,7 @@ export default function SaleDetailDialog({ open, onOpenChange, sale }: Props) {
         <div className="flex justify-end">
           <div className="text-sm space-y-1 w-48">
             <div className="flex justify-between"><span className="text-muted-foreground">Subtotal</span><span>{Number(sale.subtotal).toLocaleString()}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Tax</span><span>{Number(sale.tax).toLocaleString()}</span></div>
+            {Number(sale.tax) > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Tax</span><span>{Number(sale.tax).toLocaleString()}</span></div>}
             {Number(sale.discount) > 0 && <div className="flex justify-between"><span className="text-muted-foreground">Discount</span><span>-{Number(sale.discount).toLocaleString()}</span></div>}
             <Separator />
             <div className="flex justify-between font-semibold"><span>Total</span><span>KES {Number(sale.total).toLocaleString()}</span></div>

@@ -93,7 +93,7 @@ export default function ReceiptDialog({ open, onOpenChange, data }: Props) {
           <div className="line border-t border-dashed border-foreground/30 my-2" />
 
           <div className="flex justify-between"><span>Subtotal</span><span>{data.subtotal.toLocaleString()}</span></div>
-          <div className="flex justify-between"><span>VAT</span><span>{data.tax.toLocaleString()}</span></div>
+          {data.tax > 0 && <div className="flex justify-between"><span>VAT</span><span>{data.tax.toLocaleString()}</span></div>}
           {data.discount > 0 && <div className="flex justify-between"><span>Discount</span><span>-{data.discount.toLocaleString()}</span></div>}
           <div className="flex justify-between font-bold text-sm"><span>TOTAL</span><span>KES {data.total.toLocaleString()}</span></div>
 
