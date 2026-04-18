@@ -78,7 +78,7 @@ export function ProductFormDialog({ open, onOpenChange, onSubmit, product, isLoa
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(form);
+    onSubmit({ ...form, tax_rate: vatEnabled ? form.tax_rate : 0 });
   };
 
   const margin = form.selling_price > 0 && form.purchase_price > 0
