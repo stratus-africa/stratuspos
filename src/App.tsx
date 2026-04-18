@@ -105,7 +105,7 @@ const ProtectedRoutes = () => {
   const { needsOnboarding, loading: bizLoading, hasAccess, userRole, isSuspended } = useBusiness();
 
   if (authLoading || bizLoading) return <PageLoader />;
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!user) return <Navigate to="/landing" replace />;
   if (isSuspended) return <BusinessSuspended />;
   if (needsOnboarding) return <Suspense fallback={<PageLoader />}><Onboarding /></Suspense>;
 
