@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useCategories, useBrands, useUnits, type ProductFormData, type Product } from "@/hooks/useProducts";
 import { useTaxRates } from "@/hooks/useTaxRates";
+import { useBusiness } from "@/contexts/BusinessContext";
 
 interface Props {
   open: boolean;
@@ -21,6 +22,8 @@ export function ProductFormDialog({ open, onOpenChange, onSubmit, product, isLoa
   const { query: brandsQuery } = useBrands();
   const { query: unitsQuery } = useUnits();
   const { query: taxRatesQuery } = useTaxRates();
+  const { business } = useBusiness();
+  const vatEnabled = business?.vat_enabled !== false;
 
   const [form, setForm] = useState<ProductFormData>({
     name: "",
@@ -165,30 +168,39 @@ export function ProductFormDialog({ open, onOpenChange, onSubmit, product, isLoa
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Tax Rate</Label>
-              {taxRates.length > 0 ? (
-                <Select value={selectedTaxRateId} onValueChange={handleTaxRateChange}>
-                  <SelectTrigger><SelectValue placeholder="Select tax rate" /></SelectTrigger>
-                  <SelectContent>
-                    {taxRates.map((tr) => (
-                      <SelectItem key={tr.id} value={tr.id}>
-                        {tr.name} ({tr.rate}%){tr.exempt_reason ? ` — ${tr.exempt_reason}` : ""}
-                      </SelectItem>
-                    ))}
-                    <SelectItem value="manual">Custom</SelectItem>
-                  </SelectContent>
-                </Select>
-              ) : (
-                <Input type="number" min={0} step={0.01} value={form.tax_rate} onChange={(e) => setForm({ ...form, tax_rate: parseFloat(e.target.value) || 0 })} />
-              )}
-              {selectedTaxRateId === "manual" && taxRates.length > 0 && (
-                <Input type="number" min={0} step={0.01} value={form.tax_rate} onChange={(e) => setForm({ ...form, tax_rate: parseFloat(e.target.value) || 0 })} placeholder="Custom rate %" className="mt-1" />
-              )}
-              {selectedTaxRate?.type === "exempt" && selectedTaxRate.exempt_reason && (
-                <p className="text-xs text-muted-foreground mt-1">Exempt: {selectedTaxRate.exempt_reason}</p>
-              )}
-            </div>
+            {vatEnabled ? (
+              <div className="space-y-2">
+                <Label>Tax Rate</Label>
+                {taxRates.length > 0 ? (
+                  <Select value={selectedTaxRateId} onValueChange={handleTaxRateChange}>
+                    <SelectTrigger><SelectValue placeholder="Select tax rate" /></SelectTrigger>
+                    <SelectContent>
+                      {taxRates.map((tr) => (
+                        <SelectItem key={tr.id} value={tr.id}>
+                          {tr.name} ({tr.rate}%){tr.exempt_reason ? ` — ${tr.exempt_reason}` : ""}
+                        </SelectItem>
+                      ))}
+                      <SelectItem value="manual">Custom</SelectItem>
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <Input type="number" min={0} step={0.01} value={form.tax_rate} onChange={(e) => setForm({ ...form, tax_rate: parseFloat(e.target.value) || 0 })} />
+                )}
+                {selectedTaxRateId === "manual" && taxRates.length > 0 && (
+                  <Input type="number" min={0} step={0.01} value={form.tax_rate} onChange={(e) => setForm({ ...form, tax_rate: parseFloat(e.target.value) || 0 })} placeholder="Custom rate %" className="mt-1" />
+                )}
+                {selectedTaxRate?.type === "exempt" && selectedTaxRate.exempt_reason && (
+                  <p className="text-xs text-muted-foreground mt-1">Exempt: {selectedTaxRate.exempt_reason}</p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Tax Rate</Label>
+                <div className="flex items-center h-10 px-3 rounded-md border bg-muted text-sm text-muted-foreground">
+                  VAT disabled organization-wide
+                </div>
+              </div>
+            )}
             <div className="flex items-center gap-3 pt-6">
               <Switch checked={form.is_active} onCheckedChange={(checked) => setForm({ ...form, is_active: checked })} />
               <Label>Active</Label>
