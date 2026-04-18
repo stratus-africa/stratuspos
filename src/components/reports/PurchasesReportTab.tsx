@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Download, ShoppingCart } from "lucide-react";
 import { toast } from "sonner";
 import { formatKES, downloadCSV } from "./reportUtils";
+import { useBusiness } from "@/contexts/BusinessContext";
 
 interface PurchasesReportTabProps {
   purchases: any[];
@@ -14,12 +15,14 @@ interface PurchasesReportTabProps {
 }
 
 const PurchasesReportTab = ({ purchases, from, to, loading }: PurchasesReportTabProps) => {
+  const { business } = useBusiness();
+  const vatEnabled = business?.vat_enabled !== false;
+
   const totalPurchases = purchases.reduce((s: number, p: any) => s + Number(p.total), 0);
   const totalTax = purchases.reduce((s: number, p: any) => s + Number(p.tax), 0);
   const paidCount = purchases.filter((p: any) => p.payment_status === "paid").length;
   const unpaidCount = purchases.filter((p: any) => p.payment_status !== "paid").length;
 
-  // Top suppliers
   const supplierTotals: Record<string, { name: string; total: number; count: number }> = {};
   purchases.forEach((p: any) => {
     const name = p.suppliers?.name || "Unknown";
@@ -30,11 +33,17 @@ const PurchasesReportTab = ({ purchases, from, to, loading }: PurchasesReportTab
   const topSuppliers = Object.values(supplierTotals).sort((a, b) => b.total - a.total).slice(0, 10);
 
   const downloadPurchasesCSV = () => {
-    const headers = ["Date", "Invoice", "Supplier", "Location", "Subtotal", "Tax", "Total", "Status", "Payment Status"];
-    const rows = purchases.map((p: any) => [
-      new Date(p.created_at).toLocaleDateString(), p.invoice_number || "", p.suppliers?.name || "",
-      p.locations?.name || "", p.subtotal, p.tax, p.total, p.status, p.payment_status,
-    ].map(String));
+    const headers = vatEnabled
+      ? ["Date", "Invoice", "Supplier", "Location", "Subtotal", "Tax", "Total", "Status", "Payment Status"]
+      : ["Date", "Invoice", "Supplier", "Location", "Subtotal", "Total", "Status", "Payment Status"];
+    const rows = purchases.map((p: any) => {
+      const base = [
+        new Date(p.created_at).toLocaleDateString(), p.invoice_number || "", p.suppliers?.name || "",
+        p.locations?.name || "", p.subtotal,
+      ];
+      const tail = [p.total, p.status, p.payment_status];
+      return (vatEnabled ? [...base, p.tax, ...tail] : [...base, ...tail]).map(String);
+    });
     downloadCSV(`purchases_report_${from}_to_${to}.csv`, headers, rows);
     toast.success("Purchases report downloaded");
   };
@@ -48,9 +57,12 @@ const PurchasesReportTab = ({ purchases, from, to, loading }: PurchasesReportTab
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div className={`grid grid-cols-2 md:grid-cols-${vatEnabled ? 5 : 4} gap-3 mb-4`}>
           <Card><CardContent className="pt-4 text-center"><p className="text-xs text-muted-foreground">Total Purchases</p><p className="text-lg font-bold">{purchases.length}</p></CardContent></Card>
           <Card><CardContent className="pt-4 text-center"><p className="text-xs text-muted-foreground">Total Amount</p><p className="text-lg font-bold">{formatKES(totalPurchases)}</p></CardContent></Card>
+          {vatEnabled && (
+            <Card><CardContent className="pt-4 text-center"><p className="text-xs text-muted-foreground">Total Tax</p><p className="text-lg font-bold">{formatKES(totalTax)}</p></CardContent></Card>
+          )}
           <Card><CardContent className="pt-4 text-center"><p className="text-xs text-muted-foreground">Paid</p><p className="text-lg font-bold text-green-600">{paidCount}</p></CardContent></Card>
           <Card><CardContent className="pt-4 text-center"><p className="text-xs text-muted-foreground">Unpaid</p><p className="text-lg font-bold text-destructive">{unpaidCount}</p></CardContent></Card>
         </div>

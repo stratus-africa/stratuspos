@@ -21,6 +21,23 @@ interface BusinessDetailDialogProps {
   onClose: () => void;
 }
 
+interface PlanRow {
+  id: string;
+  name: string;
+  monthly_price: number;
+  yearly_price: number;
+  paddle_product_id: string | null;
+  paddle_monthly_price_id: string | null;
+  sort_order: number;
+}
+
+interface FeatureRow {
+  package_id: string;
+  feature_key: string;
+  feature_label: string;
+  enabled: boolean;
+}
+
 export function BusinessDetailDialog({ businessId, businessName, onClose }: BusinessDetailDialogProps) {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -32,7 +49,8 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
   const [recentExpenses, setRecentExpenses] = useState<any[]>([]);
   const [subscription, setSubscription] = useState<any>(null);
   const [locations, setLocations] = useState<any[]>([]);
-  const [productCount, setProductCount] = useState(0);
+  const [plans, setPlans] = useState<PlanRow[]>([]);
+  const [allFeatures, setAllFeatures] = useState<FeatureRow[]>([]);
 
   useEffect(() => {
     if (!businessId) return;
@@ -45,7 +63,8 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
 
     const [
       salesRes, expensesRes, productsRes, customersRes, suppliersRes,
-      usersRes, locationsRes, recentSalesRes, recentExpensesRes
+      usersRes, locationsRes, recentSalesRes, recentExpensesRes,
+      plansRes, featuresRes,
     ] = await Promise.all([
       supabase.from("sales").select("total").eq("business_id", businessId),
       supabase.from("expenses").select("amount").eq("business_id", businessId),
@@ -56,6 +75,8 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
       supabase.from("locations").select("*").eq("business_id", businessId),
       supabase.from("sales").select("id, invoice_number, total, status, payment_status, created_at").eq("business_id", businessId).order("created_at", { ascending: false }).limit(10),
       supabase.from("expenses").select("id, amount, description, date, payment_method").eq("business_id", businessId).order("date", { ascending: false }).limit(10),
+      supabase.from("subscription_packages").select("id, name, monthly_price, yearly_price, paddle_product_id, paddle_monthly_price_id, sort_order").eq("is_active", true).order("sort_order"),
+      supabase.from("package_features").select("package_id, feature_key, feature_label, enabled"),
     ]);
 
     const totalRevenue = (salesRes.data || []).reduce((s, r) => s + Number(r.total), 0);
@@ -70,7 +91,6 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
       totalSuppliers: suppliersRes.count || 0,
     });
 
-    // Fetch user profiles
     const userIds = (usersRes.data || []).map((u: any) => u.user_id);
     let userProfiles: any[] = [];
     if (userIds.length > 0) {
@@ -85,7 +105,6 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
     }
     setUsers(userProfiles);
 
-    // Fetch subscription for any user in this business
     if (userIds.length > 0) {
       const { data: subs } = await supabase
         .from("subscriptions")
@@ -99,40 +118,23 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
     setLocations(locationsRes.data || []);
     setRecentSales(recentSalesRes.data || []);
     setRecentExpenses(recentExpensesRes.data || []);
-    setProductCount(productsRes.count || 0);
+    setPlans((plansRes.data || []) as PlanRow[]);
+    setAllFeatures((featuresRes.data || []) as FeatureRow[]);
     setLoading(false);
   };
 
-  // Derive tier from subscription
-  const getTier = () => {
-    if (!subscription || !["active", "trialing"].includes(subscription.status)) return "free";
-    const pid = subscription.product_id || "";
-    if (pid.includes("pro")) return "pro";
-    if (pid.includes("basic")) return "basic";
-    return "free";
-  };
+  // Resolve current plan from subscription
+  const currentPlan: PlanRow | null = (() => {
+    if (!subscription || !["active", "trialing"].includes(subscription.status)) {
+      return plans[0] ?? null;
+    }
+    const byProd = plans.find(p => p.paddle_product_id === subscription.product_id);
+    if (byProd) return byProd;
+    return plans[0] ?? null;
+  })();
 
-  const tier = getTier();
-
-  // Modules
-  const modules = [
-    { name: "Point of Sale", enabled: true, tier: "free" },
-    { name: "Products & Inventory", enabled: true, tier: "free" },
-    { name: "Sales Management", enabled: true, tier: "free" },
-    { name: "Purchases", enabled: true, tier: "free" },
-    { name: "Expenses", enabled: true, tier: "free" },
-    { name: "Customers", enabled: true, tier: "free" },
-    { name: "Multi-Location", enabled: tier === "pro", tier: "pro" },
-    { name: "Reports & Analytics", enabled: tier === "pro", tier: "pro" },
-    { name: "Banking & Reconciliation", enabled: tier === "pro", tier: "pro" },
-    { name: "Chart of Accounts", enabled: tier === "pro", tier: "pro" },
-  ];
-
-  const tierColors: Record<string, string> = {
-    free: "bg-muted text-muted-foreground",
-    basic: "bg-blue-500/10 text-blue-600 border-blue-200",
-    pro: "bg-amber-500/10 text-amber-600 border-amber-200",
-  };
+  const planFeatures = allFeatures.filter(f => f.package_id === currentPlan?.id);
+  const planName = currentPlan?.name || "Free";
 
   return (
     <Dialog open={!!businessId} onOpenChange={(open) => !open && onClose()}>
@@ -140,7 +142,7 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 text-xl">
             {businessName}
-            <Badge className={tierColors[tier]}>{tier.toUpperCase()} Plan</Badge>
+            <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">{planName} Plan</Badge>
           </DialogTitle>
         </DialogHeader>
 
@@ -154,11 +156,10 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
               <TabsTrigger value="dashboard"><BarChart3 className="h-3.5 w-3.5 mr-1.5" />Dashboard</TabsTrigger>
               <TabsTrigger value="users"><Users className="h-3.5 w-3.5 mr-1.5" />Users</TabsTrigger>
               <TabsTrigger value="activity"><Activity className="h-3.5 w-3.5 mr-1.5" />Activity</TabsTrigger>
-              <TabsTrigger value="subscription"><CreditCard className="h-3.5 w-3.5 mr-1.5" />Subscription</TabsTrigger>
+              <TabsTrigger value="plan"><CreditCard className="h-3.5 w-3.5 mr-1.5" />Plan</TabsTrigger>
               <TabsTrigger value="modules"><Layers className="h-3.5 w-3.5 mr-1.5" />Modules</TabsTrigger>
             </TabsList>
 
-            {/* Dashboard Tab */}
             <TabsContent value="dashboard" className="space-y-4 mt-4">
               <div className="grid grid-cols-3 gap-4">
                 <StatCard icon={ShoppingCart} label="Total Sales" value={stats.totalSales.toLocaleString()} />
@@ -169,7 +170,6 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
                 <StatCard icon={MapPin} label="Locations" value={locations.length.toString()} />
               </div>
 
-              {/* Locations list */}
               {locations.length > 0 && (
                 <Card>
                   <CardHeader className="pb-2">
@@ -188,7 +188,6 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
               )}
             </TabsContent>
 
-            {/* Users Tab */}
             <TabsContent value="users" className="mt-4">
               <Card>
                 <CardContent className="p-0">
@@ -227,23 +226,14 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
               </Card>
             </TabsContent>
 
-            {/* Activity Tab */}
             <TabsContent value="activity" className="space-y-4 mt-4">
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Recent Sales</CardTitle>
-                </CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Recent Sales</CardTitle></CardHeader>
                 <CardContent className="p-0">
                   <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Invoice</TableHead>
-                        <TableHead>Total</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Payment</TableHead>
-                        <TableHead>Date</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                    <TableHeader><TableRow>
+                      <TableHead>Invoice</TableHead><TableHead>Total</TableHead><TableHead>Status</TableHead><TableHead>Payment</TableHead><TableHead>Date</TableHead>
+                    </TableRow></TableHeader>
                     <TableBody>
                       {recentSales.map((s) => (
                         <TableRow key={s.id}>
@@ -263,19 +253,12 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
               </Card>
 
               <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium">Recent Expenses</CardTitle>
-                </CardHeader>
+                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Recent Expenses</CardTitle></CardHeader>
                 <CardContent className="p-0">
                   <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Method</TableHead>
-                        <TableHead>Date</TableHead>
-                      </TableRow>
-                    </TableHeader>
+                    <TableHeader><TableRow>
+                      <TableHead>Description</TableHead><TableHead>Amount</TableHead><TableHead>Method</TableHead><TableHead>Date</TableHead>
+                    </TableRow></TableHeader>
                     <TableBody>
                       {recentExpenses.map((e) => (
                         <TableRow key={e.id}>
@@ -294,8 +277,7 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
               </Card>
             </TabsContent>
 
-            {/* Subscription Tab */}
-            <TabsContent value="subscription" className="space-y-4 mt-4">
+            <TabsContent value="plan" className="space-y-4 mt-4">
               <Card>
                 <CardContent className="pt-6">
                   {subscription ? (
@@ -303,9 +285,9 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-muted-foreground">Current Plan</p>
-                          <p className="text-2xl font-bold capitalize">{tier} Plan</p>
+                          <p className="text-2xl font-bold">{planName}</p>
                         </div>
-                        <Badge className={tierColors[tier] + " text-lg px-4 py-1"}>{subscription.status}</Badge>
+                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 text-lg px-4 py-1">{subscription.status}</Badge>
                       </div>
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
@@ -336,48 +318,53 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
                   ) : (
                     <div className="text-center py-8">
                       <CreditCard className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                      <p className="font-medium">Free Plan</p>
-                      <p className="text-sm text-muted-foreground">This business has no active subscription</p>
+                      <p className="font-medium">{planName} Plan</p>
+                      <p className="text-sm text-muted-foreground">This business has no active paid subscription</p>
                     </div>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Manual Tier Management */}
-              <ManualTierManager
-                businessId={businessId!}
+              <PlanManager
+                plans={plans}
                 users={users}
                 subscription={subscription}
+                currentPlanId={currentPlan?.id || null}
                 onUpdated={fetchAll}
               />
             </TabsContent>
 
-            {/* Modules Tab */}
             <TabsContent value="modules" className="mt-4">
               <Card>
                 <CardContent className="pt-6">
-                  <div className="grid grid-cols-2 gap-3">
-                    {modules.map((mod) => (
-                      <div
-                        key={mod.name}
-                        className={`flex items-center justify-between p-3 rounded-lg border ${
-                          mod.enabled ? "bg-emerald-500/5 border-emerald-200" : "bg-muted/50 border-border"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          {mod.enabled ? (
-                            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                          ) : (
-                            <XCircle className="h-4 w-4 text-muted-foreground" />
-                          )}
-                          <span className={`text-sm font-medium ${!mod.enabled ? "text-muted-foreground" : ""}`}>
-                            {mod.name}
-                          </span>
+                  {planFeatures.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-8">
+                      No features configured for the {planName} plan. Edit them in Super Admin → Packages.
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                      {planFeatures.map((f) => (
+                        <div
+                          key={f.feature_key}
+                          className={`flex items-center justify-between p-3 rounded-lg border ${
+                            f.enabled ? "bg-emerald-500/5 border-emerald-200" : "bg-muted/50 border-border"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            {f.enabled ? (
+                              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                            ) : (
+                              <XCircle className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            <span className={`text-sm font-medium ${!f.enabled ? "text-muted-foreground" : ""}`}>
+                              {f.feature_label}
+                            </span>
+                          </div>
+                          <Badge variant="outline" className="text-xs">{f.enabled ? "Enabled" : "Locked"}</Badge>
                         </div>
-                        <Badge variant="outline" className="text-xs capitalize">{mod.tier}</Badge>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -388,33 +375,42 @@ export function BusinessDetailDialog({ businessId, businessName, onClose }: Busi
   );
 }
 
-function ManualTierManager({
-  businessId, users, subscription, onUpdated,
+function PlanManager({
+  plans, users, subscription, currentPlanId, onUpdated,
 }: {
-  businessId: string;
+  plans: PlanRow[];
   users: any[];
   subscription: any;
+  currentPlanId: string | null;
   onUpdated: () => void;
 }) {
-  const [selectedTier, setSelectedTier] = useState<string>(subscription ? (subscription.product_id?.includes("pro") ? "pro" : "basic") : "basic");
+  const [selectedPlanId, setSelectedPlanId] = useState<string>(currentPlanId || plans[0]?.id || "");
   const [saving, setSaving] = useState(false);
   const [removing, setRemoving] = useState(false);
 
-  const ownerUserId = users[0]?.user_id || users[0]?.id;
+  useEffect(() => {
+    if (currentPlanId) setSelectedPlanId(currentPlanId);
+  }, [currentPlanId]);
 
-  const handleSetTier = async () => {
+  const ownerUserId = users[0]?.user_id || users[0]?.id;
+  const selectedPlan = plans.find(p => p.id === selectedPlanId);
+
+  const handleSetPlan = async () => {
     if (!ownerUserId) {
       toast.error("No user found for this business");
       return;
     }
+    if (!selectedPlan) {
+      toast.error("Please select a plan");
+      return;
+    }
     setSaving(true);
     try {
-      const productId = selectedTier === "pro" ? "pro_plan" : "basic_plan";
-      const priceId = selectedTier === "pro" ? "pro_monthly" : "basic_monthly";
+      const productId = selectedPlan.paddle_product_id || `manual_${selectedPlan.name.toLowerCase().replace(/\s+/g, "_")}`;
+      const priceId = selectedPlan.paddle_monthly_price_id || `manual_${selectedPlan.name.toLowerCase().replace(/\s+/g, "_")}_monthly`;
       const now = new Date().toISOString();
 
       if (subscription) {
-        // Update existing
         const { error } = await supabase
           .from("subscriptions")
           .update({
@@ -425,9 +421,8 @@ function ManualTierManager({
           })
           .eq("id", subscription.id);
         if (error) throw error;
-        toast.success(`Subscription updated to ${selectedTier.toUpperCase()}`);
+        toast.success(`Subscription updated to ${selectedPlan.name}`);
       } else {
-        // Create manual subscription
         const { error } = await supabase
           .from("subscriptions")
           .insert({
@@ -441,7 +436,7 @@ function ManualTierManager({
             current_period_start: now,
           });
         if (error) throw error;
-        toast.success(`Business upgraded to ${selectedTier.toUpperCase()} plan`);
+        toast.success(`Business upgraded to ${selectedPlan.name} plan`);
       }
       onUpdated();
     } catch (err: any) {
@@ -459,7 +454,7 @@ function ManualTierManager({
         .delete()
         .eq("id", subscription.id);
       if (error) throw error;
-      toast.success("Subscription removed — business is now on Free plan");
+      toast.success("Subscription removed — business is now on the entry-level plan");
       onUpdated();
     } catch (err: any) {
       toast.error("Failed to remove: " + err.message);
@@ -472,35 +467,36 @@ function ManualTierManager({
       <CardHeader className="pb-3">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <ArrowUpCircle className="h-4 w-4" />
-          Manual Tier Management
+          Manage Subscription Plan
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex items-end gap-3">
           <div className="flex-1 space-y-2">
             <Label>Set Plan</Label>
-            <Select value={selectedTier} onValueChange={setSelectedTier}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
+            <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
+              <SelectTrigger><SelectValue placeholder="Select a plan" /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="basic">Basic — $15/mo</SelectItem>
-                <SelectItem value="pro">Pro — $39/mo</SelectItem>
+                {plans.map(p => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name} — ${Number(p.monthly_price).toFixed(0)}/mo
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={handleSetTier} disabled={saving}>
+          <Button onClick={handleSetPlan} disabled={saving || !selectedPlanId}>
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {subscription ? "Update Plan" : "Activate Plan"}
           </Button>
           {subscription && (
-            <Button variant="destructive" size="icon" onClick={handleRemoveSubscription} disabled={removing} title="Remove subscription (downgrade to Free)">
+            <Button variant="destructive" size="icon" onClick={handleRemoveSubscription} disabled={removing} title="Remove subscription (downgrade to entry plan)">
               {removing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
             </Button>
           )}
         </div>
         <p className="text-xs text-muted-foreground mt-2">
-          This creates or updates a manual subscription record. Changes take effect immediately.
+          Plans are loaded from your Subscription Packages. Changes take effect immediately.
         </p>
       </CardContent>
     </Card>

@@ -126,9 +126,9 @@ const ProtectedRoutes = () => {
           <Route path="/sales" element={guard(["admin", "manager"], <Sales />)} />
           <Route path="/purchases" element={guard(["admin", "manager"], <Purchases />)} />
           <Route path="/expenses" element={guard(["admin"], <Expenses />)} />
-          <Route path="/chart-of-accounts" element={guard(["admin"], <FeatureGate requiredTier="pro"><ChartOfAccounts /></FeatureGate>)} />
-          <Route path="/banking" element={guard(["admin"], <FeatureGate requiredTier="pro"><Banking /></FeatureGate>)} />
-          <Route path="/reports" element={guard(["admin"], <FeatureGate requiredTier="pro"><Reports /></FeatureGate>)} />
+          <Route path="/chart-of-accounts" element={guard(["admin"], <FeatureGate featureKey="chart_of_accounts"><ChartOfAccounts /></FeatureGate>)} />
+          <Route path="/banking" element={guard(["admin"], <FeatureGate featureKey="banking"><Banking /></FeatureGate>)} />
+          <Route path="/reports" element={guard(["admin"], <FeatureGate featureKey="reports"><Reports /></FeatureGate>)} />
           <Route path="/settings" element={guard(["admin"], <SettingsPage />)} />
           <Route path="/roles" element={<Navigate to="/settings?tab=roles" replace />} />
           <Route path="*" element={<NotFound />} />

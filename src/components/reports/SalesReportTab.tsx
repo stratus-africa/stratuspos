@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Download, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import { formatKES, downloadCSV } from "./reportUtils";
+import { useBusiness } from "@/contexts/BusinessContext";
 
 interface SalesReportTabProps {
   sales: any[];
@@ -18,12 +19,21 @@ interface SalesReportTabProps {
 }
 
 const SalesReportTab = ({ sales, topProducts, totalRevenue, totalTax, totalDiscount, from, to, loading }: SalesReportTabProps) => {
+  const { business } = useBusiness();
+  const vatEnabled = business?.vat_enabled !== false;
+
   const downloadSalesCSV = () => {
-    const headers = ["Date", "Invoice", "Customer", "Location", "Subtotal", "Tax", "Discount", "Total", "Payment Status"];
-    const rows = sales.map((s: any) => [
-      new Date(s.created_at).toLocaleDateString(), s.invoice_number || "", s.customers?.name || "Walk-in",
-      s.locations?.name || "", s.subtotal, s.tax, s.discount, s.total, s.payment_status,
-    ].map(String));
+    const headers = vatEnabled
+      ? ["Date", "Invoice", "Customer", "Location", "Subtotal", "Tax", "Discount", "Total", "Payment Status"]
+      : ["Date", "Invoice", "Customer", "Location", "Subtotal", "Discount", "Total", "Payment Status"];
+    const rows = sales.map((s: any) => {
+      const base = [
+        new Date(s.created_at).toLocaleDateString(), s.invoice_number || "", s.customers?.name || "Walk-in",
+        s.locations?.name || "", s.subtotal,
+      ];
+      const tail = [s.discount, s.total, s.payment_status];
+      return (vatEnabled ? [...base, s.tax, ...tail] : [...base, ...tail]).map(String);
+    });
     downloadCSV(`sales_report_${from}_to_${to}.csv`, headers, rows);
     toast.success("Sales report downloaded");
   };
@@ -37,10 +47,12 @@ const SalesReportTab = ({ sales, topProducts, totalRevenue, totalTax, totalDisco
         </Button>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <div className={`grid grid-cols-2 md:grid-cols-${vatEnabled ? 4 : 3} gap-3 mb-4`}>
           <Card><CardContent className="pt-4 text-center"><p className="text-xs text-muted-foreground">Total Sales</p><p className="text-lg font-bold">{sales.length}</p></CardContent></Card>
           <Card><CardContent className="pt-4 text-center"><p className="text-xs text-muted-foreground">Revenue</p><p className="text-lg font-bold">{formatKES(totalRevenue)}</p></CardContent></Card>
-          <Card><CardContent className="pt-4 text-center"><p className="text-xs text-muted-foreground">Tax Collected</p><p className="text-lg font-bold">{formatKES(totalTax)}</p></CardContent></Card>
+          {vatEnabled && (
+            <Card><CardContent className="pt-4 text-center"><p className="text-xs text-muted-foreground">Tax Collected</p><p className="text-lg font-bold">{formatKES(totalTax)}</p></CardContent></Card>
+          )}
           <Card><CardContent className="pt-4 text-center"><p className="text-xs text-muted-foreground">Discounts</p><p className="text-lg font-bold">{formatKES(totalDiscount)}</p></CardContent></Card>
         </div>
 
