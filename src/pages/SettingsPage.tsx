@@ -10,9 +10,12 @@ import { TaxSettingsTab } from "@/components/settings/TaxSettingsTab";
 import { PaymentAccountsTab } from "@/components/settings/PaymentAccountsTab";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { useSearchParams } from "react-router-dom";
+import { useBusiness } from "@/contexts/BusinessContext";
 
 const SettingsPage = () => {
   const [searchParams] = useSearchParams();
+  const { business } = useBusiness();
+  const vatEnabled = business?.vat_enabled !== false;
   const defaultTab = searchParams.get("tab") || "business";
 
   return (
@@ -29,10 +32,12 @@ const SettingsPage = () => {
             <MapPin className="h-4 w-4" />
             Locations
           </TabsTrigger>
-          <TabsTrigger value="tax" className="w-full justify-start gap-2 text-sm px-3 py-2.5">
-            <Percent className="h-4 w-4" />
-            Tax
-          </TabsTrigger>
+          {vatEnabled && (
+            <TabsTrigger value="tax" className="w-full justify-start gap-2 text-sm px-3 py-2.5">
+              <Percent className="h-4 w-4" />
+              Tax
+            </TabsTrigger>
+          )}
           <TabsTrigger value="users" className="w-full justify-start gap-2 text-sm px-3 py-2.5">
             <Users className="h-4 w-4" />
             Users
@@ -58,7 +63,7 @@ const SettingsPage = () => {
         <div className="flex-1 min-w-0">
           <TabsContent value="business" className="mt-0"><BusinessProfileTab /></TabsContent>
           <TabsContent value="locations" className="mt-0"><LocationsTab /></TabsContent>
-          <TabsContent value="tax" className="mt-0"><TaxSettingsTab /></TabsContent>
+          {vatEnabled && <TabsContent value="tax" className="mt-0"><TaxSettingsTab /></TabsContent>}
           <TabsContent value="users" className="mt-0"><UserManagementTab /></TabsContent>
           <TabsContent value="roles" className="mt-0"><RolesPermissionsTab /></TabsContent>
           <TabsContent value="payments" className="mt-0"><PaymentAccountsTab /></TabsContent>
