@@ -34,7 +34,7 @@ const DEFAULT_SECTIONS = [
     { icon: "TrendingUp", title: "Banking & Expenses", description: "Track bank accounts, expenses, and purchase orders." },
     { icon: "Store", title: "Tax Management", description: "Configure VAT rates, zero-rated, and exempt items." },
   ]}},
-  { section_key: "cta", title: "Ready to Transform Your Business?", subtitle: "Join hundreds of Kenyan retailers using RetailPOS. Start your free trial today.", content: { button_text: "Get Started Free" } },
+  { section_key: "cta", title: "Ready to Transform Your Business?", subtitle: "Join hundreds of Kenyan retailers using StratusPOS. Start your free trial today.", content: { button_text: "Get Started Free" } },
   { section_key: "testimonials", title: "What Our Customers Say", subtitle: "", content: { items: [] } },
   { section_key: "faq", title: "Frequently Asked Questions", subtitle: "", content: { items: [] } },
 ];
