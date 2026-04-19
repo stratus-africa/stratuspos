@@ -16,6 +16,8 @@ import { useProducts, useCategories } from "@/hooks/useProducts";
 import { useCustomers } from "@/hooks/useSales";
 import { usePOS, CartItem, PaymentEntry } from "@/hooks/usePOS";
 import { usePOSSession } from "@/hooks/usePOSSession";
+import { useInventory } from "@/hooks/useInventory";
+import { useBusiness } from "@/contexts/BusinessContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import PaymentDialog from "@/components/pos/PaymentDialog";
 import ReceiptDialog from "@/components/pos/ReceiptDialog";
@@ -28,6 +30,8 @@ const POS = () => {
   const { query: customersQuery } = useCustomers();
   const pos = usePOS();
   const session = usePOSSession();
+  const { currentLocation } = useBusiness();
+  const { inventoryQuery } = useInventory(currentLocation?.id);
 
   const isMobile = useIsMobile();
 
@@ -57,6 +61,13 @@ const POS = () => {
   const products = productsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
   const customers = customersQuery.data ?? [];
+  const inventory = inventoryQuery.data ?? [];
+
+  const stockMap = useMemo(() => {
+    const m = new Map<string, number>();
+    inventory.forEach((i) => m.set(i.product_id, Number(i.quantity)));
+    return m;
+  }, [inventory]);
 
   const activeProducts = useMemo(
     () =>
