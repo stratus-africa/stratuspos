@@ -29,7 +29,7 @@ const Auth = () => {
         <div className="text-center space-y-2">
           <div className="flex items-center justify-center gap-2 text-primary">
             <Store className="h-8 w-8" />
-            <h1 className="text-2xl font-bold">RetailPOS</h1>
+            <h1 className="text-2xl font-bold">StratusPOS</h1>
           </div>
           <p className="text-muted-foreground text-sm">
             Multi-tenant POS & Inventory Management
@@ -115,7 +115,7 @@ const SignUpForm = ({ isSubmitting, setIsSubmitting }: { isSubmitting: boolean; 
     <Card>
       <CardHeader>
         <CardTitle>Create account</CardTitle>
-        <CardDescription>Get started with RetailPOS</CardDescription>
+        <CardDescription>Get started with StratusPOS</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">

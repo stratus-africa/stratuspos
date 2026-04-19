@@ -34,7 +34,7 @@ const Onboarding = () => {
             <h1 className="text-2xl font-bold">Set Up Your Business</h1>
           </div>
           <p className="text-muted-foreground text-sm">
-            Create your business to get started with RetailPOS
+            Create your business to get started with StratusPOS
           </p>
         </div>
 

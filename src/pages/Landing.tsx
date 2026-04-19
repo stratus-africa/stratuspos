@@ -42,7 +42,7 @@ const STATS = [
 ];
 
 const TESTIMONIALS = [
-  { name: "Jane Wanjiru", role: "Owner, Bidii Mart", quote: "Switching to RetailPOS cut my closing time in half. The M-Pesa integration just works.", initial: "J" },
+  { name: "Jane Wanjiru", role: "Owner, Bidii Mart", quote: "Switching to StratusPOS cut my closing time in half. The M-Pesa integration just works.", initial: "J" },
   { name: "Samuel Kiprono", role: "Manager, Highland Stores", quote: "We went from spreadsheets to real reports overnight. My accountant loves it.", initial: "S" },
   { name: "Aisha Mohammed", role: "CEO, Coast Retail Co.", quote: "Multi-location stock tracking finally makes sense. Highly recommended.", initial: "A" },
 ];
@@ -96,7 +96,7 @@ export default function Landing() {
             <div className="h-9 w-9 rounded-lg flex items-center justify-center" style={{ backgroundColor: TEAL }}>
               <Store className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold tracking-tight text-slate-900">RetailPOS</span>
+            <span className="text-xl font-bold tracking-tight text-slate-900">StratusPOS</span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-sm text-slate-600">
             <a href="#features" className="hover:text-slate-900 transition-colors">Features</a>
@@ -119,7 +119,7 @@ export default function Landing() {
         <div className="absolute inset-0 -z-0">
           <img
             src={heroImage}
-            alt="RetailPOS in a modern retail boutique"
+            alt="StratusPOS dashboard preview"
             width={1920}
             height={1080}
             className="w-full h-full object-cover"
@@ -351,7 +351,7 @@ export default function Landing() {
               Ready to transform your business?
             </h2>
             <p className="text-white/90 text-lg mb-8 max-w-2xl mx-auto">
-              Join hundreds of Kenyan retailers running smarter shops with RetailPOS.
+              Join hundreds of Kenyan retailers running smarter shops with StratusPOS.
             </p>
             <Button size="lg" asChild className="bg-white text-slate-900 hover:bg-slate-100 h-12 px-8 text-base shadow-lg">
               <Link to="/auth">Get Started Free <ArrowRight className="ml-2 h-4 w-4" /></Link>
@@ -367,9 +367,9 @@ export default function Landing() {
             <div className="h-8 w-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: TEAL }}>
               <Store className="h-4 w-4 text-white" />
             </div>
-            <span className="font-bold text-slate-900">RetailPOS</span>
+            <span className="font-bold text-slate-900">StratusPOS</span>
           </div>
-          <p className="text-sm text-slate-500">© {new Date().getFullYear()} RetailPOS. Built in 🇰🇪 for Kenya.</p>
+          <p className="text-sm text-slate-500">© {new Date().getFullYear()} StratusPOS. Built in 🇰🇪 for Kenya.</p>
         </div>
       </footer>
     </div>

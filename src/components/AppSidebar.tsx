@@ -124,7 +124,7 @@ export function AppSidebar() {
           <Store className="h-6 w-6 text-sidebar-primary" />
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="text-sm font-semibold text-sidebar-foreground">RetailPOS</span>
+              <span className="text-sm font-semibold text-sidebar-foreground">StratusPOS</span>
               {business && (
                 <span className="text-xs text-sidebar-foreground/60 truncate max-w-[140px]">
                   {business.name}
