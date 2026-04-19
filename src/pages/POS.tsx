@@ -139,24 +139,21 @@ const POS = () => {
 
       {/* Left: Product selection */}
       <div className="flex-1 flex flex-col min-h-0">
-        {/* Search & filters */}
-        <div className="flex flex-col sm:flex-row gap-2 mb-3">
-          <div className="relative flex-1">
+        {/* Search & filters - single row on mobile */}
+        <div className="flex flex-row gap-2 mb-3">
+          <div className="relative flex-1 min-w-0">
             <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search product or scan barcode..."
+              placeholder="Search..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
               autoFocus
             />
           </div>
-          <Button size="icon" variant="outline" onClick={() => setScannerOpen(true)} title="Scan barcode">
-            <ScanLine className="h-4 w-4" />
-          </Button>
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Category" />
+            <SelectTrigger className="w-24 sm:w-40 shrink-0">
+              <SelectValue placeholder="Cat." />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
@@ -165,7 +162,10 @@ const POS = () => {
               ))}
             </SelectContent>
           </Select>
-          <div className="flex gap-1">
+          <Button size="icon" variant="outline" className="shrink-0" onClick={() => setScannerOpen(true)} title="Scan barcode">
+            <ScanLine className="h-4 w-4" />
+          </Button>
+          <div className="flex gap-1 shrink-0">
             <Button size="icon" variant={viewMode === "grid" ? "default" : "outline"} onClick={() => setViewMode("grid")}>
               <LayoutGrid className="h-4 w-4" />
             </Button>
@@ -195,20 +195,33 @@ const POS = () => {
               )}
             </div>
           ) : (
-            <div className="space-y-1">
-              {activeProducts.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => pos.addToCart(p)}
-                  className="flex items-center justify-between w-full p-3 rounded-lg border bg-card hover:bg-accent hover:border-primary transition-colors"
-                >
-                  <div>
-                    <span className="font-medium text-sm">{p.name}</span>
-                    {p.sku && <span className="text-xs text-muted-foreground ml-2">{p.sku}</span>}
-                  </div>
-                  <span className="font-semibold text-primary">KES {Number(p.selling_price).toLocaleString()}</span>
-                </button>
-              ))}
+            <div className="border rounded-lg overflow-hidden">
+              {activeProducts.map((p, idx) => {
+                const qty = stockMap.get(p.id) ?? 0;
+                const lowStock = qty <= 0;
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => pos.addToCart(p)}
+                    className={`flex items-center justify-between w-full px-3 py-2.5 border-b last:border-b-0 hover:bg-accent transition-colors text-left ${
+                      idx % 2 === 0 ? "bg-card" : "bg-muted/40"
+                    }`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium text-sm">{p.name}</span>
+                      {p.sku && <span className="text-xs text-muted-foreground ml-2">{p.sku}</span>}
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <Badge variant={lowStock ? "destructive" : "secondary"} className="text-[10px] font-normal">
+                        Qty: {qty}
+                      </Badge>
+                      <span className="font-semibold text-primary text-sm min-w-[80px] text-right">
+                        KES {Number(p.selling_price).toLocaleString()}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
               {activeProducts.length === 0 && (
                 <p className="text-center py-10 text-muted-foreground">No products found</p>
               )}
