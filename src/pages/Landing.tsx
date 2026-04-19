@@ -42,7 +42,7 @@ const STATS = [
 ];
 
 const TESTIMONIALS = [
-  { name: "Jane Wanjiru", role: "Owner, Bidii Mart", quote: "Switching to RetailPOS cut my closing time in half. The M-Pesa integration just works.", initial: "J" },
+  { name: "Jane Wanjiru", role: "Owner, Bidii Mart", quote: "Switching to StratusPOS cut my closing time in half. The M-Pesa integration just works.", initial: "J" },
   { name: "Samuel Kiprono", role: "Manager, Highland Stores", quote: "We went from spreadsheets to real reports overnight. My accountant loves it.", initial: "S" },
   { name: "Aisha Mohammed", role: "CEO, Coast Retail Co.", quote: "Multi-location stock tracking finally makes sense. Highly recommended.", initial: "A" },
 ];
