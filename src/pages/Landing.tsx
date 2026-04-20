@@ -13,8 +13,8 @@ interface PkgDisplay {
   id: string;
   name: string;
   description: string | null;
-  monthly_price: number;
-  yearly_price: number;
+  monthly_price_kes: number;
+  yearly_price_kes: number;
   max_locations: number;
   max_products: number;
   max_users: number;
@@ -70,8 +70,8 @@ export default function Landing() {
         id: p.id,
         name: p.name,
         description: p.description,
-        monthly_price: p.monthly_price,
-        yearly_price: p.yearly_price,
+        monthly_price_kes: Number(p.monthly_price_kes ?? 0),
+        yearly_price_kes: Number(p.yearly_price_kes ?? 0),
         max_locations: p.max_locations,
         max_products: p.max_products,
         max_users: p.max_users,
@@ -304,7 +304,7 @@ export default function Landing() {
                     {pkg.description && <p className="text-sm text-slate-600 mt-1">{pkg.description}</p>}
                     <div className="mt-6 mb-6">
                       <span className="text-5xl font-extrabold tracking-tight text-slate-900">
-                        {formatKES(billingCycle === "monthly" ? pkg.monthly_price : pkg.yearly_price)}
+                        {formatKES(billingCycle === "monthly" ? pkg.monthly_price_kes : pkg.yearly_price_kes)}
                       </span>
                       <span className="text-slate-500 ml-1">/{billingCycle === "monthly" ? "mo" : "yr"}</span>
                     </div>
