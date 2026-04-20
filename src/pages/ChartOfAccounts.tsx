@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Search, Wallet, Building2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Wallet, Building2, Landmark, BookOpen } from "lucide-react";
 import { Link } from "react-router-dom";
+import { OpeningBalanceDialog } from "@/components/accounting/OpeningBalanceDialog";
 import { toast } from "sonner";
 
 const ACCOUNT_TYPES = ["asset", "liability", "equity", "revenue", "expense"] as const;
@@ -23,6 +24,8 @@ interface Account {
   parent_id: string | null;
   is_active: boolean;
   description: string | null;
+  opening_balance: number;
+  opening_balance_date: string | null;
 }
 
 interface BankAccountSummary {
@@ -42,6 +45,8 @@ export default function ChartOfAccounts() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Account | null>(null);
+  const [openingAcc, setOpeningAcc] = useState<Account | null>(null);
+  const [openingDialogOpen, setOpeningDialogOpen] = useState(false);
   const [form, setForm] = useState({ code: "", name: "", type: "expense", description: "", parent_id: "" });
 
   const fetchAccounts = async () => {
@@ -122,13 +127,17 @@ export default function ChartOfAccounts() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Chart of Accounts</h1>
-          <p className="text-sm text-muted-foreground">Manage your accounting structure</p>
+          <p className="text-sm text-muted-foreground">Manage your accounting structure and opening balances</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" /> Add Account</Button>
-          </DialogTrigger>
-          <DialogContent>
+        <div className="flex gap-2">
+          <Link to="/journal-entries">
+            <Button variant="outline"><BookOpen className="mr-2 h-4 w-4" /> Journal Entries</Button>
+          </Link>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" /> Add Account</Button>
+            </DialogTrigger>
+            <DialogContent>
             <DialogHeader>
               <DialogTitle>{editing ? "Edit Account" : "New Account"}</DialogTitle>
             </DialogHeader>
@@ -172,9 +181,17 @@ export default function ChartOfAccounts() {
               </div>
               <Button onClick={handleSave} className="w-full">{editing ? "Update" : "Create"} Account</Button>
             </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
+
+      <OpeningBalanceDialog
+        account={openingAcc}
+        open={openingDialogOpen}
+        onOpenChange={(o) => { setOpeningDialogOpen(o); if (!o) setOpeningAcc(null); }}
+        onSaved={fetchAccounts}
+      />
 
       <Card>
         <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
@@ -240,18 +257,25 @@ export default function ChartOfAccounts() {
                   <TableHead>Code</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Type</TableHead>
+                  <TableHead className="text-right">Opening Balance</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((acc) => (
-                  <TableRow key={acc.id}>
+                {filtered.map((acc, idx) => (
+                  <TableRow key={acc.id} className={idx % 2 === 0 ? "" : "bg-muted/30"}>
                     <TableCell className="font-mono font-medium">{acc.code}</TableCell>
                     <TableCell className="font-medium">{acc.name}</TableCell>
                     <TableCell><Badge variant={typeColor(acc.type)} className="capitalize">{acc.type}</Badge></TableCell>
+                    <TableCell className="text-right font-mono">
+                      {Number(acc.opening_balance) !== 0 ? `KES ${Number(acc.opening_balance).toLocaleString()}` : <span className="text-muted-foreground">—</span>}
+                    </TableCell>
                     <TableCell className="text-muted-foreground text-sm">{acc.description || "—"}</TableCell>
                     <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" title="Set opening balance" onClick={() => { setOpeningAcc(acc); setOpeningDialogOpen(true); }}>
+                        <Landmark className="h-4 w-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => openEdit(acc)}><Pencil className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(acc.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     </TableCell>

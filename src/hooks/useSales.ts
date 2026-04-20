@@ -154,6 +154,9 @@ export function useSales() {
 
   const deleteSale = useMutation({
     mutationFn: async (id: string) => {
+      // Defensive cleanup: delete payments and items before the sale (FK now cascades, but this keeps old DBs safe)
+      await supabase.from("payments").delete().eq("sale_id", id);
+      await supabase.from("sale_items").delete().eq("sale_id", id);
       const { error } = await supabase.from("sales").delete().eq("id", id);
       if (error) throw error;
     },

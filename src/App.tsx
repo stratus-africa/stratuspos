@@ -24,6 +24,7 @@ const Expenses = lazy(() => import("./pages/Expenses"));
 const Reports = lazy(() => import("./pages/Reports"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const ChartOfAccounts = lazy(() => import("./pages/ChartOfAccounts"));
+const JournalEntries = lazy(() => import("./pages/JournalEntries"));
 const Banking = lazy(() => import("./pages/Banking"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Landing = lazy(() => import("./pages/Landing"));
@@ -127,6 +128,7 @@ const ProtectedRoutes = () => {
           <Route path="/purchases" element={guard(["admin", "manager"], <Purchases />)} />
           <Route path="/expenses" element={guard(["admin"], <Expenses />)} />
           <Route path="/chart-of-accounts" element={guard(["admin"], <FeatureGate featureKey="chart_of_accounts"><ChartOfAccounts /></FeatureGate>)} />
+          <Route path="/journal-entries" element={guard(["admin"], <FeatureGate featureKey="chart_of_accounts"><JournalEntries /></FeatureGate>)} />
           <Route path="/banking" element={guard(["admin"], <FeatureGate featureKey="banking"><Banking /></FeatureGate>)} />
           <Route path="/reports" element={guard(["admin"], <FeatureGate featureKey="reports"><Reports /></FeatureGate>)} />
           <Route path="/settings" element={guard(["admin"], <SettingsPage />)} />

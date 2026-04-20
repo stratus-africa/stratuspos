@@ -44,6 +44,8 @@ const Products = () => {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const handleScanned = (code: string) => {
     setSearch(code);
@@ -68,7 +70,11 @@ const Products = () => {
     return matchSearch && matchCategory && matchStatus;
   });
 
-  const allFilteredSelected = filtered.length > 0 && filtered.every((p) => selectedIds.has(p.id));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paged = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const allFilteredSelected = paged.length > 0 && paged.every((p) => selectedIds.has(p.id));
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -80,9 +86,17 @@ const Products = () => {
 
   const toggleSelectAll = () => {
     if (allFilteredSelected) {
-      setSelectedIds(new Set());
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        paged.forEach((p) => next.delete(p.id));
+        return next;
+      });
     } else {
-      setSelectedIds(new Set(filtered.map((p) => p.id)));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        paged.forEach((p) => next.add(p.id));
+        return next;
+      });
     }
   };
 
@@ -321,7 +335,7 @@ const Products = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filtered.map((p) => {
+                    paged.map((p) => {
                       const margin = p.purchase_price > 0
                         ? (((p.selling_price - p.purchase_price) / p.purchase_price) * 100).toFixed(0)
                         : "—";
@@ -379,6 +393,25 @@ const Products = () => {
                 </TableBody>
               </Table>
             </CardContent>
+            {filtered.length > 0 && (
+              <div className="flex items-center justify-between gap-2 px-4 py-3 border-t flex-wrap">
+                <div className="text-sm text-muted-foreground">
+                  Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, filtered.length)} of {filtered.length}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Rows per page</span>
+                  <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(1); }}>
+                    <SelectTrigger className="h-8 w-[80px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {[10, 25, 50, 100].map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <Button size="sm" variant="outline" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>Prev</Button>
+                  <span className="text-sm">Page {currentPage} / {totalPages}</span>
+                  <Button size="sm" variant="outline" disabled={currentPage === totalPages} onClick={() => setPage(currentPage + 1)}>Next</Button>
+                </div>
+              </div>
+            )}
           </Card>
         </TabsContent>
 
