@@ -181,9 +181,17 @@ export default function ChartOfAccounts() {
               </div>
               <Button onClick={handleSave} className="w-full">{editing ? "Update" : "Create"} Account</Button>
             </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
+
+      <OpeningBalanceDialog
+        account={openingAcc}
+        open={openingDialogOpen}
+        onOpenChange={(o) => { setOpeningDialogOpen(o); if (!o) setOpeningAcc(null); }}
+        onSaved={fetchAccounts}
+      />
 
       <Card>
         <CardHeader className="pb-3 flex-row items-center justify-between space-y-0">
@@ -249,18 +257,25 @@ export default function ChartOfAccounts() {
                   <TableHead>Code</TableHead>
                   <TableHead>Name</TableHead>
                   <TableHead>Type</TableHead>
+                  <TableHead className="text-right">Opening Balance</TableHead>
                   <TableHead>Description</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((acc) => (
-                  <TableRow key={acc.id}>
+                {filtered.map((acc, idx) => (
+                  <TableRow key={acc.id} className={idx % 2 === 0 ? "" : "bg-muted/30"}>
                     <TableCell className="font-mono font-medium">{acc.code}</TableCell>
                     <TableCell className="font-medium">{acc.name}</TableCell>
                     <TableCell><Badge variant={typeColor(acc.type)} className="capitalize">{acc.type}</Badge></TableCell>
+                    <TableCell className="text-right font-mono">
+                      {Number(acc.opening_balance) !== 0 ? `KES ${Number(acc.opening_balance).toLocaleString()}` : <span className="text-muted-foreground">—</span>}
+                    </TableCell>
                     <TableCell className="text-muted-foreground text-sm">{acc.description || "—"}</TableCell>
                     <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" title="Set opening balance" onClick={() => { setOpeningAcc(acc); setOpeningDialogOpen(true); }}>
+                        <Landmark className="h-4 w-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => openEdit(acc)}><Pencil className="h-4 w-4" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(acc.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     </TableCell>
