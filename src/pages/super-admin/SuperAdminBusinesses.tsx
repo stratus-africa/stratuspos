@@ -9,9 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { format } from "date-fns";
-import { Search, Ban, CheckCircle2, Pencil, Eye, Loader2 } from "lucide-react";
+import { Search, Ban, CheckCircle2, Pencil, Eye, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { BusinessDetailDialog } from "@/components/super-admin/BusinessDetailDialog";
+import { AddBusinessDialog } from "@/components/super-admin/AddBusinessDialog";
 
 interface BusinessRow {
   id: string;
@@ -46,6 +47,9 @@ export default function SuperAdminBusinesses() {
 
   // Detail dialog
   const [detailBiz, setDetailBiz] = useState<BusinessRow | null>(null);
+
+  // Add business dialog
+  const [showAdd, setShowAdd] = useState(false);
 
   const fetchData = async () => {
     const [bizRes, salesRes] = await Promise.all([
@@ -166,14 +170,19 @@ export default function SuperAdminBusinesses() {
           <h1 className="text-2xl font-bold">All Businesses</h1>
           <p className="text-muted-foreground">{businesses.length} registered businesses</p>
         </div>
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search businesses..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex items-center gap-2">
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search businesses..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Button onClick={() => setShowAdd(true)}>
+            <Plus className="h-4 w-4 mr-2" /> Add Business
+          </Button>
         </div>
       </div>
 
@@ -323,6 +332,12 @@ export default function SuperAdminBusinesses() {
         businessId={detailBiz?.id || null}
         businessName={detailBiz?.name || ""}
         onClose={() => setDetailBiz(null)}
+      />
+
+      <AddBusinessDialog
+        open={showAdd}
+        onOpenChange={setShowAdd}
+        onCreated={() => { setLoading(true); fetchData(); }}
       />
     </div>
   );

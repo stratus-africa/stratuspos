@@ -2,17 +2,18 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { getPaddleEnvironment } from "@/lib/paddle";
+import { getPaystackEnvironment } from "@/lib/paystack";
 
 export type SubscriptionTier = "free" | "basic" | "pro";
 
 interface Subscription {
   id: string;
   user_id: string;
-  paddle_subscription_id: string;
-  paddle_customer_id: string;
-  product_id: string;
-  price_id: string;
+  paystack_subscription_code: string | null;
+  paystack_customer_code: string | null;
+  plan_code: string | null;
+  product_id: string | null;
+  price_id: string | null;
   status: string;
   current_period_start: string | null;
   current_period_end: string | null;
@@ -26,9 +27,10 @@ interface SubscriptionPackage {
   max_locations: number;
   max_products: number;
   max_users: number;
-  paddle_product_id: string | null;
-  paddle_monthly_price_id: string | null;
-  paddle_yearly_price_id: string | null;
+  paystack_plan_code_monthly: string | null;
+  paystack_plan_code_yearly: string | null;
+  monthly_price_kes: number;
+  yearly_price_kes: number;
   sort_order: number;
 }
 
@@ -41,7 +43,7 @@ interface PackageFeature {
 export function useSubscription() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const environment = getPaddleEnvironment();
+  const environment = getPaystackEnvironment();
 
   const { data: subscription, isLoading: subLoading } = useQuery({
     queryKey: ["subscription", user?.id, environment],
@@ -53,14 +55,12 @@ export function useSubscription() {
         .eq("user_id", user.id)
         .eq("environment", environment)
         .maybeSingle();
-
       if (error) throw error;
-      return data as Subscription | null;
+      return data as unknown as Subscription | null;
     },
     enabled: !!user,
   });
 
-  // Load all active packages + their features (small dataset, cache long)
   const { data: packagesData, isLoading: pkgLoading } = useQuery({
     queryKey: ["subscription_packages_with_features"],
     queryFn: async () => {
@@ -69,14 +69,13 @@ export function useSubscription() {
         supabase.from("package_features").select("package_id, feature_key, enabled"),
       ]);
       return {
-        packages: (pkgs || []) as SubscriptionPackage[],
+        packages: (pkgs || []) as unknown as SubscriptionPackage[],
         features: (feats || []) as PackageFeature[],
       };
     },
     staleTime: 60_000,
   });
 
-  // Listen for realtime changes to subscription
   useEffect(() => {
     if (!user) return;
     const channelName = `subscription-changes-${user.id}-${Date.now()}`;
@@ -96,7 +95,9 @@ export function useSubscription() {
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user?.id, environment, queryClient]);
 
   const isActive = subscription
@@ -107,23 +108,23 @@ export function useSubscription() {
   const packages = packagesData?.packages ?? [];
   const features = packagesData?.features ?? [];
 
-  // Resolve current package: matched by paddle_product_id when active subscription exists,
-  // otherwise fall back to the lowest sort_order package (the entry-level "free/starter" tier).
+  // Resolve current package: by package id stored in product_id, then plan_code, fallback to lowest sort_order.
   const currentPackage: SubscriptionPackage | null = (() => {
     if (isActive && subscription) {
-      const byProduct = packages.find(p => p.paddle_product_id === subscription.product_id);
-      if (byProduct) return byProduct;
-      const byPrice = packages.find(p =>
-        p.paddle_monthly_price_id === subscription.price_id ||
-        p.paddle_yearly_price_id === subscription.price_id
+      const byId = packages.find((p) => p.id === subscription.product_id);
+      if (byId) return byId;
+      const byPlan = packages.find(
+        (p) =>
+          p.paystack_plan_code_monthly === subscription.plan_code ||
+          p.paystack_plan_code_yearly === subscription.plan_code
       );
-      if (byPrice) return byPrice;
+      if (byPlan) return byPlan;
     }
     return packages[0] ?? null;
   })();
 
   const enabledFeatureKeys = new Set(
-    features.filter(f => f.package_id === currentPackage?.id && f.enabled).map(f => f.feature_key)
+    features.filter((f) => f.package_id === currentPackage?.id && f.enabled).map((f) => f.feature_key)
   );
 
   const hasFeatureKey = (key: string): boolean => {
@@ -131,12 +132,8 @@ export function useSubscription() {
     return enabledFeatureKeys.has(key);
   };
 
-  // Legacy tier mapping kept for backwards-compat callers
   const tier: SubscriptionTier = isActive ? "pro" : "free";
-  const hasFeature = (_requiredTier: SubscriptionTier): boolean => {
-    // Deprecated tier API — defer to package features when possible
-    return isActive;
-  };
+  const hasFeature = (_requiredTier: SubscriptionTier): boolean => isActive;
 
   return {
     subscription,

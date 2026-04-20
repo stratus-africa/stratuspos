@@ -190,6 +190,7 @@ export type Database = {
           kra_pin: string | null
           logo_url: string | null
           name: string
+          owner_id: string | null
           phone: string | null
           tax_rate: number | null
           timezone: string
@@ -209,6 +210,7 @@ export type Database = {
           kra_pin?: string | null
           logo_url?: string | null
           name: string
+          owner_id?: string | null
           phone?: string | null
           tax_rate?: number | null
           timezone?: string
@@ -228,6 +230,7 @@ export type Database = {
           kra_pin?: string | null
           logo_url?: string | null
           name?: string
+          owner_id?: string | null
           phone?: string | null
           tax_rate?: number | null
           timezone?: string
@@ -1295,14 +1298,18 @@ export type Database = {
           max_products: number
           max_users: number
           monthly_price: number
+          monthly_price_kes: number
           name: string
           paddle_monthly_price_id: string | null
           paddle_product_id: string | null
           paddle_yearly_price_id: string | null
+          paystack_plan_code_monthly: string | null
+          paystack_plan_code_yearly: string | null
           sort_order: number
           trial_days: number
           updated_at: string
           yearly_price: number
+          yearly_price_kes: number
         }
         Insert: {
           created_at?: string
@@ -1313,14 +1320,18 @@ export type Database = {
           max_products?: number
           max_users?: number
           monthly_price?: number
+          monthly_price_kes?: number
           name: string
           paddle_monthly_price_id?: string | null
           paddle_product_id?: string | null
           paddle_yearly_price_id?: string | null
+          paystack_plan_code_monthly?: string | null
+          paystack_plan_code_yearly?: string | null
           sort_order?: number
           trial_days?: number
           updated_at?: string
           yearly_price?: number
+          yearly_price_kes?: number
         }
         Update: {
           created_at?: string
@@ -1331,14 +1342,18 @@ export type Database = {
           max_products?: number
           max_users?: number
           monthly_price?: number
+          monthly_price_kes?: number
           name?: string
           paddle_monthly_price_id?: string | null
           paddle_product_id?: string | null
           paddle_yearly_price_id?: string | null
+          paystack_plan_code_monthly?: string | null
+          paystack_plan_code_yearly?: string | null
           sort_order?: number
           trial_days?: number
           updated_at?: string
           yearly_price?: number
+          yearly_price_kes?: number
         }
         Relationships: []
       }
@@ -1350,10 +1365,14 @@ export type Database = {
           current_period_start: string | null
           environment: string
           id: string
-          paddle_customer_id: string
-          paddle_subscription_id: string
-          price_id: string
-          product_id: string
+          paddle_customer_id: string | null
+          paddle_subscription_id: string | null
+          paystack_customer_code: string | null
+          paystack_email_token: string | null
+          paystack_subscription_code: string | null
+          plan_code: string | null
+          price_id: string | null
+          product_id: string | null
           status: string
           updated_at: string | null
           user_id: string
@@ -1365,10 +1384,14 @@ export type Database = {
           current_period_start?: string | null
           environment?: string
           id?: string
-          paddle_customer_id: string
-          paddle_subscription_id: string
-          price_id: string
-          product_id: string
+          paddle_customer_id?: string | null
+          paddle_subscription_id?: string | null
+          paystack_customer_code?: string | null
+          paystack_email_token?: string | null
+          paystack_subscription_code?: string | null
+          plan_code?: string | null
+          price_id?: string | null
+          product_id?: string | null
           status?: string
           updated_at?: string | null
           user_id: string
@@ -1380,10 +1403,14 @@ export type Database = {
           current_period_start?: string | null
           environment?: string
           id?: string
-          paddle_customer_id?: string
-          paddle_subscription_id?: string
-          price_id?: string
-          product_id?: string
+          paddle_customer_id?: string | null
+          paddle_subscription_id?: string | null
+          paystack_customer_code?: string | null
+          paystack_email_token?: string | null
+          paystack_subscription_code?: string | null
+          plan_code?: string | null
+          price_id?: string | null
+          product_id?: string | null
           status?: string
           updated_at?: string | null
           user_id?: string

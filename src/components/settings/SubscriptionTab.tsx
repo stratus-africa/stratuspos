@@ -4,32 +4,30 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSubscription } from "@/hooks/useSubscription";
-import { usePaddleCheckout } from "@/hooks/usePaddleCheckout";
+import { usePaystackCheckout } from "@/hooks/usePaystackCheckout";
 import { supabase } from "@/integrations/supabase/client";
-import { getPaddleEnvironment } from "@/lib/paddle";
 import { toast } from "sonner";
-import { Check, Crown, Zap, Building2, Loader2, ExternalLink } from "lucide-react";
+import { Check, Crown, Loader2, ExternalLink, XCircle } from "lucide-react";
 
 interface PkgDisplay {
   id: string;
   name: string;
   description: string | null;
-  monthly_price: number;
-  yearly_price: number;
+  monthly_price_kes: number;
+  yearly_price_kes: number;
   max_locations: number;
   max_products: number;
   max_users: number;
-  paddle_monthly_price_id: string | null;
-  paddle_yearly_price_id: string | null;
   features: string[];
 }
 
 export function SubscriptionTab() {
   const { user } = useAuth();
-  const { subscription, tier, isActive, isCanceling, isLoading } = useSubscription();
-  const { openCheckout, loading: checkoutLoading } = usePaddleCheckout();
+  const { subscription, isActive, isCanceling, isLoading, currentPackage } = useSubscription();
+  const { openCheckout, loading: checkoutLoading } = usePaystackCheckout();
   const [billingInterval, setBillingInterval] = useState<"monthly" | "yearly">("monthly");
   const [portalLoading, setPortalLoading] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
   const [packages, setPackages] = useState<PkgDisplay[]>([]);
   const [loadingPkgs, setLoadingPkgs] = useState(true);
 
@@ -46,25 +44,20 @@ export function SubscriptionTab() {
         return;
       }
 
-      const { data: feats } = await supabase
-        .from("package_features")
-        .select("*")
-        .eq("enabled", true);
+      const { data: feats } = await supabase.from("package_features").select("*").eq("enabled", true);
 
-      const result: PkgDisplay[] = (pkgs as any[]).map(p => ({
+      const result: PkgDisplay[] = (pkgs as any[]).map((p) => ({
         id: p.id,
         name: p.name,
         description: p.description,
-        monthly_price: p.monthly_price,
-        yearly_price: p.yearly_price,
+        monthly_price_kes: Number(p.monthly_price_kes ?? 0),
+        yearly_price_kes: Number(p.yearly_price_kes ?? 0),
         max_locations: p.max_locations,
         max_products: p.max_products,
         max_users: p.max_users,
-        paddle_monthly_price_id: p.paddle_monthly_price_id,
-        paddle_yearly_price_id: p.paddle_yearly_price_id,
         features: (feats as any[] || [])
-          .filter(f => f.package_id === p.id)
-          .map(f => f.feature_label),
+          .filter((f) => f.package_id === p.id)
+          .map((f) => f.feature_label),
       }));
       setPackages(result);
       setLoadingPkgs(false);
@@ -72,24 +65,18 @@ export function SubscriptionTab() {
     fetchPkgs();
   }, []);
 
-  const handleSubscribe = (priceId: string) => {
+  const handleSubscribe = (packageId: string) => {
     if (!user) return;
-    openCheckout({
-      priceId,
-      customerEmail: user.email,
-      customData: { userId: user.id },
-    });
+    openCheckout({ packageId, interval: billingInterval });
   };
 
   const handleManageBilling = async () => {
-    if (!user) return;
     setPortalLoading(true);
     try {
-      const environment = getPaddleEnvironment();
-      const { data, error } = await supabase.functions.invoke("customer-portal", {
-        body: { userId: user.id, environment },
+      const { data, error } = await supabase.functions.invoke("paystack-manage-subscription", {
+        body: {},
       });
-      if (error || !data?.url) throw new Error("Could not open billing portal");
+      if (error || !data?.url) throw new Error(error?.message || data?.error || "Could not open portal");
       window.open(data.url, "_blank");
     } catch (e: any) {
       toast.error(e.message || "Failed to open billing portal");
@@ -98,8 +85,28 @@ export function SubscriptionTab() {
     }
   };
 
+  const handleCancel = async () => {
+    if (!confirm("Cancel your subscription? You'll keep access until the end of the current period.")) return;
+    setCancelLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("paystack-manage-subscription", {
+        body: { action: "cancel" },
+      });
+      if (error || !data?.ok) throw new Error(error?.message || data?.error || "Could not cancel");
+      toast.success("Subscription set to cancel at period end");
+    } catch (e: any) {
+      toast.error(e.message || "Failed to cancel");
+    } finally {
+      setCancelLoading(false);
+    }
+  };
+
   const formatKES = (amount: number) =>
-    new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", minimumFractionDigits: 0 }).format(amount);
+    new Intl.NumberFormat("en-KE", {
+      style: "currency",
+      currency: "KES",
+      minimumFractionDigits: 0,
+    }).format(amount);
 
   if (isLoading || loadingPkgs) {
     return (
@@ -113,19 +120,20 @@ export function SubscriptionTab() {
 
   return (
     <div className="space-y-6">
-      {/* Current Plan */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Crown className="h-5 w-5" />
-            Current Plan: {tier === "free" ? "Free" : packages.find(p => p.paddle_monthly_price_id === subscription?.price_id || p.paddle_yearly_price_id === subscription?.price_id)?.name || tier}
+            Current Plan: {isActive ? currentPackage?.name || "Active" : "Free"}
           </CardTitle>
           <CardDescription>
             {isActive && subscription ? (
               isCanceling ? (
                 <span className="text-orange-600">
                   Canceling — access until{" "}
-                  {new Date(subscription.current_period_end!).toLocaleDateString()}
+                  {subscription.current_period_end
+                    ? new Date(subscription.current_period_end).toLocaleDateString()
+                    : "—"}
                 </span>
               ) : (
                 <span>
@@ -141,17 +149,25 @@ export function SubscriptionTab() {
           </CardDescription>
         </CardHeader>
         {isActive && subscription && (
-          <CardContent>
-            <Button variant="outline" onClick={handleManageBilling} disabled={portalLoading}>
-              {portalLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              <ExternalLink className="mr-2 h-4 w-4" />
-              Manage Billing
-            </Button>
+          <CardContent className="flex gap-2 flex-wrap">
+            {subscription.paystack_subscription_code && (
+              <Button variant="outline" onClick={handleManageBilling} disabled={portalLoading}>
+                {portalLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <ExternalLink className="mr-2 h-4 w-4" />
+                Manage on Paystack
+              </Button>
+            )}
+            {subscription.paystack_subscription_code && !isCanceling && (
+              <Button variant="outline" onClick={handleCancel} disabled={cancelLoading}>
+                {cancelLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <XCircle className="mr-2 h-4 w-4" />
+                Cancel Subscription
+              </Button>
+            )}
           </CardContent>
         )}
       </Card>
 
-      {/* Billing Toggle */}
       <div className="flex justify-center gap-2">
         <Button
           variant={billingInterval === "monthly" ? "default" : "outline"}
@@ -169,7 +185,6 @@ export function SubscriptionTab() {
         </Button>
       </div>
 
-      {/* Plans Grid */}
       {packages.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
@@ -177,18 +192,32 @@ export function SubscriptionTab() {
           </CardContent>
         </Card>
       ) : (
-        <div className={`grid gap-4 ${packages.length >= 3 ? "md:grid-cols-3" : packages.length === 2 ? "md:grid-cols-2 max-w-3xl mx-auto" : "max-w-md mx-auto"}`}>
+        <div
+          className={`grid gap-4 ${
+            packages.length >= 3
+              ? "md:grid-cols-3"
+              : packages.length === 2
+              ? "md:grid-cols-2 max-w-3xl mx-auto"
+              : "max-w-md mx-auto"
+          }`}
+        >
           {packages.map((pkg, i) => {
-            const priceId = billingInterval === "yearly" ? pkg.paddle_yearly_price_id : pkg.paddle_monthly_price_id;
-            const displayPrice = billingInterval === "yearly" ? pkg.yearly_price : pkg.monthly_price;
+            const displayPrice =
+              billingInterval === "yearly" ? pkg.yearly_price_kes : pkg.monthly_price_kes;
             const isPopular = i === 1 && packages.length >= 3;
+            const noPrice = displayPrice <= 0;
 
             return (
               <Card key={pkg.id} className={`relative ${isPopular ? "border-primary ring-2 ring-primary/20" : ""}`}>
                 {isPopular && <Badge className="absolute -top-2.5 left-4">Most Popular</Badge>}
                 <CardHeader>
                   <CardTitle className="text-lg">{pkg.name}</CardTitle>
-                  <div className="text-2xl font-bold">{formatKES(displayPrice)}<span className="text-sm font-normal text-muted-foreground">/{billingInterval === "monthly" ? "mo" : "yr"}</span></div>
+                  <div className="text-2xl font-bold">
+                    {formatKES(displayPrice)}
+                    <span className="text-sm font-normal text-muted-foreground">
+                      /{billingInterval === "monthly" ? "mo" : "yr"}
+                    </span>
+                  </div>
                   {pkg.description && <CardDescription>{pkg.description}</CardDescription>}
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -205,7 +234,7 @@ export function SubscriptionTab() {
                       <Check className="h-4 w-4 text-emerald-500 shrink-0" />
                       {pkg.max_users} team member{pkg.max_users > 1 ? "s" : ""}
                     </li>
-                    {pkg.features.map(f => (
+                    {pkg.features.map((f) => (
                       <li key={f} className="flex items-center gap-2 text-sm">
                         <Check className="h-4 w-4 text-emerald-500 shrink-0" />
                         {f}
@@ -215,11 +244,12 @@ export function SubscriptionTab() {
                   <Button
                     className="w-full"
                     variant={isPopular ? "default" : "outline"}
-                    disabled={checkoutLoading || !priceId}
-                    onClick={() => priceId && handleSubscribe(priceId)}
+                    disabled={checkoutLoading || noPrice}
+                    onClick={() => handleSubscribe(pkg.id)}
+                    title={noPrice ? "Price not yet configured" : undefined}
                   >
                     {checkoutLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Subscribe
+                    {noPrice ? "Coming soon" : "Subscribe"}
                   </Button>
                 </CardContent>
               </Card>
