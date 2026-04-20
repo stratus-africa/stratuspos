@@ -44,6 +44,8 @@ const Products = () => {
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   const handleScanned = (code: string) => {
     setSearch(code);
@@ -68,7 +70,11 @@ const Products = () => {
     return matchSearch && matchCategory && matchStatus;
   });
 
-  const allFilteredSelected = filtered.length > 0 && filtered.every((p) => selectedIds.has(p.id));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const paged = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  const allFilteredSelected = paged.length > 0 && paged.every((p) => selectedIds.has(p.id));
 
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
@@ -80,9 +86,17 @@ const Products = () => {
 
   const toggleSelectAll = () => {
     if (allFilteredSelected) {
-      setSelectedIds(new Set());
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        paged.forEach((p) => next.delete(p.id));
+        return next;
+      });
     } else {
-      setSelectedIds(new Set(filtered.map((p) => p.id)));
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        paged.forEach((p) => next.add(p.id));
+        return next;
+      });
     }
   };
 
@@ -321,7 +335,7 @@ const Products = () => {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filtered.map((p) => {
+                    paged.map((p) => {
                       const margin = p.purchase_price > 0
                         ? (((p.selling_price - p.purchase_price) / p.purchase_price) * 100).toFixed(0)
                         : "—";
