@@ -67,6 +67,7 @@ const transactionNav: NavItem[] = [
 
 const financeNav: NavItem[] = [
   { title: "Accountant", url: "/chart-of-accounts", icon: BookOpen, roles: ["admin"], featureKey: "chart_of_accounts" },
+  { title: "Journal Entries", url: "/journal-entries", icon: BookOpen, roles: ["admin"], featureKey: "chart_of_accounts" },
   { title: "Banking", url: "/banking", icon: Landmark, roles: ["admin"], featureKey: "banking" },
 ];
 
