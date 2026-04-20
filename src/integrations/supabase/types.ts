@@ -290,6 +290,8 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          opening_balance: number
+          opening_balance_date: string | null
           parent_id: string | null
           type: string
           updated_at: string
@@ -302,6 +304,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          opening_balance?: number
+          opening_balance_date?: string | null
           parent_id?: string | null
           type?: string
           updated_at?: string
@@ -314,6 +318,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          opening_balance?: number
+          opening_balance_date?: string | null
           parent_id?: string | null
           type?: string
           updated_at?: string
@@ -513,6 +519,93 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journal_entries: {
+        Row: {
+          business_id: string
+          created_at: string
+          created_by: string
+          date: string
+          description: string | null
+          entry_number: string | null
+          id: string
+          reference: string | null
+          status: string
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          created_by: string
+          date?: string
+          description?: string | null
+          entry_number?: string | null
+          id?: string
+          reference?: string | null
+          status?: string
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          created_by?: string
+          date?: string
+          description?: string | null
+          entry_number?: string | null
+          id?: string
+          reference?: string | null
+          status?: string
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      journal_entry_lines: {
+        Row: {
+          account_id: string
+          created_at: string
+          credit: number
+          debit: number
+          description: string | null
+          id: string
+          journal_entry_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          credit?: number
+          debit?: number
+          description?: string | null
+          id?: string
+          journal_entry_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          credit?: number
+          debit?: number
+          description?: string | null
+          id?: string
+          journal_entry_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entry_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
             referencedColumns: ["id"]
           },
         ]
