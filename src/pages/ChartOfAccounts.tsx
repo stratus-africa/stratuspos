@@ -9,8 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Search, Wallet, Building2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Wallet, Building2, Landmark, BookOpen } from "lucide-react";
 import { Link } from "react-router-dom";
+import { OpeningBalanceDialog } from "@/components/accounting/OpeningBalanceDialog";
 import { toast } from "sonner";
 
 const ACCOUNT_TYPES = ["asset", "liability", "equity", "revenue", "expense"] as const;
@@ -23,6 +24,8 @@ interface Account {
   parent_id: string | null;
   is_active: boolean;
   description: string | null;
+  opening_balance: number;
+  opening_balance_date: string | null;
 }
 
 interface BankAccountSummary {
@@ -42,6 +45,8 @@ export default function ChartOfAccounts() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Account | null>(null);
+  const [openingAcc, setOpeningAcc] = useState<Account | null>(null);
+  const [openingDialogOpen, setOpeningDialogOpen] = useState(false);
   const [form, setForm] = useState({ code: "", name: "", type: "expense", description: "", parent_id: "" });
 
   const fetchAccounts = async () => {
@@ -122,13 +127,17 @@ export default function ChartOfAccounts() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Chart of Accounts</h1>
-          <p className="text-sm text-muted-foreground">Manage your accounting structure</p>
+          <p className="text-sm text-muted-foreground">Manage your accounting structure and opening balances</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" /> Add Account</Button>
-          </DialogTrigger>
-          <DialogContent>
+        <div className="flex gap-2">
+          <Link to="/journal-entries">
+            <Button variant="outline"><BookOpen className="mr-2 h-4 w-4" /> Journal Entries</Button>
+          </Link>
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" /> Add Account</Button>
+            </DialogTrigger>
+            <DialogContent>
             <DialogHeader>
               <DialogTitle>{editing ? "Edit Account" : "New Account"}</DialogTitle>
             </DialogHeader>
