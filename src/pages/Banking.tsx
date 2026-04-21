@@ -277,6 +277,7 @@ export default function Banking() {
                       <SelectItem value="bank">Bank Account</SelectItem>
                       <SelectItem value="cash">Cash Account</SelectItem>
                       <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                      <SelectItem value="loan">Loan Account</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -321,6 +322,8 @@ export default function Banking() {
                       <SelectContent>
                         <SelectItem value="payment_received">Payment Received</SelectItem>
                         <SelectItem value="payment_made">Payment Made</SelectItem>
+                        <SelectItem value="withdrawal">Withdrawal</SelectItem>
+                        <SelectItem value="owner_deposit">Owner Deposit / Capital</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
