@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Save, Loader2, Building2, Phone, Mail, MapPin, FileText, UserCheck } from "lucide-react";
+import { Save, Loader2, Building2, Phone, Mail, MapPin, FileText, UserCheck, Palette, PackageOpen } from "lucide-react";
+import { THEMES, DEFAULT_THEME, applyTheme, type ThemeKey } from "@/lib/themes";
 
 export function BusinessProfileTab() {
   const { business, refreshBusiness } = useBusiness();
@@ -23,10 +24,12 @@ export function BusinessProfileTab() {
   const [email, setEmail] = useState((business as any)?.email || "");
   const [address, setAddress] = useState((business as any)?.address || "");
   const [kraPin, setKraPin] = useState((business as any)?.kra_pin || "");
-  const [vatEnabled, setVatEnabled] = useState((business as any)?.vat_enabled ?? true);
-  const [accountantName, setAccountantName] = useState((business as any)?.accountant_name || "");
-  const [accountantEmail, setAccountantEmail] = useState((business as any)?.accountant_email || "");
-  const [accountantPhone, setAccountantPhone] = useState((business as any)?.accountant_phone || "");
+  const [vatEnabled, setVatEnabled] = useState((business as { vat_enabled?: boolean })?.vat_enabled ?? true);
+  const [accountantName, setAccountantName] = useState((business as { accountant_name?: string })?.accountant_name || "");
+  const [accountantEmail, setAccountantEmail] = useState((business as { accountant_email?: string })?.accountant_email || "");
+  const [accountantPhone, setAccountantPhone] = useState((business as { accountant_phone?: string })?.accountant_phone || "");
+  const [themeColor, setThemeColor] = useState<ThemeKey>(((business as { theme_color?: ThemeKey })?.theme_color || DEFAULT_THEME) as ThemeKey);
+  const [preventOverselling, setPreventOverselling] = useState((business as { prevent_overselling?: boolean })?.prevent_overselling ?? false);
 
   const handleSave = async () => {
     if (!business) return;
@@ -46,12 +49,15 @@ export function BusinessProfileTab() {
         accountant_name: accountantName.trim() || null,
         accountant_email: accountantEmail.trim() || null,
         accountant_phone: accountantPhone.trim() || null,
-      } as any)
+        theme_color: themeColor,
+        prevent_overselling: preventOverselling,
+      } as never)
       .eq("id", business.id);
 
     if (error) {
       toast.error("Failed to update business: " + error.message);
     } else {
+      applyTheme(themeColor);
       toast.success("Business profile updated");
       await refreshBusiness();
     }
@@ -194,6 +200,53 @@ export function BusinessProfileTab() {
               <Label>Accountant Phone</Label>
               <Input value={accountantPhone} onChange={(e) => setAccountantPhone(e.target.value)} placeholder="+254 7XX XXX XXX" />
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Appearance */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-5 w-5" />
+            Appearance
+          </CardTitle>
+          <CardDescription>Pick a brand color. Alternating table rows use a lighter shade of this color.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {Object.values(THEMES).map((t) => (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => { setThemeColor(t.key); applyTheme(t.key); }}
+                className={`flex items-center gap-3 p-3 rounded-lg border-2 transition-colors ${
+                  themeColor === t.key ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-primary/40"
+                }`}
+              >
+                <span className="h-8 w-8 rounded-full border" style={{ backgroundColor: t.swatch }} />
+                <span className="text-sm font-medium">{t.label}</span>
+              </button>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Inventory rules */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <PackageOpen className="h-5 w-5" />
+            Inventory Rules
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-base">Prevent overselling</Label>
+              <p className="text-sm text-muted-foreground">Block sales and adjustments that would push stock below zero.</p>
+            </div>
+            <Switch checked={preventOverselling} onCheckedChange={setPreventOverselling} />
           </div>
         </CardContent>
       </Card>
