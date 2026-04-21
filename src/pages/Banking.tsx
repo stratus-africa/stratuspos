@@ -101,6 +101,10 @@ export default function Banking() {
     fetchData();
   };
 
+  // Returns +1 for inflow, -1 for outflow on a non-loan account
+  const balanceSign = (type: string) =>
+    ["payment_received", "transfer_in", "owner_deposit", "loan_disbursement_received"].includes(type) ? 1 : -1;
+
   const handleCreateTransaction = async () => {
     if (!business || !user || !txnForm.bank_account_id || !txnForm.amount) {
       toast.error("Account and amount are required"); return;
@@ -119,7 +123,8 @@ export default function Banking() {
     // Update account balance
     const acc = accounts.find((a) => a.id === txnForm.bank_account_id);
     if (acc) {
-      const newBalance = txnForm.type === "payment_received" ? acc.balance + amount : acc.balance - amount;
+      const delta = balanceSign(txnForm.type) * amount;
+      const newBalance = Number(acc.balance) + delta;
       await supabase.from("bank_accounts").update({ balance: newBalance }).eq("id", acc.id);
     }
 
@@ -127,6 +132,58 @@ export default function Banking() {
     setTxnDialogOpen(false);
     setTxnForm({ bank_account_id: "", type: "payment_received", amount: "", date: format(new Date(), "yyyy-MM-dd"), reference: "", description: "", category: "", contact_name: "" });
     fetchData();
+  };
+
+  const handlePayLoan = async () => {
+    if (!business || !user) return;
+    const { loan_account_id, from_account_id, amount: amtStr, date, reference, description } = loanForm;
+    if (!loan_account_id || !from_account_id) { toast.error("Select loan and source accounts"); return; }
+    const amount = parseFloat(amtStr);
+    if (isNaN(amount) || amount <= 0) { toast.error("Enter a valid amount"); return; }
+
+    const fromAcc = accounts.find((a) => a.id === from_account_id);
+    const loanAcc = accounts.find((a) => a.id === loan_account_id);
+    if (!fromAcc || !loanAcc) { toast.error("Invalid accounts"); return; }
+    if (loanAcc.account_type !== "loan") { toast.error("Selected account is not a loan account"); return; }
+    if (Number(fromAcc.balance) < amount) {
+      toast.error(`Insufficient balance in ${fromAcc.name} (KES ${Number(fromAcc.balance).toLocaleString()})`);
+      return;
+    }
+
+    setLoanLoading(true);
+    try {
+      const ref = reference?.trim() || `LOAN-${Date.now()}`;
+      const desc = description?.trim() || `Loan repayment to ${loanAcc.name}`;
+
+      const { error: txnError } = await supabase.from("bank_transactions").insert([
+        {
+          business_id: business.id, bank_account_id: from_account_id, type: "loan_payment",
+          amount, date, reference: ref, description: desc,
+          category: "Loan Payment", contact_name: loanAcc.name, created_by: user.id,
+        },
+        {
+          business_id: business.id, bank_account_id: loan_account_id, type: "loan_repayment_applied",
+          amount, date, reference: ref, description: desc,
+          category: "Loan Payment", contact_name: fromAcc.name, created_by: user.id,
+        },
+      ]);
+      if (txnError) throw txnError;
+
+      // Source account decreases, loan balance also decreases (paying down debt)
+      await Promise.all([
+        supabase.from("bank_accounts").update({ balance: Number(fromAcc.balance) - amount }).eq("id", fromAcc.id),
+        supabase.from("bank_accounts").update({ balance: Number(loanAcc.balance) - amount }).eq("id", loanAcc.id),
+      ]);
+
+      toast.success(`Paid KES ${amount.toLocaleString()} towards ${loanAcc.name}`);
+      setLoanDialogOpen(false);
+      setLoanForm({ loan_account_id: "", from_account_id: "", amount: "", date: format(new Date(), "yyyy-MM-dd"), reference: "", description: "" });
+      fetchData();
+    } catch (err: any) {
+      toast.error(`Loan payment failed: ${err.message}`);
+    } finally {
+      setLoanLoading(false);
+    }
   };
 
   const handleTransfer = async () => {
