@@ -5,8 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPin, Clock, FileText, Sunset, Receipt } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import { MapPin, Clock, FileText, Sunset, Receipt, ShoppingCart, LayoutDashboard } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { usePOSSession } from "@/hooks/usePOSSession";
 import { useState } from "react";
 import ZReportDialog from "@/components/pos/ZReportDialog";
@@ -18,6 +18,7 @@ export function TopBar() {
   const { business, locations, currentLocation, setCurrentLocation } = useBusiness();
   const { user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const session = usePOSSession();
   const { create: createExpense } = useExpenses();
 
@@ -26,6 +27,7 @@ export function TopBar() {
   const [expenseOpen, setExpenseOpen] = useState(false);
 
   const isPOS = location.pathname === "/pos";
+  const isDashboard = location.pathname === "/" || location.pathname === "/dashboard";
 
   const initials = user?.user_metadata?.full_name
     ? user.user_metadata.full_name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -72,6 +74,17 @@ export function TopBar() {
         </div>
 
         <div className="flex items-center gap-2">
+          {(isDashboard || isPOS) && (
+            <Button
+              size="sm"
+              variant={isPOS ? "outline" : "default"}
+              className="h-7 text-xs"
+              onClick={() => navigate(isPOS ? "/" : "/pos")}
+            >
+              {isPOS ? <LayoutDashboard className="h-3.5 w-3.5 mr-1" /> : <ShoppingCart className="h-3.5 w-3.5 mr-1" />}
+              {isPOS ? "Dashboard" : "POS"}
+            </Button>
+          )}
           {isPOS && session.activeSession && (
             <>
               <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-200 gap-1 text-xs">
