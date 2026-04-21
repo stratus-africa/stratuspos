@@ -293,6 +293,19 @@ export default function Banking() {
                     <Input value={accForm.account_number} onChange={(e) => setAccForm({ ...accForm, account_number: e.target.value })} placeholder="Optional" />
                   </div>
                 </div>
+                <div className="space-y-2">
+                  <Label>Opening Balance (KES)</Label>
+                  <Input
+                    type="number" step="0.01" value={accForm.opening_balance}
+                    onChange={(e) => setAccForm({ ...accForm, opening_balance: e.target.value })}
+                    placeholder="0"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {accForm.account_type === "loan"
+                      ? "For loans, enter the outstanding loan balance you owe."
+                      : "Starting balance for this account."}
+                  </p>
+                </div>
                 <Button onClick={handleCreateAccount} className="w-full">Create Account</Button>
               </div>
             </DialogContent>
