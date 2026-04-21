@@ -50,7 +50,7 @@ export default function Banking() {
 
   // Account dialog
   const [accDialogOpen, setAccDialogOpen] = useState(false);
-  const [accForm, setAccForm] = useState({ name: "", account_number: "", bank_name: "", account_type: "bank" });
+  const [accForm, setAccForm] = useState({ name: "", account_number: "", bank_name: "", account_type: "bank", opening_balance: "" });
 
   // Transaction dialog
   const [txnDialogOpen, setTxnDialogOpen] = useState(false);
@@ -90,14 +90,16 @@ export default function Banking() {
 
   const handleCreateAccount = async () => {
     if (!business || !accForm.name) { toast.error("Account name is required"); return; }
+    const opening = parseFloat(accForm.opening_balance) || 0;
     const { error } = await supabase.from("bank_accounts").insert({
       business_id: business.id, name: accForm.name, account_number: accForm.account_number || null,
       bank_name: accForm.bank_name || null, account_type: accForm.account_type,
+      balance: opening,
     });
     if (error) { toast.error(error.message); return; }
     toast.success("Account created");
     setAccDialogOpen(false);
-    setAccForm({ name: "", account_number: "", bank_name: "", account_type: "bank" });
+    setAccForm({ name: "", account_number: "", bank_name: "", account_type: "bank", opening_balance: "" });
     fetchData();
   };
 
