@@ -7,12 +7,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Trash2, AlertCircle } from "lucide-react";
+import { Plus, Trash2, AlertCircle, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { useSuppliers, type PurchaseItem, type Purchase } from "@/hooks/usePurchases";
 import { useProducts } from "@/hooks/useProducts";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { SupplierFormDialog } from "@/components/purchases/SupplierFormDialog";
 
 interface Props {
   open: boolean;
@@ -39,14 +40,15 @@ interface Props {
 }
 
 export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, editingPurchase, editingItems }: Props) {
-  const { query: suppliersQuery } = useSuppliers();
+  const { query: suppliersQuery, create: createSupplier } = useSuppliers();
   const { productsQuery } = useProducts();
   const { locations, currentLocation, business } = useBusiness();
   const { user } = useAuth();
 
   const orgVatEnabled = (business as any)?.vat_enabled ?? true;
 
-  const [supplierId, setSupplierId] = useState<string>("none");
+  const [supplierId, setSupplierId] = useState<string>("");
+  const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
   const [locationId, setLocationId] = useState(currentLocation?.id || "");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("unpaid");
@@ -60,7 +62,7 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
 
   useEffect(() => {
     if (editingPurchase) {
-      setSupplierId(editingPurchase.supplier_id || "none");
+      setSupplierId(editingPurchase.supplier_id || "");
       setLocationId(editingPurchase.location_id);
       setInvoiceNumber(editingPurchase.invoice_number || "");
       setPaymentStatus(editingPurchase.payment_status);
@@ -69,7 +71,7 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
       setNotes(editingPurchase.notes || "");
       setItems(editingItems || []);
     } else {
-      setSupplierId("none");
+      setSupplierId("");
       setLocationId(currentLocation?.id || "");
       setInvoiceNumber("");
       setPaymentStatus("unpaid");
@@ -81,9 +83,9 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
   }, [editingPurchase, editingItems, currentLocation?.id]);
 
   const taxRate = business?.tax_rate ?? 16;
-  const selectedSupplier = supplierId === "none" ? null : suppliersQuery.data?.find((s) => s.id === supplierId);
+  const selectedSupplier = !supplierId ? null : suppliersQuery.data?.find((s) => s.id === supplierId);
   const supplierMissingPin = vatEnabled && selectedSupplier && !selectedSupplier.kra_pin?.trim();
-  const noSupplierWithVat = vatEnabled && supplierId === "none";
+  const noSupplier = !supplierId;
 
   const addItem = () => {
     if (!addProductId) return;
@@ -115,19 +117,17 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || items.length === 0) return;
-    if (vatEnabled) {
-      if (supplierId === "none") {
-        toast.error("VAT-enabled purchases require a supplier with a KRA PIN");
-        return;
-      }
-      if (supplierMissingPin) {
-        toast.error(`Supplier "${selectedSupplier?.name}" has no KRA PIN. Add it before saving a VAT purchase.`);
-        return;
-      }
+    if (!supplierId) {
+      toast.error("Supplier is required for purchases");
+      return;
+    }
+    if (vatEnabled && supplierMissingPin) {
+      toast.error(`Supplier "${selectedSupplier?.name}" has no KRA PIN. Add it before saving a VAT purchase.`);
+      return;
     }
     onSubmit({
       purchase: {
-        supplier_id: supplierId === "none" ? null : supplierId,
+        supplier_id: supplierId,
         location_id: locationId,
         invoice_number: invoiceNumber || undefined,
         subtotal, tax, total,
@@ -152,16 +152,20 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Supplier</Label>
-              <Select value={supplierId} onValueChange={setSupplierId}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No supplier</SelectItem>
-                  {suppliersQuery.data?.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Supplier *</Label>
+              <div className="flex gap-2">
+                <Select value={supplierId} onValueChange={setSupplierId}>
+                  <SelectTrigger className="flex-1"><SelectValue placeholder="Select supplier..." /></SelectTrigger>
+                  <SelectContent>
+                    {suppliersQuery.data?.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button type="button" size="icon" variant="outline" onClick={() => setSupplierDialogOpen(true)} title="Add supplier">
+                  <UserPlus className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
             <div className="space-y-2">
               <Label>Location *</Label>
@@ -223,12 +227,6 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
                 disabled={!orgVatEnabled}
               />
             </div>
-            {vatEnabled && noSupplierWithVat && (
-              <div className="flex items-start gap-2 text-xs text-destructive bg-destructive/10 rounded p-2">
-                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                <span>Select a supplier with a KRA PIN to enable VAT.</span>
-              </div>
-            )}
             {vatEnabled && supplierMissingPin && (
               <div className="flex items-start gap-2 text-xs text-destructive bg-destructive/10 rounded p-2">
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
@@ -297,12 +295,25 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
 
           <div className="flex justify-end gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" disabled={isLoading || items.length === 0 || !!supplierMissingPin || noSupplierWithVat}>
+            <Button type="submit" disabled={isLoading || items.length === 0 || !!supplierMissingPin || noSupplier}>
               {isLoading ? "Saving..." : editingPurchase ? "Update Purchase" : "Create Purchase"}
             </Button>
           </div>
         </form>
       </DialogContent>
+
+      <SupplierFormDialog
+        open={supplierDialogOpen}
+        onOpenChange={setSupplierDialogOpen}
+        isLoading={createSupplier.isPending}
+        onSubmit={async (data) => {
+          await createSupplier.mutateAsync(data);
+          // Refetch and auto-select the newly created supplier by name
+          const { data: latest } = await (await import("@/integrations/supabase/client")).supabase
+            .from("suppliers").select("id, name").eq("business_id", business!.id).order("created_at", { ascending: false }).limit(1);
+          if (latest && latest[0]) setSupplierId(latest[0].id);
+        }}
+      />
     </Dialog>
   );
 }

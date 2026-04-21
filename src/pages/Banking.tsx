@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Building2, Wallet, ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from "lucide-react";
+import { Plus, Building2, Wallet, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Landmark, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -50,7 +50,7 @@ export default function Banking() {
 
   // Account dialog
   const [accDialogOpen, setAccDialogOpen] = useState(false);
-  const [accForm, setAccForm] = useState({ name: "", account_number: "", bank_name: "", account_type: "bank" });
+  const [accForm, setAccForm] = useState({ name: "", account_number: "", bank_name: "", account_type: "bank", opening_balance: "" });
 
   // Transaction dialog
   const [txnDialogOpen, setTxnDialogOpen] = useState(false);
@@ -67,6 +67,14 @@ export default function Banking() {
   });
   const [transferLoading, setTransferLoading] = useState(false);
 
+  // Pay Loan dialog
+  const [loanDialogOpen, setLoanDialogOpen] = useState(false);
+  const [loanForm, setLoanForm] = useState({
+    loan_account_id: "", from_account_id: "", amount: "",
+    date: format(new Date(), "yyyy-MM-dd"), reference: "", description: "",
+  });
+  const [loanLoading, setLoanLoading] = useState(false);
+
   const fetchData = async () => {
     if (!business) return;
     const [accRes, txnRes] = await Promise.all([
@@ -82,16 +90,22 @@ export default function Banking() {
 
   const handleCreateAccount = async () => {
     if (!business || !accForm.name) { toast.error("Account name is required"); return; }
+    const opening = parseFloat(accForm.opening_balance) || 0;
     const { error } = await supabase.from("bank_accounts").insert({
       business_id: business.id, name: accForm.name, account_number: accForm.account_number || null,
       bank_name: accForm.bank_name || null, account_type: accForm.account_type,
+      balance: opening,
     });
     if (error) { toast.error(error.message); return; }
     toast.success("Account created");
     setAccDialogOpen(false);
-    setAccForm({ name: "", account_number: "", bank_name: "", account_type: "bank" });
+    setAccForm({ name: "", account_number: "", bank_name: "", account_type: "bank", opening_balance: "" });
     fetchData();
   };
+
+  // Returns +1 for inflow, -1 for outflow on a non-loan account
+  const balanceSign = (type: string) =>
+    ["payment_received", "transfer_in", "owner_deposit", "loan_disbursement_received"].includes(type) ? 1 : -1;
 
   const handleCreateTransaction = async () => {
     if (!business || !user || !txnForm.bank_account_id || !txnForm.amount) {
@@ -111,7 +125,8 @@ export default function Banking() {
     // Update account balance
     const acc = accounts.find((a) => a.id === txnForm.bank_account_id);
     if (acc) {
-      const newBalance = txnForm.type === "payment_received" ? acc.balance + amount : acc.balance - amount;
+      const delta = balanceSign(txnForm.type) * amount;
+      const newBalance = Number(acc.balance) + delta;
       await supabase.from("bank_accounts").update({ balance: newBalance }).eq("id", acc.id);
     }
 
@@ -119,6 +134,58 @@ export default function Banking() {
     setTxnDialogOpen(false);
     setTxnForm({ bank_account_id: "", type: "payment_received", amount: "", date: format(new Date(), "yyyy-MM-dd"), reference: "", description: "", category: "", contact_name: "" });
     fetchData();
+  };
+
+  const handlePayLoan = async () => {
+    if (!business || !user) return;
+    const { loan_account_id, from_account_id, amount: amtStr, date, reference, description } = loanForm;
+    if (!loan_account_id || !from_account_id) { toast.error("Select loan and source accounts"); return; }
+    const amount = parseFloat(amtStr);
+    if (isNaN(amount) || amount <= 0) { toast.error("Enter a valid amount"); return; }
+
+    const fromAcc = accounts.find((a) => a.id === from_account_id);
+    const loanAcc = accounts.find((a) => a.id === loan_account_id);
+    if (!fromAcc || !loanAcc) { toast.error("Invalid accounts"); return; }
+    if (loanAcc.account_type !== "loan") { toast.error("Selected account is not a loan account"); return; }
+    if (Number(fromAcc.balance) < amount) {
+      toast.error(`Insufficient balance in ${fromAcc.name} (KES ${Number(fromAcc.balance).toLocaleString()})`);
+      return;
+    }
+
+    setLoanLoading(true);
+    try {
+      const ref = reference?.trim() || `LOAN-${Date.now()}`;
+      const desc = description?.trim() || `Loan repayment to ${loanAcc.name}`;
+
+      const { error: txnError } = await supabase.from("bank_transactions").insert([
+        {
+          business_id: business.id, bank_account_id: from_account_id, type: "loan_payment",
+          amount, date, reference: ref, description: desc,
+          category: "Loan Payment", contact_name: loanAcc.name, created_by: user.id,
+        },
+        {
+          business_id: business.id, bank_account_id: loan_account_id, type: "loan_repayment_applied",
+          amount, date, reference: ref, description: desc,
+          category: "Loan Payment", contact_name: fromAcc.name, created_by: user.id,
+        },
+      ]);
+      if (txnError) throw txnError;
+
+      // Source account decreases, loan balance also decreases (paying down debt)
+      await Promise.all([
+        supabase.from("bank_accounts").update({ balance: Number(fromAcc.balance) - amount }).eq("id", fromAcc.id),
+        supabase.from("bank_accounts").update({ balance: Number(loanAcc.balance) - amount }).eq("id", loanAcc.id),
+      ]);
+
+      toast.success(`Paid KES ${amount.toLocaleString()} towards ${loanAcc.name}`);
+      setLoanDialogOpen(false);
+      setLoanForm({ loan_account_id: "", from_account_id: "", amount: "", date: format(new Date(), "yyyy-MM-dd"), reference: "", description: "" });
+      fetchData();
+    } catch (err: any) {
+      toast.error(`Loan payment failed: ${err.message}`);
+    } finally {
+      setLoanLoading(false);
+    }
   };
 
   const handleTransfer = async () => {
@@ -212,6 +279,7 @@ export default function Banking() {
                       <SelectItem value="bank">Bank Account</SelectItem>
                       <SelectItem value="cash">Cash Account</SelectItem>
                       <SelectItem value="mobile_money">Mobile Money</SelectItem>
+                      <SelectItem value="loan">Loan Account</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -224,6 +292,19 @@ export default function Banking() {
                     <Label>Account Number</Label>
                     <Input value={accForm.account_number} onChange={(e) => setAccForm({ ...accForm, account_number: e.target.value })} placeholder="Optional" />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Opening Balance (KES)</Label>
+                  <Input
+                    type="number" step="0.01" value={accForm.opening_balance}
+                    onChange={(e) => setAccForm({ ...accForm, opening_balance: e.target.value })}
+                    placeholder="0"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {accForm.account_type === "loan"
+                      ? "For loans, enter the outstanding loan balance you owe."
+                      : "Starting balance for this account."}
+                  </p>
                 </div>
                 <Button onClick={handleCreateAccount} className="w-full">Create Account</Button>
               </div>
@@ -256,6 +337,8 @@ export default function Banking() {
                       <SelectContent>
                         <SelectItem value="payment_received">Payment Received</SelectItem>
                         <SelectItem value="payment_made">Payment Made</SelectItem>
+                        <SelectItem value="withdrawal">Withdrawal</SelectItem>
+                        <SelectItem value="owner_deposit">Owner Deposit / Capital</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -396,6 +479,77 @@ export default function Banking() {
               </div>
             </DialogContent>
           </Dialog>
+
+          <Dialog open={loanDialogOpen} onOpenChange={setLoanDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" disabled={!accounts.some((a) => a.account_type === "loan")}>
+                <CreditCard className="mr-2 h-4 w-4" /> Pay Loan
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Pay Loan</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Loan Account</Label>
+                    <Select value={loanForm.loan_account_id} onValueChange={(v) => setLoanForm({ ...loanForm, loan_account_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select loan" /></SelectTrigger>
+                      <SelectContent>
+                        {accounts.filter((a) => a.account_type === "loan").map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.name} (Balance: KES {Number(a.balance).toLocaleString()})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Pay From</Label>
+                    <Select value={loanForm.from_account_id} onValueChange={(v) => setLoanForm({ ...loanForm, from_account_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="Source account" /></SelectTrigger>
+                      <SelectContent>
+                        {accounts.filter((a) => a.account_type !== "loan").map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.name} (KES {Number(a.balance).toLocaleString()})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Amount (KES)</Label>
+                    <Input type="number" min="0" step="0.01" value={loanForm.amount}
+                      onChange={(e) => setLoanForm({ ...loanForm, amount: e.target.value })} placeholder="0" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Date</Label>
+                    <Input type="date" value={loanForm.date}
+                      onChange={(e) => setLoanForm({ ...loanForm, date: e.target.value })} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Reference</Label>
+                  <Input value={loanForm.reference}
+                    onChange={(e) => setLoanForm({ ...loanForm, reference: e.target.value })}
+                    placeholder="Auto-generated if blank" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Input value={loanForm.description}
+                    onChange={(e) => setLoanForm({ ...loanForm, description: e.target.value })}
+                    placeholder="Optional notes" />
+                </div>
+                <Button onClick={handlePayLoan} className="w-full" disabled={loanLoading}>
+                  <Landmark className="mr-2 h-4 w-4" />
+                  {loanLoading ? "Processing..." : "Confirm Payment"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -460,11 +614,22 @@ export default function Banking() {
               </TableHeader>
               <TableBody>
                 {filteredTxns.map((txn) => {
-                  const isIn = txn.type === "payment_received" || txn.type === "transfer_in";
-                  const isTransfer = txn.type === "transfer_in" || txn.type === "transfer_out";
-                  const label = isTransfer
-                    ? (txn.type === "transfer_in" ? "Transfer In" : "Transfer Out")
-                    : (txn.type === "payment_received" ? "Received" : "Paid");
+                  const inflows = ["payment_received", "transfer_in", "owner_deposit", "loan_disbursement_received"];
+                  const transfers = ["transfer_in", "transfer_out"];
+                  const isIn = inflows.includes(txn.type);
+                  const isTransfer = transfers.includes(txn.type);
+                  const labelMap: Record<string, string> = {
+                    payment_received: "Received",
+                    payment_made: "Paid",
+                    transfer_in: "Transfer In",
+                    transfer_out: "Transfer Out",
+                    withdrawal: "Withdrawal",
+                    owner_deposit: "Owner Deposit",
+                    loan_payment: "Loan Payment",
+                    loan_repayment_applied: "Loan Reduced",
+                    loan_disbursement_received: "Loan Received",
+                  };
+                  const label = labelMap[txn.type] || txn.type;
                   const variant = isTransfer ? "secondary" : (isIn ? "default" : "destructive");
                   return (
                     <TableRow key={txn.id}>
