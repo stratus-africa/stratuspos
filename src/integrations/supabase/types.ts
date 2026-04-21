@@ -192,7 +192,9 @@ export type Database = {
           name: string
           owner_id: string | null
           phone: string | null
+          prevent_overselling: boolean
           tax_rate: number | null
+          theme_color: string
           timezone: string
           updated_at: string
           vat_enabled: boolean
@@ -212,7 +214,9 @@ export type Database = {
           name: string
           owner_id?: string | null
           phone?: string | null
+          prevent_overselling?: boolean
           tax_rate?: number | null
+          theme_color?: string
           timezone?: string
           updated_at?: string
           vat_enabled?: boolean
@@ -232,7 +236,9 @@ export type Database = {
           name?: string
           owner_id?: string | null
           phone?: string | null
+          prevent_overselling?: boolean
           tax_rate?: number | null
+          theme_color?: string
           timezone?: string
           updated_at?: string
           vat_enabled?: boolean
@@ -966,6 +972,7 @@ export type Database = {
       }
       products: {
         Row: {
+          allow_decimal_quantity: boolean
           barcode: string | null
           brand_id: string | null
           business_id: string
@@ -983,6 +990,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allow_decimal_quantity?: boolean
           barcode?: string | null
           brand_id?: string | null
           business_id: string
@@ -1000,6 +1008,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allow_decimal_quantity?: boolean
           barcode?: string | null
           brand_id?: string | null
           business_id?: string
