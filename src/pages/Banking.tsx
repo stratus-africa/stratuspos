@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Building2, Wallet, ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from "lucide-react";
+import { Plus, Building2, Wallet, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Landmark, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -66,6 +66,14 @@ export default function Banking() {
     date: format(new Date(), "yyyy-MM-dd"), reference: "", description: "",
   });
   const [transferLoading, setTransferLoading] = useState(false);
+
+  // Pay Loan dialog
+  const [loanDialogOpen, setLoanDialogOpen] = useState(false);
+  const [loanForm, setLoanForm] = useState({
+    loan_account_id: "", from_account_id: "", amount: "",
+    date: format(new Date(), "yyyy-MM-dd"), reference: "", description: "",
+  });
+  const [loanLoading, setLoanLoading] = useState(false);
 
   const fetchData = async () => {
     if (!business) return;
