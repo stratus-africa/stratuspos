@@ -464,6 +464,77 @@ export default function Banking() {
               </div>
             </DialogContent>
           </Dialog>
+
+          <Dialog open={loanDialogOpen} onOpenChange={setLoanDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" disabled={!accounts.some((a) => a.account_type === "loan")}>
+                <CreditCard className="mr-2 h-4 w-4" /> Pay Loan
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Pay Loan</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Loan Account</Label>
+                    <Select value={loanForm.loan_account_id} onValueChange={(v) => setLoanForm({ ...loanForm, loan_account_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="Select loan" /></SelectTrigger>
+                      <SelectContent>
+                        {accounts.filter((a) => a.account_type === "loan").map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.name} (Balance: KES {Number(a.balance).toLocaleString()})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Pay From</Label>
+                    <Select value={loanForm.from_account_id} onValueChange={(v) => setLoanForm({ ...loanForm, from_account_id: v })}>
+                      <SelectTrigger><SelectValue placeholder="Source account" /></SelectTrigger>
+                      <SelectContent>
+                        {accounts.filter((a) => a.account_type !== "loan").map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.name} (KES {Number(a.balance).toLocaleString()})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Amount (KES)</Label>
+                    <Input type="number" min="0" step="0.01" value={loanForm.amount}
+                      onChange={(e) => setLoanForm({ ...loanForm, amount: e.target.value })} placeholder="0" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Date</Label>
+                    <Input type="date" value={loanForm.date}
+                      onChange={(e) => setLoanForm({ ...loanForm, date: e.target.value })} />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Reference</Label>
+                  <Input value={loanForm.reference}
+                    onChange={(e) => setLoanForm({ ...loanForm, reference: e.target.value })}
+                    placeholder="Auto-generated if blank" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Input value={loanForm.description}
+                    onChange={(e) => setLoanForm({ ...loanForm, description: e.target.value })}
+                    placeholder="Optional notes" />
+                </div>
+                <Button onClick={handlePayLoan} className="w-full" disabled={loanLoading}>
+                  <Landmark className="mr-2 h-4 w-4" />
+                  {loanLoading ? "Processing..." : "Confirm Payment"}
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -528,11 +599,22 @@ export default function Banking() {
               </TableHeader>
               <TableBody>
                 {filteredTxns.map((txn) => {
-                  const isIn = txn.type === "payment_received" || txn.type === "transfer_in";
-                  const isTransfer = txn.type === "transfer_in" || txn.type === "transfer_out";
-                  const label = isTransfer
-                    ? (txn.type === "transfer_in" ? "Transfer In" : "Transfer Out")
-                    : (txn.type === "payment_received" ? "Received" : "Paid");
+                  const inflows = ["payment_received", "transfer_in", "owner_deposit", "loan_disbursement_received"];
+                  const transfers = ["transfer_in", "transfer_out"];
+                  const isIn = inflows.includes(txn.type);
+                  const isTransfer = transfers.includes(txn.type);
+                  const labelMap: Record<string, string> = {
+                    payment_received: "Received",
+                    payment_made: "Paid",
+                    transfer_in: "Transfer In",
+                    transfer_out: "Transfer Out",
+                    withdrawal: "Withdrawal",
+                    owner_deposit: "Owner Deposit",
+                    loan_payment: "Loan Payment",
+                    loan_repayment_applied: "Loan Reduced",
+                    loan_disbursement_received: "Loan Received",
+                  };
+                  const label = labelMap[txn.type] || txn.type;
                   const variant = isTransfer ? "secondary" : (isIn ? "default" : "destructive");
                   return (
                     <TableRow key={txn.id}>
