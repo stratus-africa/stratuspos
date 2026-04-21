@@ -198,26 +198,30 @@ export function StockAdjustmentDialog({ open, onOpenChange, onSubmit, isLoading 
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {lines.map(l => (
-                    <TableRow key={l.product_id}>
-                      <TableCell className="font-medium">{l.product_name}</TableCell>
-                      <TableCell className="text-muted-foreground text-sm">{l.sku || "—"}</TableCell>
-                      <TableCell>
-                        <Input
-                          type="number"
-                          step={1}
-                          value={l.quantity_change}
-                          onChange={e => handleQuantityChange(l.product_id, parseFloat(e.target.value) || 0)}
-                          className="h-8"
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRemoveLine(l.product_id)}>
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {lines.map(l => {
+                    const product = products.find(p => p.id === l.product_id);
+                    const allowDecimal = product?.allow_decimal_quantity ?? false;
+                    return (
+                      <TableRow key={l.product_id}>
+                        <TableCell className="font-medium">{l.product_name}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{l.sku || "—"}</TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            step={allowDecimal ? 0.01 : 1}
+                            value={l.quantity_change}
+                            onChange={e => handleQuantityChange(l.product_id, parseFloat(e.target.value) || 0)}
+                            className="h-8"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Button type="button" variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleRemoveLine(l.product_id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

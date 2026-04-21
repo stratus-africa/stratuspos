@@ -39,23 +39,57 @@ export function usePOS() {
   const [heldSales, setHeldSales] = useState<HeldSale[]>([]);
   const [processing, setProcessing] = useState(false);
 
+  const preventOverselling = (business as { prevent_overselling?: boolean } | null)?.prevent_overselling === true;
+
+  // Read cached inventory to enforce stock limits without an extra fetch.
+  const inventoryRows = (queryClient.getQueryData<{ product_id: string; quantity: number }[]>(
+    ["inventory", currentLocation?.id]
+  ) || []);
+  const stockOf = (productId: string) => {
+    const row = inventoryRows.find((r) => r.product_id === productId);
+    return row ? Number(row.quantity) : 0;
+  };
+
   const addToCart = useCallback((product: Product) => {
     setCart((prev) => {
       const existing = prev.find((i) => i.product.id === product.id);
+      const newQty = existing ? existing.quantity + 1 : 1;
+      if (preventOverselling) {
+        const available = stockOf(product.id);
+        if (newQty > available) {
+          toast.error(`Only ${available} ${product.name} in stock`);
+          return prev;
+        }
+      }
       if (existing) {
         return prev.map((i) =>
-          i.product.id === product.id ? { ...i, quantity: i.quantity + 1 } : i
+          i.product.id === product.id ? { ...i, quantity: newQty } : i
         );
       }
       return [...prev, { product, quantity: 1, unit_price: product.selling_price, discount: 0 }];
     });
-  }, []);
+  }, [preventOverselling, inventoryRows]);
 
   const updateCartItem = useCallback((productId: string, updates: Partial<CartItem>) => {
     setCart((prev) =>
-      prev.map((i) => (i.product.id === productId ? { ...i, ...updates } : i))
+      prev.map((i) => {
+        if (i.product.id !== productId) return i;
+        const next = { ...i, ...updates };
+        if (preventOverselling && updates.quantity !== undefined) {
+          const available = stockOf(productId);
+          if (next.quantity > available) {
+            toast.error(`Only ${available} ${i.product.name} in stock`);
+            return { ...i, quantity: available };
+          }
+        }
+        // Decimal handling: if product disallows decimals, round down.
+        if (!i.product.allow_decimal_quantity && updates.quantity !== undefined) {
+          next.quantity = Math.floor(next.quantity);
+        }
+        return next;
+      })
     );
-  }, []);
+  }, [preventOverselling, inventoryRows]);
 
   const removeFromCart = useCallback((productId: string) => {
     setCart((prev) => prev.filter((i) => i.product.id !== productId));
@@ -68,7 +102,7 @@ export function usePOS() {
   }, []);
 
   const cartSubtotal = cart.reduce((sum, i) => sum + i.unit_price * i.quantity - i.discount, 0);
-  const vatEnabled = (business as any)?.vat_enabled ?? true;
+  const vatEnabled = (business as { vat_enabled?: boolean } | null)?.vat_enabled ?? true;
   const cartTax = vatEnabled
     ? cart.reduce((sum, i) => {
         const lineTotal = i.unit_price * i.quantity - i.discount;
@@ -113,6 +147,24 @@ export function usePOS() {
   // Complete sale
   const completeSale = async (payments: PaymentEntry[], bankAccountId?: string | null) => {
     if (!business || !currentLocation || !user || cart.length === 0) return null;
+
+    // Server-of-truth stock check before committing if overselling is disallowed.
+    if (preventOverselling) {
+      const productIds = cart.map((i) => i.product.id);
+      const { data: stockRows } = await supabase
+        .from("inventory")
+        .select("product_id, quantity")
+        .eq("location_id", currentLocation.id)
+        .in("product_id", productIds);
+      const stockMap = new Map((stockRows || []).map((r) => [r.product_id, Number(r.quantity)]));
+      for (const item of cart) {
+        const available = stockMap.get(item.product.id) ?? 0;
+        if (item.quantity > available) {
+          toast.error(`Cannot sell ${item.quantity} of ${item.product.name} — only ${available} in stock`);
+          return null;
+        }
+      }
+    }
 
     try {
       const totalPaid = payments.reduce((s, p) => s + p.amount, 0);

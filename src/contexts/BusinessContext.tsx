@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
+import { applyTheme, DEFAULT_THEME } from "@/lib/themes";
 
 interface Business {
   id: string;
@@ -11,6 +12,8 @@ interface Business {
   tax_rate: number;
   is_active: boolean;
   vat_enabled: boolean;
+  prevent_overselling?: boolean;
+  theme_color?: string;
 }
 
 interface Location {
@@ -109,6 +112,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setBusiness(biz as Business);
         setNeedsOnboarding(false);
         setIsSuspended(biz.is_active === false);
+        applyTheme((biz as { theme_color?: string }).theme_color || DEFAULT_THEME);
 
         // Fetch role
         const { data: roleData } = await supabase

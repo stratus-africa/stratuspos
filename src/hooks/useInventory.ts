@@ -53,8 +53,24 @@ export function useInventory(locationId?: string) {
       notes?: string;
       created_by: string;
     }) => {
+      const preventOverselling = (business as { prevent_overselling?: boolean } | null)?.prevent_overselling === true;
+
       for (const item of batch.items) {
-        // Insert adjustment record
+        // Look up current inventory first
+        const { data: existing } = await supabase
+          .from("inventory")
+          .select("id, quantity")
+          .eq("product_id", item.product_id)
+          .eq("location_id", batch.location_id)
+          .maybeSingle();
+
+        const currentQty = existing ? Number(existing.quantity) : 0;
+        const newQty = currentQty + item.quantity_change;
+
+        if (preventOverselling && newQty < 0) {
+          throw new Error(`Adjustment would push stock below zero (current: ${currentQty}, change: ${item.quantity_change})`);
+        }
+
         const { error: adjError } = await supabase
           .from("stock_adjustments")
           .insert({
@@ -67,18 +83,10 @@ export function useInventory(locationId?: string) {
           });
         if (adjError) throw adjError;
 
-        // Upsert inventory
-        const { data: existing } = await supabase
-          .from("inventory")
-          .select("id, quantity")
-          .eq("product_id", item.product_id)
-          .eq("location_id", batch.location_id)
-          .maybeSingle();
-
         if (existing) {
           const { error } = await supabase
             .from("inventory")
-            .update({ quantity: existing.quantity + item.quantity_change })
+            .update({ quantity: newQty })
             .eq("id", existing.id);
           if (error) throw error;
         } else {

@@ -17,6 +17,7 @@ export interface Product {
   tax_rate: number | null;
   image_url: string | null;
   is_active: boolean;
+  allow_decimal_quantity?: boolean;
   created_at: string;
   categories?: { name: string } | null;
   brands?: { name: string } | null;
@@ -34,6 +35,7 @@ export interface ProductFormData {
   selling_price: number;
   tax_rate?: number;
   is_active?: boolean;
+  allow_decimal_quantity?: boolean;
 }
 
 export function useProducts() {

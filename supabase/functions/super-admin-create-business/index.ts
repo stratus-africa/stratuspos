@@ -17,6 +17,17 @@ interface CreateBusinessBody {
   packageId?: string | null;
 }
 
+// Wait until we can read the freshly-created auth user back through the admin API.
+// This avoids a race where the FK from public.user_roles -> auth.users sees a missing row.
+async function waitForAuthUser(admin: ReturnType<typeof createClient>, userId: string, maxAttempts = 8) {
+  for (let i = 0; i < maxAttempts; i++) {
+    const { data, error } = await admin.auth.admin.getUserById(userId);
+    if (!error && data?.user?.id === userId) return true;
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  return false;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -45,8 +56,6 @@ Deno.serve(async (req) => {
     }
 
     const callerId = claims.claims.sub as string;
-
-    // Verify caller is super admin
     const { data: isSA } = await supabase.rpc("is_super_admin", { _user_id: callerId });
     if (!isSA) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
@@ -90,6 +99,16 @@ Deno.serve(async (req) => {
     }
     const newUserId = createdUser.user.id;
 
+    // 1b. Wait for the auth user to be fully readable (avoids FK race on user_roles)
+    const visible = await waitForAuthUser(admin, newUserId);
+    if (!visible) {
+      await admin.auth.admin.deleteUser(newUserId).catch(() => {});
+      return new Response(
+        JSON.stringify({ error: "Auth user creation timed out — please retry" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // 2. Create the business
     const { data: biz, error: bizErr } = await admin
       .from("businesses")
@@ -103,23 +122,55 @@ Deno.serve(async (req) => {
       .select()
       .single();
     if (bizErr || !biz) {
-      // rollback user
-      await admin.auth.admin.deleteUser(newUserId);
+      await admin.auth.admin.deleteUser(newUserId).catch(() => {});
       return new Response(JSON.stringify({ error: bizErr?.message || "Failed to create business" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // 3. Update profile to link business (the handle_new_user trigger created the row already)
-    await admin.from("profiles").update({ business_id: biz.id }).eq("id", newUserId);
+    // 3. Ensure profile row exists and link business (handle_new_user trigger usually creates it,
+    //    but if the trigger ever lags we upsert defensively).
+    const { error: profileErr } = await admin
+      .from("profiles")
+      .upsert({
+        id: newUserId,
+        business_id: biz.id,
+        full_name: body.ownerFullName.trim(),
+        email: body.ownerEmail.trim().toLowerCase(),
+      }, { onConflict: "id" });
+    if (profileErr) {
+      console.error("profile upsert failed", profileErr);
+    }
 
-    // 4. Assign admin role
-    await admin.from("user_roles").insert({
-      user_id: newUserId,
-      role: "admin",
-      business_id: biz.id,
-    });
+    // 4. Assign admin role with retry — this is where the FK error was hitting.
+    let roleErr: unknown = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { error } = await admin.from("user_roles").insert({
+        user_id: newUserId,
+        role: "admin",
+        business_id: biz.id,
+      });
+      if (!error) {
+        roleErr = null;
+        break;
+      }
+      roleErr = error;
+      // If it's a FK violation, the auth user replication may still be catching up.
+      const msg = (error as { message?: string })?.message || "";
+      if (!msg.includes("user_roles_user_id_fkey")) break;
+      await new Promise((r) => setTimeout(r, 400));
+    }
+    if (roleErr) {
+      // Roll everything back so the super admin can retry cleanly.
+      await admin.from("businesses").delete().eq("id", biz.id).catch(() => {});
+      await admin.auth.admin.deleteUser(newUserId).catch(() => {});
+      const msg = (roleErr as { message?: string })?.message || "Failed to assign role";
+      return new Response(JSON.stringify({ error: msg }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // 5. Create initial location
     await admin.from("locations").insert({
@@ -128,7 +179,7 @@ Deno.serve(async (req) => {
       type: "store",
     });
 
-    // 6. Optional: create a comp/manual subscription so the business immediately gets a plan
+    // 6. Optional manual subscription
     if (body.packageId) {
       const { data: pkg } = await admin
         .from("subscription_packages")

@@ -54,6 +54,10 @@
     --sidebar-accent-foreground: 213 31% 91%;
     --sidebar-border: 217 33% 17%;
     --sidebar-ring: 217 91% 60%;
+
+    /* Themed alternating row tint — overridden at runtime by applyTheme() */
+    --table-alt-row: 217 91% 96%;
+    --primary-glow: 217 91% 62%;
   }
 
   .dark {
@@ -112,6 +116,14 @@
 .dense-table td,
 .dense-table th {
   @apply py-2 px-3 text-sm;
+}
+
+/* Themed alternating rows — pair with class="theme-alt-rows" on a <tbody> or any list container */
+.theme-alt-rows > *:nth-child(even) {
+  background-color: hsl(var(--table-alt-row));
+}
+.theme-alt-rows tr:nth-child(even) {
+  background-color: hsl(var(--table-alt-row));
 }
 
 /* Scrollbar styling */
