@@ -148,6 +148,24 @@ export function usePOS() {
   const completeSale = async (payments: PaymentEntry[], bankAccountId?: string | null) => {
     if (!business || !currentLocation || !user || cart.length === 0) return null;
 
+    // Server-of-truth stock check before committing if overselling is disallowed.
+    if (preventOverselling) {
+      const productIds = cart.map((i) => i.product.id);
+      const { data: stockRows } = await supabase
+        .from("inventory")
+        .select("product_id, quantity")
+        .eq("location_id", currentLocation.id)
+        .in("product_id", productIds);
+      const stockMap = new Map((stockRows || []).map((r) => [r.product_id, Number(r.quantity)]));
+      for (const item of cart) {
+        const available = stockMap.get(item.product.id) ?? 0;
+        if (item.quantity > available) {
+          toast.error(`Cannot sell ${item.quantity} of ${item.product.name} — only ${available} in stock`);
+          return null;
+        }
+      }
+    }
+
     try {
       const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
       const paymentStatus = totalPaid >= cartTotal ? "paid" : totalPaid > 0 ? "partial" : "unpaid";

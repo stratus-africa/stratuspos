@@ -413,6 +413,10 @@ const POS = () => {
 
 function CartItemRow({ item, onUpdate, onRemove }: { item: CartItem; onUpdate: (id: string, u: Partial<CartItem>) => void; onRemove: (id: string) => void }) {
   const lineTotal = item.unit_price * item.quantity - item.discount;
+  const allowDecimal = item.product.allow_decimal_quantity ?? false;
+  const step = allowDecimal ? 0.01 : 1;
+  const minQty = allowDecimal ? 0.01 : 1;
+  const decrementBy = allowDecimal ? 0.5 : 1;
   return (
     <div className="flex items-start gap-2 p-2 rounded border bg-background">
       <div className="flex-1 min-w-0">
@@ -420,17 +424,22 @@ function CartItemRow({ item, onUpdate, onRemove }: { item: CartItem; onUpdate: (
         <p className="text-xs text-muted-foreground">@ KES {Number(item.unit_price).toLocaleString()}</p>
       </div>
       <div className="flex items-center gap-1">
-        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => onUpdate(item.product.id, { quantity: Math.max(1, item.quantity - 1) })}>
+        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => onUpdate(item.product.id, { quantity: Math.max(minQty, +(item.quantity - decrementBy).toFixed(3)) })}>
           <Minus className="h-3 w-3" />
         </Button>
         <Input
-          className="w-12 h-7 text-center text-sm p-0"
+          className="w-14 h-7 text-center text-sm p-0"
           type="number"
-          min={1}
+          min={minQty}
+          step={step}
           value={item.quantity}
-          onChange={(e) => onUpdate(item.product.id, { quantity: Math.max(1, parseInt(e.target.value) || 1) })}
+          onChange={(e) => {
+            const v = parseFloat(e.target.value);
+            if (Number.isNaN(v)) return;
+            onUpdate(item.product.id, { quantity: Math.max(minQty, v) });
+          }}
         />
-        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => onUpdate(item.product.id, { quantity: item.quantity + 1 })}>
+        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => onUpdate(item.product.id, { quantity: +(item.quantity + (allowDecimal ? 0.5 : 1)).toFixed(3) })}>
           <Plus className="h-3 w-3" />
         </Button>
       </div>
