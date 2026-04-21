@@ -36,6 +36,7 @@ export function ProductFormDialog({ open, onOpenChange, onSubmit, product, isLoa
     selling_price: 0,
     tax_rate: 16,
     is_active: true,
+    allow_decimal_quantity: false,
   });
 
   const [selectedTaxRateId, setSelectedTaxRateId] = useState<string>("manual");
@@ -53,6 +54,7 @@ export function ProductFormDialog({ open, onOpenChange, onSubmit, product, isLoa
         selling_price: product.selling_price,
         tax_rate: product.tax_rate ?? 16,
         is_active: product.is_active,
+        allow_decimal_quantity: product.allow_decimal_quantity ?? false,
       });
       // Try to match existing tax rate
       const matched = taxRatesQuery.data?.find((tr) => tr.rate === (product.tax_rate ?? 16));
@@ -60,7 +62,7 @@ export function ProductFormDialog({ open, onOpenChange, onSubmit, product, isLoa
     } else {
       setForm({
         name: "", sku: "", barcode: "", category_id: null, brand_id: null, unit_id: null,
-        purchase_price: 0, selling_price: 0, tax_rate: 16, is_active: true,
+        purchase_price: 0, selling_price: 0, tax_rate: 16, is_active: true, allow_decimal_quantity: false,
       });
       // Default to first standard rate if available
       const defaultRate = taxRatesQuery.data?.find((tr) => tr.type === "standard");
@@ -205,6 +207,19 @@ export function ProductFormDialog({ open, onOpenChange, onSubmit, product, isLoa
               <Switch checked={form.is_active} onCheckedChange={(checked) => setForm({ ...form, is_active: checked })} />
               <Label>Active</Label>
             </div>
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <Label className="text-sm">Allow decimal quantity</Label>
+              <p className="text-xs text-muted-foreground">
+                Enable for products sold by weight or volume (e.g. 1.5 kg, 0.75 L).
+              </p>
+            </div>
+            <Switch
+              checked={form.allow_decimal_quantity ?? false}
+              onCheckedChange={(checked) => setForm({ ...form, allow_decimal_quantity: checked })}
+            />
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
