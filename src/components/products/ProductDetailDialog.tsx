@@ -4,8 +4,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Package, ShoppingCart, Truck, ClipboardList } from "lucide-react";
+import { Package, ShoppingCart, Truck, ClipboardList, Layers } from "lucide-react";
 import type { Product } from "@/hooks/useProducts";
+import { useBusiness } from "@/contexts/BusinessContext";
+import BatchesTab from "@/components/products/BatchesTab";
 
 interface ProductDetailDialogProps {
   product: Product | null;
@@ -19,6 +21,8 @@ const fmt = (n: number) =>
 const fmtDate = (d: string) => new Date(d).toLocaleString("en-KE", { dateStyle: "medium", timeStyle: "short" });
 
 export default function ProductDetailDialog({ product, open, onOpenChange }: ProductDetailDialogProps) {
+  const { business } = useBusiness();
+  const showBatches = (business as any)?.business_type === "pharmacy";
   const productId = product?.id;
 
   const inventoryQuery = useQuery({
@@ -101,8 +105,11 @@ export default function ProductDetailDialog({ product, open, onOpenChange }: Pro
         </DialogHeader>
 
         <Tabs defaultValue="details" className="space-y-3">
-          <TabsList className="grid grid-cols-4 w-full">
+          <TabsList className={`grid w-full ${showBatches ? "grid-cols-5" : "grid-cols-4"}`}>
             <TabsTrigger value="details"><Package className="mr-1 h-4 w-4" /> Details</TabsTrigger>
+            {showBatches && (
+              <TabsTrigger value="batches"><Layers className="mr-1 h-4 w-4" /> Batches</TabsTrigger>
+            )}
             <TabsTrigger value="purchases"><Truck className="mr-1 h-4 w-4" /> Purchases</TabsTrigger>
             <TabsTrigger value="sales"><ShoppingCart className="mr-1 h-4 w-4" /> Sales</TabsTrigger>
             <TabsTrigger value="adjustments"><ClipboardList className="mr-1 h-4 w-4" /> Adjustments</TabsTrigger>
