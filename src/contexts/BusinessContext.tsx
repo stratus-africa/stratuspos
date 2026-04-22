@@ -14,6 +14,7 @@ interface Business {
   vat_enabled: boolean;
   prevent_overselling?: boolean;
   theme_color?: string;
+  business_type?: string;
 }
 
 interface Location {
@@ -35,7 +36,7 @@ interface BusinessContextType {
   loading: boolean;
   needsOnboarding: boolean;
   isSuspended: boolean;
-  createBusiness: (name: string, locationName: string) => Promise<{ error: Error | null }>;
+  createBusiness: (name: string, locationName: string, businessType?: string) => Promise<{ error: Error | null }>;
   refreshBusiness: () => Promise<void>;
   userRole: AppRole | null;
   hasAccess: (requiredRoles: AppRole[]) => boolean;
@@ -145,7 +146,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setLoading(false);
   };
 
-  const createBusiness = async (name: string, locationName: string) => {
+  const createBusiness = async (name: string, locationName: string, businessType: string = "general") => {
     if (!user) return { error: new Error("Not authenticated") };
 
     try {
@@ -153,7 +154,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
       const { error: bizError } = await supabase
         .from("businesses")
-        .insert({ id: businessId, name });
+        .insert({ id: businessId, name, business_type: businessType } as any);
 
       if (bizError) throw bizError;
 
