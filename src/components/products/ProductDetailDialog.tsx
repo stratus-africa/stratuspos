@@ -164,6 +164,13 @@ export default function ProductDetailDialog({ product, open, onOpenChange }: Pro
             </div>
           </TabsContent>
 
+          {/* BATCHES (pharmacy only) */}
+          {showBatches && (
+            <TabsContent value="batches">
+              <BatchesTab productId={product.id} productName={product.name} />
+            </TabsContent>
+          )}
+
           {/* PURCHASES */}
           <TabsContent value="purchases">
             <Table>

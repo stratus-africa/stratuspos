@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Product } from "@/hooks/useProducts";
+import { pickFefoBatches } from "@/hooks/useProductBatches";
 
 export interface CartItem {
   product: Product;
@@ -192,17 +193,40 @@ export function usePOS() {
       });
       if (saleErr) throw saleErr;
 
-      // Insert sale items
-      const saleItems = cart.map((i) => ({
-        sale_id: saleId,
-        product_id: i.product.id,
-        quantity: i.quantity,
-        unit_price: i.unit_price,
-        discount: i.discount,
-        total: i.unit_price * i.quantity - i.discount,
-      }));
+      // Insert sale items — for pharmacy businesses, FEFO-pick a batch per line.
+      const isPharmacy = (business as any)?.business_type === "pharmacy";
+      const saleItems: any[] = [];
+      const batchDeductions: { batch_id: string; quantity: number }[] = [];
+
+      for (const i of cart) {
+        let batchId: string | null = null;
+        if (isPharmacy) {
+          const picks = await pickFefoBatches(i.product.id, currentLocation.id, i.quantity);
+          // Use the earliest-expiry batch as the line's batch_id; track all picks for deduction.
+          if (picks.length > 0) batchId = picks[0].batch_id;
+          batchDeductions.push(...picks);
+        }
+        saleItems.push({
+          sale_id: saleId,
+          product_id: i.product.id,
+          quantity: i.quantity,
+          unit_price: i.unit_price,
+          discount: i.discount,
+          total: i.unit_price * i.quantity - i.discount,
+          batch_id: batchId,
+        });
+      }
       const { error: itemsErr } = await supabase.from("sale_items").insert(saleItems);
       if (itemsErr) throw itemsErr;
+
+      // Decrement batch quantities (FEFO)
+      if (batchDeductions.length > 0) {
+        await Promise.all(
+          batchDeductions.map((p) =>
+            supabase.rpc("decrement_batch_quantity" as any, { _batch_id: p.batch_id, _qty: p.quantity })
+          )
+        );
+      }
 
       // Insert payments
       if (payments.length > 0) {

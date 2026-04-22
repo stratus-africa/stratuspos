@@ -1,7 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Clock } from "lucide-react";
+import { useExpiringBatches } from "@/hooks/useProductBatches";
+import { useBusiness } from "@/contexts/BusinessContext";
+import { differenceInDays, format } from "date-fns";
 
 interface DashboardBottomRowProps {
   data: {
@@ -19,6 +22,9 @@ interface DashboardBottomRowProps {
 
 export function DashboardBottomRow({ data }: DashboardBottomRowProps) {
   const { todaySales, todayExpenses, todayProfit, lowStockItems } = data;
+  const { business } = useBusiness();
+  const isPharmacy = (business as any)?.business_type === "pharmacy";
+  const { data: expiring = [] } = useExpiringBatches(60);
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
