@@ -7,12 +7,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
-import { Search, Ban, CheckCircle2, Pencil, Eye, Loader2, Plus } from "lucide-react";
+import { Search, Ban, CheckCircle2, Pencil, Eye, Loader2, Plus, Trash2, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { BusinessDetailDialog } from "@/components/super-admin/BusinessDetailDialog";
 import { AddBusinessDialog } from "@/components/super-admin/AddBusinessDialog";
+
+interface SubInfo {
+  status: string;
+  current_period_end: string | null;
+  plan_code: string | null;
+}
 
 interface BusinessRow {
   id: string;
@@ -22,11 +32,22 @@ interface BusinessRow {
   created_at: string;
   is_active: boolean;
   tax_rate: number | null;
+  business_type?: string | null;
+  owner_id: string | null;
   _userCount: number;
   _locationCount: number;
   _salesCount: number;
   _revenue: number;
+  _subscription: SubInfo | null;
 }
+
+const SUB_BADGES: Record<string, { variant: "default" | "secondary" | "destructive" | "outline"; className: string; label: string }> = {
+  active:   { variant: "default",   className: "bg-emerald-500/10 text-emerald-600 border-emerald-200", label: "Active" },
+  trialing: { variant: "default",   className: "bg-blue-500/10 text-blue-600 border-blue-200",         label: "Trial" },
+  past_due: { variant: "secondary", className: "bg-amber-500/10 text-amber-700 border-amber-200",      label: "Past Due" },
+  canceled: { variant: "secondary", className: "bg-muted text-muted-foreground",                       label: "Canceled" },
+  none:     { variant: "outline",   className: "text-muted-foreground",                                label: "No Sub" },
+};
 
 export default function SuperAdminBusinesses() {
   const [businesses, setBusinesses] = useState<BusinessRow[]>([]);
@@ -34,7 +55,6 @@ export default function SuperAdminBusinesses() {
   const [search, setSearch] = useState("");
   const [toggling, setToggling] = useState<string | null>(null);
 
-  // Edit state
   const [editBiz, setEditBiz] = useState<BusinessRow | null>(null);
   const [editName, setEditName] = useState("");
   const [editCurrency, setEditCurrency] = useState("KES");
@@ -42,19 +62,18 @@ export default function SuperAdminBusinesses() {
   const [editTimezone, setEditTimezone] = useState("Africa/Nairobi");
   const [saving, setSaving] = useState(false);
 
-  // Masquerade
   const [masquerading, setMasquerading] = useState<string | null>(null);
-
-  // Detail dialog
   const [detailBiz, setDetailBiz] = useState<BusinessRow | null>(null);
-
-  // Add business dialog
   const [showAdd, setShowAdd] = useState(false);
 
+  const [deleteBiz, setDeleteBiz] = useState<BusinessRow | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   const fetchData = async () => {
-    const [bizRes, salesRes] = await Promise.all([
+    const [bizRes, salesRes, subsRes] = await Promise.all([
       supabase.from("businesses").select("*"),
       supabase.from("sales").select("business_id, total"),
+      supabase.from("subscriptions").select("user_id, status, current_period_end, plan_code"),
     ]);
     if (!bizRes.data) { setLoading(false); return; }
 
@@ -66,6 +85,19 @@ export default function SuperAdminBusinesses() {
       salesByBiz.set(s.business_id, entry);
     });
 
+    const subsByUser = new Map<string, SubInfo>();
+    (subsRes.data || []).forEach((s: any) => {
+      // Keep the most recent / active one if multiple
+      const existing = subsByUser.get(s.user_id);
+      if (!existing || s.status === "active" || s.status === "trialing") {
+        subsByUser.set(s.user_id, {
+          status: s.status,
+          current_period_end: s.current_period_end,
+          plan_code: s.plan_code,
+        });
+      }
+    });
+
     const enriched = await Promise.all(
       bizRes.data.map(async (biz: any) => {
         const [usersRes, locsRes] = await Promise.all([
@@ -73,6 +105,20 @@ export default function SuperAdminBusinesses() {
           supabase.from("locations").select("id", { count: "exact", head: true }).eq("business_id", biz.id),
         ]);
         const salesData = salesByBiz.get(biz.id) || { count: 0, revenue: 0 };
+
+        // Find subscription via owner_id, falling back to first admin for the business
+        let sub: SubInfo | null = biz.owner_id ? (subsByUser.get(biz.owner_id) || null) : null;
+        if (!sub) {
+          const { data: adminRow } = await supabase
+            .from("user_roles")
+            .select("user_id")
+            .eq("business_id", biz.id)
+            .eq("role", "admin")
+            .limit(1)
+            .maybeSingle();
+          if (adminRow?.user_id) sub = subsByUser.get(adminRow.user_id) || null;
+        }
+
         return {
           ...biz,
           is_active: biz.is_active ?? true,
@@ -80,7 +126,8 @@ export default function SuperAdminBusinesses() {
           _locationCount: locsRes.count || 0,
           _salesCount: salesData.count,
           _revenue: salesData.revenue,
-        };
+          _subscription: sub,
+        } as BusinessRow;
       })
     );
 
@@ -105,6 +152,94 @@ export default function SuperAdminBusinesses() {
       );
     }
     setToggling(null);
+  };
+
+  const isSubscriptionActive = (sub: SubInfo | null): boolean => {
+    if (!sub) return false;
+    if (sub.status !== "active" && sub.status !== "trialing") return false;
+    if (sub.current_period_end && new Date(sub.current_period_end) < new Date()) return false;
+    return true;
+  };
+
+  const handleDelete = async () => {
+    if (!deleteBiz) return;
+    if (isSubscriptionActive(deleteBiz._subscription)) {
+      toast.error("Cannot delete a business with an active subscription. Cancel it first.");
+      return;
+    }
+    setDeleting(true);
+    try {
+      // Delete in dependency order so FKs / RLS don't block
+      const bizId = deleteBiz.id;
+
+      // Sales chain
+      const { data: saleRows } = await supabase.from("sales").select("id").eq("business_id", bizId);
+      const saleIds = (saleRows || []).map((s) => s.id);
+      if (saleIds.length) {
+        await supabase.from("payments").delete().in("sale_id", saleIds);
+        await supabase.from("sale_items").delete().in("sale_id", saleIds);
+      }
+      await supabase.from("sales").delete().eq("business_id", bizId);
+
+      // Purchase chain
+      const { data: purchRows } = await supabase.from("purchases").select("id").eq("business_id", bizId);
+      const purchIds = (purchRows || []).map((p) => p.id);
+      if (purchIds.length) await supabase.from("purchase_items").delete().in("purchase_id", purchIds);
+      await supabase.from("purchases").delete().eq("business_id", bizId);
+
+      // Journal chain
+      const { data: jeRows } = await supabase.from("journal_entries").select("id").eq("business_id", bizId);
+      const jeIds = (jeRows || []).map((j) => j.id);
+      if (jeIds.length) await supabase.from("journal_entry_lines").delete().in("journal_entry_id", jeIds);
+      await supabase.from("journal_entries").delete().eq("business_id", bizId);
+
+      // Other business-scoped tables
+      await Promise.all([
+        supabase.from("bank_transactions").delete().eq("business_id", bizId),
+        supabase.from("expenses").delete().eq("business_id", bizId),
+        supabase.from("stock_adjustments" as any).delete().in("location_id",
+          (await supabase.from("locations").select("id").eq("business_id", bizId)).data?.map((l) => l.id) || ["00000000-0000-0000-0000-000000000000"]
+        ),
+        supabase.from("product_batches" as any).delete().eq("business_id", bizId),
+        supabase.from("payment_method_accounts").delete().eq("business_id", bizId),
+        supabase.from("bank_accounts").delete().eq("business_id", bizId),
+        supabase.from("mpesa_transactions").delete().eq("business_id", bizId),
+        supabase.from("pos_sessions").delete().eq("business_id", bizId),
+        supabase.from("tax_rates").delete().eq("business_id", bizId),
+        supabase.from("expense_categories").delete().eq("business_id", bizId),
+        supabase.from("chart_of_accounts").delete().eq("business_id", bizId),
+      ]);
+
+      // Inventory via locations
+      const { data: locs } = await supabase.from("locations").select("id").eq("business_id", bizId);
+      const locIds = (locs || []).map((l) => l.id);
+      if (locIds.length) await supabase.from("inventory").delete().in("location_id", locIds);
+
+      // Catalog
+      await supabase.from("products").delete().eq("business_id", bizId);
+      await supabase.from("brands").delete().eq("business_id", bizId);
+      await supabase.from("categories").delete().eq("business_id", bizId);
+      await supabase.from("units").delete().eq("business_id", bizId);
+      await supabase.from("customers").delete().eq("business_id", bizId);
+      await supabase.from("suppliers").delete().eq("business_id", bizId);
+
+      // Locations + roles + profile detach
+      await supabase.from("locations").delete().eq("business_id", bizId);
+      await supabase.from("user_roles").delete().eq("business_id", bizId);
+      await supabase.from("profiles").update({ business_id: null }).eq("business_id", bizId);
+
+      // Finally the business
+      const { error: bizErr } = await supabase.from("businesses").delete().eq("id", bizId);
+      if (bizErr) throw bizErr;
+
+      toast.success(`Deleted "${deleteBiz.name}"`);
+      setBusinesses((prev) => prev.filter((b) => b.id !== bizId));
+      setDeleteBiz(null);
+    } catch (err: any) {
+      toast.error("Failed to delete: " + (err.message || "unknown error"));
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const openEdit = (biz: BusinessRow) => {
@@ -146,7 +281,6 @@ export default function SuperAdminBusinesses() {
 
   const handleMasquerade = (bizId: string) => {
     setMasquerading(bizId);
-    // Store masquerade business ID and redirect to main app
     localStorage.setItem("masquerade_business_id", bizId);
     window.location.href = "/";
   };
@@ -193,75 +327,103 @@ export default function SuperAdminBusinesses() {
               <TableRow>
                 <TableHead>Business Name</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Currency</TableHead>
+                <TableHead>Subscription</TableHead>
+                <TableHead>Type</TableHead>
                 <TableHead className="text-center">Users</TableHead>
                 <TableHead className="text-center">Locations</TableHead>
-                <TableHead className="text-center">Sales</TableHead>
                 <TableHead className="text-right">Revenue</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((biz) => (
-                <TableRow key={biz.id} className={!biz.is_active ? "opacity-60" : ""}>
-                  <TableCell className="font-medium">
-                    <button
-                      className="text-left hover:underline text-primary cursor-pointer"
-                      onClick={() => setDetailBiz(biz)}
-                    >
-                      {biz.name}
-                    </button>
-                  </TableCell>
-                  <TableCell>
-                    {biz.is_active ? (
-                      <Badge variant="default" className="bg-emerald-500/10 text-emerald-600 border-emerald-200">Active</Badge>
-                    ) : (
-                      <Badge variant="secondary" className="bg-destructive/10 text-destructive border-destructive/20">Inactive</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{biz.currency}</Badge>
-                  </TableCell>
-                  <TableCell className="text-center">{biz._userCount}</TableCell>
-                  <TableCell className="text-center">{biz._locationCount}</TableCell>
-                  <TableCell className="text-center">{biz._salesCount}</TableCell>
-                  <TableCell className="text-right font-medium">
-                    {biz.currency} {biz._revenue.toLocaleString()}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {format(new Date(biz.created_at), "MMM dd, yyyy")}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex gap-1 justify-end">
-                      <Button variant="outline" size="sm" onClick={() => openEdit(biz)} title="Edit business">
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleMasquerade(biz.id)}
-                        disabled={masquerading === biz.id}
-                        title="View as this business"
+              {filtered.map((biz) => {
+                const sub = biz._subscription;
+                const subKey = sub?.status && SUB_BADGES[sub.status] ? sub.status : (sub ? "canceled" : "none");
+                const subBadge = SUB_BADGES[subKey];
+                const subActive = isSubscriptionActive(sub);
+                return (
+                  <TableRow key={biz.id} className={!biz.is_active ? "opacity-60" : ""}>
+                    <TableCell className="font-medium">
+                      <button
+                        className="text-left hover:underline text-primary cursor-pointer"
+                        onClick={() => setDetailBiz(biz)}
                       >
-                        {masquerading === biz.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eye className="h-3 w-3" />}
-                      </Button>
-                      <Button
-                        variant={biz.is_active ? "destructive" : "outline"}
-                        size="sm"
-                        disabled={toggling === biz.id}
-                        onClick={() => toggleActive(biz.id, biz.is_active)}
-                      >
-                        {biz.is_active ? (
-                          <><Ban className="h-3 w-3 mr-1" /> Deactivate</>
-                        ) : (
-                          <><CheckCircle2 className="h-3 w-3 mr-1" /> Reactivate</>
+                        {biz.name}
+                      </button>
+                    </TableCell>
+                    <TableCell>
+                      {biz.is_active ? (
+                        <Badge variant="default" className="bg-emerald-500/10 text-emerald-600 border-emerald-200">Active</Badge>
+                      ) : (
+                        <Badge variant="secondary" className="bg-destructive/10 text-destructive border-destructive/20">Inactive</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-0.5">
+                        <Badge variant={subBadge.variant} className={subBadge.className}>
+                          <CreditCard className="h-3 w-3 mr-1" />
+                          {subBadge.label}
+                        </Badge>
+                        {sub?.current_period_end && (
+                          <span className="text-[10px] text-muted-foreground">
+                            until {format(new Date(sub.current_period_end), "MMM dd, yyyy")}
+                          </span>
                         )}
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="capitalize text-sm text-muted-foreground">
+                      {(biz.business_type || "general").replace("_", " ")}
+                    </TableCell>
+                    <TableCell className="text-center">{biz._userCount}</TableCell>
+                    <TableCell className="text-center">{biz._locationCount}</TableCell>
+                    <TableCell className="text-right font-medium">
+                      {biz.currency} {biz._revenue.toLocaleString()}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {format(new Date(biz.created_at), "MMM dd, yyyy")}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex gap-1 justify-end">
+                        <Button variant="outline" size="sm" onClick={() => openEdit(biz)} title="Edit business">
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleMasquerade(biz.id)}
+                          disabled={masquerading === biz.id}
+                          title="View as this business"
+                        >
+                          {masquerading === biz.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Eye className="h-3 w-3" />}
+                        </Button>
+                        <Button
+                          variant={biz.is_active ? "destructive" : "outline"}
+                          size="sm"
+                          disabled={toggling === biz.id}
+                          onClick={() => toggleActive(biz.id, biz.is_active)}
+                        >
+                          {biz.is_active ? (
+                            <><Ban className="h-3 w-3 mr-1" /> Deactivate</>
+                          ) : (
+                            <><CheckCircle2 className="h-3 w-3 mr-1" /> Reactivate</>
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setDeleteBiz(biz)}
+                          disabled={subActive}
+                          title={subActive ? "Cannot delete — has active subscription" : "Delete business"}
+                          className={subActive ? "" : "text-destructive hover:bg-destructive/10"}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
               {filtered.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
@@ -327,6 +489,31 @@ export default function SuperAdminBusinesses() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete confirmation */}
+      <AlertDialog open={!!deleteBiz} onOpenChange={(o) => !o && setDeleteBiz(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete "{deleteBiz?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the business and ALL its data: products, sales, purchases,
+              expenses, journals, banking, locations, and user roles. The user accounts themselves
+              will remain but will be detached from this business. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Delete Business
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <BusinessDetailDialog
         businessId={detailBiz?.id || null}
