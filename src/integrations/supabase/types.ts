@@ -182,6 +182,7 @@ export type Database = {
           accountant_name: string | null
           accountant_phone: string | null
           address: string | null
+          business_type: string
           created_at: string
           currency: string
           email: string | null
@@ -204,6 +205,7 @@ export type Database = {
           accountant_name?: string | null
           accountant_phone?: string | null
           address?: string | null
+          business_type?: string
           created_at?: string
           currency?: string
           email?: string | null
@@ -226,6 +228,7 @@ export type Database = {
           accountant_name?: string | null
           accountant_phone?: string | null
           address?: string | null
+          business_type?: string
           created_at?: string
           currency?: string
           email?: string | null
@@ -970,6 +973,57 @@ export type Database = {
           },
         ]
       }
+      product_batches: {
+        Row: {
+          batch_number: string
+          business_id: string
+          created_at: string
+          expiry_date: string | null
+          id: string
+          is_active: boolean
+          location_id: string
+          manufacture_date: string | null
+          notes: string | null
+          product_id: string
+          quantity: number
+          supplier_id: string | null
+          unit_cost: number
+          updated_at: string
+        }
+        Insert: {
+          batch_number: string
+          business_id: string
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          is_active?: boolean
+          location_id: string
+          manufacture_date?: string | null
+          notes?: string | null
+          product_id: string
+          quantity?: number
+          supplier_id?: string | null
+          unit_cost?: number
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string
+          business_id?: string
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          is_active?: boolean
+          location_id?: string
+          manufacture_date?: string | null
+          notes?: string | null
+          product_id?: string
+          quantity?: number
+          supplier_id?: string | null
+          unit_cost?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           allow_decimal_quantity: boolean
@@ -1099,6 +1153,7 @@ export type Database = {
       }
       purchase_items: {
         Row: {
+          batch_id: string | null
           created_at: string
           id: string
           product_id: string
@@ -1108,6 +1163,7 @@ export type Database = {
           unit_cost: number
         }
         Insert: {
+          batch_id?: string | null
           created_at?: string
           id?: string
           product_id: string
@@ -1117,6 +1173,7 @@ export type Database = {
           unit_cost?: number
         }
         Update: {
+          batch_id?: string | null
           created_at?: string
           id?: string
           product_id?: string
@@ -1220,6 +1277,7 @@ export type Database = {
       }
       sale_items: {
         Row: {
+          batch_id: string | null
           created_at: string
           discount: number
           id: string
@@ -1230,6 +1288,7 @@ export type Database = {
           unit_price: number
         }
         Insert: {
+          batch_id?: string | null
           created_at?: string
           discount?: number
           id?: string
@@ -1240,6 +1299,7 @@ export type Database = {
           unit_price?: number
         }
         Update: {
+          batch_id?: string | null
           created_at?: string
           discount?: number
           id?: string
@@ -1700,6 +1760,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      decrement_batch_quantity: {
+        Args: { _batch_id: string; _qty: number }
+        Returns: undefined
+      }
       get_user_business_id: { Args: { _user_id: string }; Returns: string }
       has_active_subscription: {
         Args: { check_env?: string; user_uuid: string }
