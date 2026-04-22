@@ -47,15 +47,15 @@ Deno.serve(async (req) => {
     );
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: claims, error: claimsErr } = await supabase.auth.getClaims(token);
-    if (claimsErr || !claims?.claims) {
+    const { data: userData, error: userAuthErr } = await supabase.auth.getUser(token);
+    if (userAuthErr || !userData?.user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const callerId = claims.claims.sub as string;
+    const callerId = userData.user.id;
     const { data: isSA } = await supabase.rpc("is_super_admin", { _user_id: callerId });
     if (!isSA) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {

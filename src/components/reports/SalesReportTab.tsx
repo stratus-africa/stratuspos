@@ -22,16 +22,24 @@ const SalesReportTab = ({ sales, topProducts, totalRevenue, totalTax, totalDisco
   const { business } = useBusiness();
   const vatEnabled = business?.vat_enabled !== false;
 
+  const batchesForSale = (s: any): string => {
+    const items = s.sale_items || [];
+    const labels = items
+      .map((i: any) => i.product_batches?.batch_number)
+      .filter(Boolean);
+    return labels.join(", ");
+  };
+
   const downloadSalesCSV = () => {
     const headers = vatEnabled
-      ? ["Date", "Invoice", "Customer", "Location", "Subtotal", "Tax", "Discount", "Total", "Payment Status"]
-      : ["Date", "Invoice", "Customer", "Location", "Subtotal", "Discount", "Total", "Payment Status"];
+      ? ["Date", "Invoice", "Customer", "Location", "Subtotal", "Tax", "Discount", "Total", "Payment Status", "Batches"]
+      : ["Date", "Invoice", "Customer", "Location", "Subtotal", "Discount", "Total", "Payment Status", "Batches"];
     const rows = sales.map((s: any) => {
       const base = [
         new Date(s.created_at).toLocaleDateString(), s.invoice_number || "", s.customers?.name || "Walk-in",
         s.locations?.name || "", s.subtotal,
       ];
-      const tail = [s.discount, s.total, s.payment_status];
+      const tail = [s.discount, s.total, s.payment_status, batchesForSale(s)];
       return (vatEnabled ? [...base, s.tax, ...tail] : [...base, ...tail]).map(String);
     });
     downloadCSV(`sales_report_${from}_to_${to}.csv`, headers, rows);
@@ -81,19 +89,25 @@ const SalesReportTab = ({ sales, topProducts, totalRevenue, totalTax, totalDisco
         <div className="max-h-96 overflow-auto rounded border">
           <Table>
             <TableHeader><TableRow>
-              <TableHead>Date</TableHead><TableHead>Invoice</TableHead><TableHead>Customer</TableHead><TableHead className="text-right">Total</TableHead><TableHead>Status</TableHead>
+              <TableHead>Date</TableHead><TableHead>Invoice</TableHead><TableHead>Customer</TableHead><TableHead>Batches</TableHead><TableHead className="text-right">Total</TableHead><TableHead>Status</TableHead>
             </TableRow></TableHeader>
             <TableBody>
-              {sales.slice(0, 100).map((s: any) => (
-                <TableRow key={s.id}>
-                  <TableCell>{new Date(s.created_at).toLocaleDateString()}</TableCell>
-                  <TableCell>{s.invoice_number || "-"}</TableCell>
-                  <TableCell>{s.customers?.name || "Walk-in"}</TableCell>
-                  <TableCell className="text-right">{formatKES(s.total)}</TableCell>
-                  <TableCell><Badge variant={s.payment_status === "paid" ? "default" : "secondary"}>{s.payment_status}</Badge></TableCell>
-                </TableRow>
-              ))}
-              {sales.length === 0 && <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-8">No sales in this period</TableCell></TableRow>}
+              {sales.slice(0, 100).map((s: any) => {
+                const batchLabel = batchesForSale(s);
+                return (
+                  <TableRow key={s.id}>
+                    <TableCell>{new Date(s.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell>{s.invoice_number || "-"}</TableCell>
+                    <TableCell>{s.customers?.name || "Walk-in"}</TableCell>
+                    <TableCell className="text-xs text-muted-foreground max-w-[180px] truncate" title={batchLabel}>
+                      {batchLabel || "—"}
+                    </TableCell>
+                    <TableCell className="text-right">{formatKES(s.total)}</TableCell>
+                    <TableCell><Badge variant={s.payment_status === "paid" ? "default" : "secondary"}>{s.payment_status}</Badge></TableCell>
+                  </TableRow>
+                );
+              })}
+              {sales.length === 0 && <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-8">No sales in this period</TableCell></TableRow>}
             </TableBody>
           </Table>
         </div>
