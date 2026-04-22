@@ -114,6 +114,32 @@ export function BusinessProfileTab() {
         </CardContent>
       </Card>
 
+      {/* Business Type */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Briefcase className="h-5 w-5" />
+            Business Type
+          </CardTitle>
+          <CardDescription>
+            Industry helps us tailor features. Pharmacy unlocks batch & expiry tracking.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2 max-w-sm">
+            <Label>Industry</Label>
+            <Select value={businessType} onValueChange={(v) => setBusinessType(v as BusinessType)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {BUSINESS_TYPE_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Tax & Regional */}
       <Card>
         <CardHeader>
