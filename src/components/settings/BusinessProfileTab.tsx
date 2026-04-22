@@ -10,8 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Save, Loader2, Building2, Phone, Mail, MapPin, FileText, UserCheck, Palette, PackageOpen } from "lucide-react";
-import { THEMES, DEFAULT_THEME, applyTheme, type ThemeKey } from "@/lib/themes";
+import { Save, Loader2, Building2, Phone, Mail, MapPin, FileText, UserCheck, Palette, PackageOpen, Briefcase } from "lucide-react";
+import { THEMES, DEFAULT_THEME, applyTheme, type ThemeKey, BUSINESS_TYPE_OPTIONS, type BusinessType } from "@/lib/themes";
 
 export function BusinessProfileTab() {
   const { business, refreshBusiness } = useBusiness();
@@ -30,6 +30,7 @@ export function BusinessProfileTab() {
   const [accountantPhone, setAccountantPhone] = useState((business as { accountant_phone?: string })?.accountant_phone || "");
   const [themeColor, setThemeColor] = useState<ThemeKey>(((business as { theme_color?: ThemeKey })?.theme_color || DEFAULT_THEME) as ThemeKey);
   const [preventOverselling, setPreventOverselling] = useState((business as { prevent_overselling?: boolean })?.prevent_overselling ?? false);
+  const [businessType, setBusinessType] = useState<BusinessType>(((business as { business_type?: BusinessType })?.business_type || "general") as BusinessType);
 
   const handleSave = async () => {
     if (!business) return;
@@ -51,6 +52,7 @@ export function BusinessProfileTab() {
         accountant_phone: accountantPhone.trim() || null,
         theme_color: themeColor,
         prevent_overselling: preventOverselling,
+        business_type: businessType,
       } as never)
       .eq("id", business.id);
 
