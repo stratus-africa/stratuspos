@@ -28,7 +28,7 @@ const Reports = () => {
       if (!business) return [];
       const { data, error } = await supabase
         .from("sales")
-        .select("*, customers(name), locations(name), sale_items(quantity, unit_price, discount, total, products(name, purchase_price))")
+        .select("*, customers(name), locations(name), sale_items(quantity, unit_price, discount, total, batch_id, products(name, purchase_price), product_batches:batch_id(batch_number, expiry_date))")
         .eq("business_id", business.id)
         .gte("created_at", `${from}T00:00:00`)
         .lte("created_at", `${to}T23:59:59`)
@@ -43,12 +43,31 @@ const Reports = () => {
     queryKey: ["report-inventory", business?.id, currentLocation?.id],
     queryFn: async () => {
       if (!business || !currentLocation) return [];
-      const { data, error } = await supabase
-        .from("inventory")
-        .select("*, products(name, sku, purchase_price, selling_price, categories(name), brands(name))")
-        .eq("location_id", currentLocation.id);
-      if (error) throw error;
-      return data;
+      const [invRes, batchRes] = await Promise.all([
+        supabase
+          .from("inventory")
+          .select("*, products(name, sku, purchase_price, selling_price, categories(name), brands(name))")
+          .eq("location_id", currentLocation.id),
+        supabase
+          .from("product_batches")
+          .select("product_id, batch_number, expiry_date, quantity")
+          .eq("business_id", business.id)
+          .eq("location_id", currentLocation.id)
+          .eq("is_active", true)
+          .gt("quantity", 0)
+          .order("expiry_date", { ascending: true, nullsFirst: false }),
+      ]);
+      if (invRes.error) throw invRes.error;
+      const batchesByProduct = new Map<string, { batch_number: string; expiry_date: string | null; quantity: number }[]>();
+      (batchRes.data || []).forEach((b: any) => {
+        const arr = batchesByProduct.get(b.product_id) || [];
+        arr.push({ batch_number: b.batch_number, expiry_date: b.expiry_date, quantity: Number(b.quantity) });
+        batchesByProduct.set(b.product_id, arr);
+      });
+      return (invRes.data || []).map((row: any) => ({
+        ...row,
+        _batches: batchesByProduct.get(row.product_id) || [],
+      }));
     },
     enabled: !!business && !!currentLocation,
   });
