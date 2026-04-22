@@ -327,7 +327,6 @@ export default function SuperAdminBusinesses() {
               <TableRow>
                 <TableHead>Business Name</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Subscription</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead className="text-center">Users</TableHead>
                 <TableHead className="text-center">Locations</TableHead>
@@ -353,15 +352,13 @@ export default function SuperAdminBusinesses() {
                       </button>
                     </TableCell>
                     <TableCell>
-                      {biz.is_active ? (
-                        <Badge variant="default" className="bg-emerald-500/10 text-emerald-600 border-emerald-200">Active</Badge>
-                      ) : (
-                        <Badge variant="secondary" className="bg-destructive/10 text-destructive border-destructive/20">Inactive</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-0.5">
-                        <Badge variant={subBadge.variant} className={subBadge.className}>
+                      <div className="flex flex-col gap-1">
+                        {biz.is_active ? (
+                          <Badge variant="default" className="bg-emerald-500/10 text-emerald-600 border-emerald-200 w-fit">Active</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="bg-destructive/10 text-destructive border-destructive/20 w-fit">Inactive</Badge>
+                        )}
+                        <Badge variant={subBadge.variant} className={`${subBadge.className} w-fit`}>
                           <CreditCard className="h-3 w-3 mr-1" />
                           {subBadge.label}
                         </Badge>
@@ -426,7 +423,7 @@ export default function SuperAdminBusinesses() {
               })}
               {filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     {search ? "No businesses match your search" : "No businesses registered yet"}
                   </TableCell>
                 </TableRow>
