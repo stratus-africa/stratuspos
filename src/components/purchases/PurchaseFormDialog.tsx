@@ -330,6 +330,46 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
             </div>
           </div>
 
+          {requiresPaidThrough && (
+            <div className="rounded-lg border p-3 space-y-3 bg-muted/30">
+              <div>
+                <Label className="text-sm font-semibold">Paid Through</Label>
+                <p className="text-xs text-muted-foreground">
+                  A payment-out record will be created in the selected bank account.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Bank Account *</Label>
+                  <Select value={paidThroughAccountId} onValueChange={setPaidThroughAccountId}>
+                    <SelectTrigger><SelectValue placeholder="Select account..." /></SelectTrigger>
+                    <SelectContent>
+                      {(bankAccounts ?? []).map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.name} ({formatKES(Number(a.balance))})
+                        </SelectItem>
+                      ))}
+                      {(bankAccounts ?? []).length === 0 && (
+                        <div className="px-2 py-1.5 text-xs text-muted-foreground">No bank accounts. Add one in Banking.</div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Amount Paid (KES) *</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={amountPaid}
+                    onChange={(e) => setAmountPaid(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label>Notes</Label>
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
