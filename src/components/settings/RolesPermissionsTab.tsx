@@ -95,10 +95,32 @@ export function RolesPermissionsTab() {
   const [editingRole, setEditingRole] = useState<AppRole | null>(null);
   const [editPerms, setEditPerms] = useState<string[]>([]);
 
-  // Local permissions state (in-memory, could be persisted later)
+  // Persisted permissions per role (loaded from role_permissions table)
   const [rolePermissions, setRolePermissions] = useState<Record<AppRole, string[]>>(defaultRolePermissions);
+  const [savingPerms, setSavingPerms] = useState(false);
 
   const isAdmin = userRole === "admin";
+
+  const fetchPermissions = async () => {
+    if (!business) return;
+    const { data } = await (supabase as any)
+      .from("role_permissions")
+      .select("role, permission")
+      .eq("business_id", business.id);
+    const next: Record<AppRole, string[]> = { ...defaultRolePermissions };
+    if (data && data.length > 0) {
+      // Reset only roles that actually have stored rows so unset roles keep defaults
+      const seenRoles = new Set<AppRole>();
+      data.forEach((row: { role: AppRole; permission: string }) => {
+        if (!seenRoles.has(row.role)) {
+          next[row.role] = [];
+          seenRoles.add(row.role);
+        }
+        next[row.role].push(row.permission);
+      });
+    }
+    setRolePermissions(next);
+  };
 
   const fetchMembers = async () => {
     if (!business) return;
@@ -137,6 +159,8 @@ export function RolesPermissionsTab() {
 
   useEffect(() => {
     fetchMembers();
+    fetchPermissions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [business?.id]);
 
   const openEditMember = (member: TeamMember) => {
@@ -193,11 +217,36 @@ export function RolesPermissionsTab() {
     );
   };
 
-  const handleSaveRolePerms = () => {
-    if (!editingRole) return;
-    setRolePermissions((prev) => ({ ...prev, [editingRole]: editPerms }));
-    toast.success(`${roleDescriptions[editingRole].label} permissions updated`);
-    setEditingRole(null);
+  const handleSaveRolePerms = async () => {
+    if (!editingRole || !business) return;
+    setSavingPerms(true);
+    try {
+      // Replace stored permissions for this role
+      const { error: delErr } = await (supabase as any)
+        .from("role_permissions")
+        .delete()
+        .eq("business_id", business.id)
+        .eq("role", editingRole);
+      if (delErr) throw delErr;
+
+      if (editPerms.length > 0) {
+        const rows = editPerms.map((permission) => ({
+          business_id: business.id,
+          role: editingRole,
+          permission,
+        }));
+        const { error: insErr } = await (supabase as any).from("role_permissions").insert(rows);
+        if (insErr) throw insErr;
+      }
+
+      setRolePermissions((prev) => ({ ...prev, [editingRole]: editPerms }));
+      toast.success(`${roleDescriptions[editingRole].label} permissions saved`);
+      setEditingRole(null);
+    } catch (err: any) {
+      toast.error("Failed to save permissions: " + err.message);
+    } finally {
+      setSavingPerms(false);
+    }
   };
 
   const roleCounts = {
@@ -427,7 +476,8 @@ export function RolesPermissionsTab() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingRole(null)}>Cancel</Button>
-            <Button onClick={handleSaveRolePerms}>
+            <Button onClick={handleSaveRolePerms} disabled={savingPerms}>
+              {savingPerms && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Permissions
             </Button>
           </DialogFooter>

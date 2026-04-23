@@ -1275,6 +1275,30 @@ export type Database = {
           },
         ]
       }
+      role_permissions: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          permission: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          permission: string
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          permission?: string
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
+      }
       sale_items: {
         Row: {
           batch_id: string | null

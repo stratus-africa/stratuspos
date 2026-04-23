@@ -94,8 +94,23 @@ export default function ChartOfAccounts() {
     fetchAccounts();
   };
 
-  const handleDelete = async (id: string) => {
-    const { error } = await supabase.from("chart_of_accounts").delete().eq("id", id);
+  const handleDelete = async (acc: Account) => {
+    // Block delete if any opening balance / transactions exist
+    if (Math.abs(Number(acc.opening_balance) || 0) > 0.0001) {
+      toast.error(`Cannot delete "${acc.name}": account has an opening balance. Clear it first.`);
+      return;
+    }
+    const { count: lineCount, error: lineErr } = await supabase
+      .from("journal_entry_lines")
+      .select("id", { count: "exact", head: true })
+      .eq("account_id", acc.id);
+    if (lineErr) { toast.error(lineErr.message); return; }
+    if ((lineCount ?? 0) > 0) {
+      toast.error(`Cannot delete "${acc.name}": ${lineCount} journal line${lineCount === 1 ? "" : "s"} reference this account.`);
+      return;
+    }
+
+    const { error } = await supabase.from("chart_of_accounts").delete().eq("id", acc.id);
     if (error) { toast.error(error.message); return; }
     toast.success("Account deleted");
     fetchAccounts();
@@ -277,7 +292,7 @@ export default function ChartOfAccounts() {
                         <Landmark className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => openEdit(acc)}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(acc.id)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(acc)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                     </TableCell>
                   </TableRow>
                 ))}

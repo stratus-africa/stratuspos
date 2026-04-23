@@ -42,10 +42,40 @@ const Products = () => {
   const [importing, setImporting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
+  const [bulkUpdateOpen, setBulkUpdateOpen] = useState(false);
+  const [bulkCategoryId, setBulkCategoryId] = useState<string>("");
+  const [bulkUnitId, setBulkUnitId] = useState<string>("");
+  const [bulkUpdating, setBulkUpdating] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+
+  const handleBulkUpdate = async () => {
+    if (selectedIds.size === 0) return;
+    if (!bulkCategoryId && !bulkUnitId) {
+      toast.error("Pick a category or unit to apply");
+      return;
+    }
+    setBulkUpdating(true);
+    try {
+      const update: Record<string, string> = {};
+      if (bulkCategoryId) update.category_id = bulkCategoryId;
+      if (bulkUnitId) update.unit_id = bulkUnitId;
+      const { error } = await supabase.from("products").update(update).in("id", Array.from(selectedIds));
+      if (error) throw error;
+      toast.success(`Updated ${selectedIds.size} products`);
+      setBulkUpdateOpen(false);
+      setBulkCategoryId("");
+      setBulkUnitId("");
+      setSelectedIds(new Set());
+      productsQuery.refetch();
+    } catch (err: any) {
+      toast.error(`Bulk update failed: ${err.message}`);
+    } finally {
+      setBulkUpdating(false);
+    }
+  };
 
   const handleScanned = (code: string) => {
     setSearch(code);
@@ -283,8 +313,11 @@ const Products = () => {
                 </Select>
               </div>
               {selectedIds.size > 0 && (
-                <div className="flex items-center gap-3 pt-2">
+                <div className="flex items-center gap-3 pt-2 flex-wrap">
                   <span className="text-sm text-muted-foreground">{selectedIds.size} selected</span>
+                  <Button size="sm" variant="outline" onClick={() => setBulkUpdateOpen(true)}>
+                    <Pencil className="mr-1 h-4 w-4" /> Bulk Update
+                  </Button>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button size="sm" variant="destructive" disabled={bulkDeleting}>
@@ -506,6 +539,48 @@ const Products = () => {
         open={!!detailProduct}
         onOpenChange={(o) => { if (!o) setDetailProduct(null); }}
       />
+
+      {/* Bulk Update Dialog */}
+      <AlertDialog open={bulkUpdateOpen} onOpenChange={setBulkUpdateOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bulk Update {selectedIds.size} product{selectedIds.size > 1 ? "s" : ""}</AlertDialogTitle>
+            <AlertDialogDescription>
+              Pick a Category and/or Unit to apply to all selected products. Leave a field empty to keep it unchanged.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Category</label>
+              <Select value={bulkCategoryId} onValueChange={setBulkCategoryId}>
+                <SelectTrigger><SelectValue placeholder="Keep unchanged" /></SelectTrigger>
+                <SelectContent>
+                  {categoriesQuery.data?.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium">Unit</label>
+              <Select value={bulkUnitId} onValueChange={setBulkUnitId}>
+                <SelectTrigger><SelectValue placeholder="Keep unchanged" /></SelectTrigger>
+                <SelectContent>
+                  {unitsQuery.data?.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>{u.name}{u.abbreviation ? ` (${u.abbreviation})` : ""}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBulkUpdate} disabled={bulkUpdating || (!bulkCategoryId && !bulkUnitId)}>
+              {bulkUpdating ? "Updating..." : "Apply"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

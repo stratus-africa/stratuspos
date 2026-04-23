@@ -81,13 +81,9 @@ export function BusinessProfileTab() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
+            <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="biz-name">Business Name</Label>
               <Input id="biz-name" value={name} onChange={(e) => setName(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="biz-kra">KRA PIN</Label>
-              <Input id="biz-kra" value={kraPin} onChange={(e) => setKraPin(e.target.value)} placeholder="e.g. P051234567X" />
             </div>
             <div className="space-y-2">
               <Label htmlFor="biz-phone">Phone Number</Label>

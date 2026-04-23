@@ -78,6 +78,12 @@ export default function PaymentDialog({ open, onOpenChange, total, onConfirm, pr
     onOpenChange(v);
   };
 
+  // Whenever dialog opens or initialMethod / total changes, sync the first payment row
+  useEffect(() => {
+    if (!open) return;
+    setPayments([{ method: initialMethod, amount: total, reference: "" }]);
+  }, [open, initialMethod, total]);
+
   const sendSTKPush = async () => {
     if (!mpesaPhone || !business) return;
 
@@ -164,7 +170,7 @@ export default function PaymentDialog({ open, onOpenChange, total, onConfirm, pr
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-1rem)]">
         <DialogHeader>
           <DialogTitle>Payment — KES {total.toLocaleString()}</DialogTitle>
         </DialogHeader>
