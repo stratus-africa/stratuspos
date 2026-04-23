@@ -59,7 +59,7 @@ const Products = () => {
     }
     setBulkUpdating(true);
     try {
-      const update: Record<string, string> = {};
+      const update: { category_id?: string; unit_id?: string } = {};
       if (bulkCategoryId) update.category_id = bulkCategoryId;
       if (bulkUnitId) update.unit_id = bulkUnitId;
       const { error } = await supabase.from("products").update(update).in("id", Array.from(selectedIds));
