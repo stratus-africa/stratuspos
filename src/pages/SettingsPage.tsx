@@ -22,39 +22,39 @@ const SettingsPage = () => {
     <div className="space-y-4">
       <PaymentTestModeBanner />
       <h1 className="text-2xl font-bold">Settings</h1>
-      <Tabs defaultValue={defaultTab} orientation="vertical" className="flex gap-6">
-        <TabsList className="text-muted-foreground flex-col h-auto w-52 bg-muted rounded-lg p-1.5 shrink-0 flex items-start justify-start">
-          <TabsTrigger value="business" className="w-full justify-start gap-2 text-sm px-3 py-2.5">
+      <Tabs defaultValue={defaultTab} className="flex flex-col md:flex-row gap-4 md:gap-6">
+        <TabsList className="text-muted-foreground flex md:flex-col h-auto w-full md:w-52 bg-muted rounded-lg p-1.5 shrink-0 md:items-start md:justify-start overflow-x-auto md:overflow-visible flex-nowrap">
+          <TabsTrigger value="business" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
             <Building2 className="h-4 w-4" />
             Business
           </TabsTrigger>
-          <TabsTrigger value="locations" className="w-full justify-start gap-2 text-sm px-3 py-2.5">
+          <TabsTrigger value="locations" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
             <MapPin className="h-4 w-4" />
             Locations
           </TabsTrigger>
           {vatEnabled && (
-            <TabsTrigger value="tax" className="w-full justify-start gap-2 text-sm px-3 py-2.5">
+            <TabsTrigger value="tax" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
               <Percent className="h-4 w-4" />
               Tax
             </TabsTrigger>
           )}
-          <TabsTrigger value="users" className="w-full justify-start gap-2 text-sm px-3 py-2.5">
+          <TabsTrigger value="users" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
             <Users className="h-4 w-4" />
             Users
           </TabsTrigger>
-          <TabsTrigger value="roles" className="w-full justify-start gap-2 text-sm px-3 py-2.5">
+          <TabsTrigger value="roles" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
             <ShieldCheck className="h-4 w-4" />
             Roles
           </TabsTrigger>
-          <TabsTrigger value="payments" className="w-full justify-start gap-2 text-sm px-3 py-2.5">
+          <TabsTrigger value="payments" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
             <Wallet className="h-4 w-4" />
             Payments
           </TabsTrigger>
-          <TabsTrigger value="receipt" className="w-full justify-start gap-2 text-sm px-3 py-2.5">
+          <TabsTrigger value="receipt" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
             <Receipt className="h-4 w-4" />
             Receipt
           </TabsTrigger>
-          <TabsTrigger value="subscription" className="w-full justify-start gap-2 text-sm px-3 py-2.5">
+          <TabsTrigger value="subscription" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
             <CreditCard className="h-4 w-4" />
             Plan
           </TabsTrigger>
