@@ -137,10 +137,48 @@ export function usePurchases() {
     enabled: !!business,
   });
 
+  const createPaidThroughTransaction = async (
+    bankAccountId: string,
+    amount: number,
+    purchase: { invoice_number?: string; created_by: string },
+    supplierName: string | null,
+    purchaseRef: string,
+  ) => {
+    if (!business) return;
+    const ref = purchase.invoice_number || `PUR-${purchaseRef.slice(0, 8)}`;
+    const { error: btErr } = await supabase.from("bank_transactions").insert({
+      business_id: business.id,
+      bank_account_id: bankAccountId,
+      type: "payment_made",
+      amount,
+      date: new Date().toISOString().slice(0, 10),
+      reference: ref,
+      description: `Purchase payment ${ref}`,
+      category: "Purchases",
+      contact_name: supplierName,
+      created_by: purchase.created_by,
+    });
+    if (btErr) throw btErr;
+
+    // Decrement bank account balance
+    const { data: acc } = await supabase
+      .from("bank_accounts")
+      .select("id, balance")
+      .eq("id", bankAccountId)
+      .maybeSingle();
+    if (acc) {
+      await supabase
+        .from("bank_accounts")
+        .update({ balance: Number(acc.balance) - amount })
+        .eq("id", acc.id);
+    }
+  };
+
   const createPurchase = useMutation({
     mutationFn: async ({
       purchase,
       items,
+      paidThrough,
     }: {
       purchase: {
         supplier_id: string | null;
@@ -156,6 +194,7 @@ export function usePurchases() {
         created_by: string;
       };
       items: PurchaseItem[];
+      paidThrough?: { bank_account_id: string; amount: number } | null;
     }) => {
       if (!business) throw new Error("No business");
       const purchaseId = crypto.randomUUID();
@@ -174,11 +213,33 @@ export function usePurchases() {
       if (purchase.status === "received") {
         await updateInventoryForItems(items, purchase.location_id, purchase.created_by, purchase.invoice_number || purchaseId.slice(0, 8));
       }
+
+      if (paidThrough && paidThrough.amount > 0) {
+        // Look up supplier name for contact_name
+        let supplierName: string | null = null;
+        if (purchase.supplier_id) {
+          const { data: sup } = await supabase
+            .from("suppliers")
+            .select("name")
+            .eq("id", purchase.supplier_id)
+            .maybeSingle();
+          supplierName = sup?.name ?? null;
+        }
+        await createPaidThroughTransaction(
+          paidThrough.bank_account_id,
+          paidThrough.amount,
+          purchase,
+          supplierName,
+          purchaseId,
+        );
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["purchases"] });
       qc.invalidateQueries({ queryKey: ["inventory"] });
       qc.invalidateQueries({ queryKey: ["stock_adjustments"] });
+      qc.invalidateQueries({ queryKey: ["bank_accounts"] });
+      qc.invalidateQueries({ queryKey: ["bank_transactions"] });
       toast.success("Purchase created");
     },
     onError: (e) => toast.error(e.message),

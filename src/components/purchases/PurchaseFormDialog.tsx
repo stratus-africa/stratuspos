@@ -11,6 +11,7 @@ import { Plus, Trash2, AlertCircle, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { useSuppliers, type PurchaseItem, type Purchase } from "@/hooks/usePurchases";
 import { useProducts } from "@/hooks/useProducts";
+import { useBankAccounts } from "@/hooks/useBankAccounts";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { SupplierFormDialog } from "@/components/purchases/SupplierFormDialog";
@@ -33,6 +34,7 @@ interface Props {
       created_by: string;
     };
     items: PurchaseItem[];
+    paidThrough?: { bank_account_id: string; amount: number } | null;
   }) => void;
   isLoading?: boolean;
   editingPurchase?: Purchase | null;
@@ -44,6 +46,7 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
   const { productsQuery } = useProducts();
   const { locations, currentLocation, business } = useBusiness();
   const { user } = useAuth();
+  const { data: bankAccounts } = useBankAccounts();
 
   const orgVatEnabled = (business as any)?.vat_enabled ?? true;
 
@@ -59,6 +62,8 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [addProductId, setAddProductId] = useState("");
+  const [paidThroughAccountId, setPaidThroughAccountId] = useState<string>("");
+  const [amountPaid, setAmountPaid] = useState<string>("");
 
   useEffect(() => {
     if (editingPurchase) {
@@ -70,6 +75,8 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
       setVatEnabledLocal(editingPurchase.vat_enabled ?? true);
       setNotes(editingPurchase.notes || "");
       setItems(editingItems || []);
+      setPaidThroughAccountId("");
+      setAmountPaid("");
     } else {
       setSupplierId("");
       setLocationId(currentLocation?.id || "");
@@ -79,6 +86,8 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
       setVatEnabledLocal(true);
       setNotes("");
       setItems([]);
+      setPaidThroughAccountId("");
+      setAmountPaid("");
     }
   }, [editingPurchase, editingItems, currentLocation?.id]);
 
@@ -114,6 +123,19 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
   const tax = vatEnabled ? subtotal * (taxRate / 100) : 0;
   const total = subtotal + tax;
 
+  const requiresPaidThrough = paymentStatus !== "unpaid" && !editingPurchase;
+
+  // Auto-fill amount paid based on payment status when total/status changes
+  useEffect(() => {
+    if (editingPurchase) return;
+    if (paymentStatus === "paid") {
+      setAmountPaid(total ? total.toFixed(2) : "");
+    } else if (paymentStatus === "unpaid") {
+      setAmountPaid("");
+      setPaidThroughAccountId("");
+    }
+  }, [paymentStatus, total, editingPurchase]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || items.length === 0) return;
@@ -125,6 +147,25 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
       toast.error(`Supplier "${selectedSupplier?.name}" has no KRA PIN. Add it before saving a VAT purchase.`);
       return;
     }
+
+    let paidThrough: { bank_account_id: string; amount: number } | null = null;
+    if (requiresPaidThrough) {
+      if (!paidThroughAccountId) {
+        toast.error("Select the bank account used to pay this purchase");
+        return;
+      }
+      const amt = parseFloat(amountPaid);
+      if (!amt || amt <= 0) {
+        toast.error("Enter a valid amount paid");
+        return;
+      }
+      if (amt > total + 0.01) {
+        toast.error("Amount paid cannot exceed the purchase total");
+        return;
+      }
+      paidThrough = { bank_account_id: paidThroughAccountId, amount: amt };
+    }
+
     onSubmit({
       purchase: {
         supplier_id: supplierId,
@@ -138,6 +179,7 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
         created_by: user.id,
       },
       items,
+      paidThrough,
     });
   };
 
@@ -145,7 +187,7 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[calc(100vw-1rem)] sm:w-full p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>{editingPurchase ? "Edit Purchase Order" : "New Purchase Order"}</DialogTitle>
         </DialogHeader>
@@ -287,6 +329,46 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
               <div className="text-base font-bold">Total: {formatKES(total)}</div>
             </div>
           </div>
+
+          {requiresPaidThrough && (
+            <div className="rounded-lg border p-3 space-y-3 bg-muted/30">
+              <div>
+                <Label className="text-sm font-semibold">Paid Through</Label>
+                <p className="text-xs text-muted-foreground">
+                  A payment-out record will be created in the selected bank account.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Bank Account *</Label>
+                  <Select value={paidThroughAccountId} onValueChange={setPaidThroughAccountId}>
+                    <SelectTrigger><SelectValue placeholder="Select account..." /></SelectTrigger>
+                    <SelectContent>
+                      {(bankAccounts ?? []).map((a) => (
+                        <SelectItem key={a.id} value={a.id}>
+                          {a.name} ({formatKES(Number(a.balance))})
+                        </SelectItem>
+                      ))}
+                      {(bankAccounts ?? []).length === 0 && (
+                        <div className="px-2 py-1.5 text-xs text-muted-foreground">No bank accounts. Add one in Banking.</div>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Amount Paid (KES) *</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    value={amountPaid}
+                    onChange={(e) => setAmountPaid(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Notes</Label>

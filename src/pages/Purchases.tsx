@@ -86,6 +86,7 @@ const Purchases = () => {
       created_by: string;
     };
     items: PurchaseItem[];
+    paidThrough?: { bank_account_id: string; amount: number } | null;
   }) => {
     if (editingPurchase) {
       updatePurchase.mutate({ id: editingPurchase.id, purchase: data.purchase, items: data.items }, {
@@ -96,22 +97,24 @@ const Purchases = () => {
         },
       });
     } else {
-      createPurchase.mutate(data, {
+      createPurchase.mutate({ purchase: data.purchase, items: data.items, paidThrough: data.paidThrough }, {
         onSuccess: () => setPurchaseDialogOpen(false),
       });
     }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Purchases</h1>
-        <Button onClick={() => { setEditingPurchase(null); setEditingItems([]); setPurchaseDialogOpen(true); }}>
-          <Plus className="mr-2 h-4 w-4" /> New Purchase
+    <div className="space-y-3 sm:space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-xl sm:text-2xl font-bold">Purchases</h1>
+        <Button size="sm" className="sm:size-default" onClick={() => { setEditingPurchase(null); setEditingItems([]); setPurchaseDialogOpen(true); }}>
+          <Plus className="mr-1 sm:mr-2 h-4 w-4" />
+          <span className="hidden sm:inline">New Purchase</span>
+          <span className="sm:hidden">New</span>
         </Button>
       </div>
 
-      <Tabs defaultValue="purchases" className="space-y-4">
+      <Tabs defaultValue="purchases" className="space-y-3 sm:space-y-4">
         <TabsList>
           <TabsTrigger value="purchases"><TruckIcon className="mr-1 h-4 w-4" /> Purchases ({purchases.length})</TabsTrigger>
           <TabsTrigger value="suppliers"><Users className="mr-1 h-4 w-4" /> Suppliers</TabsTrigger>
@@ -137,67 +140,128 @@ const Purchases = () => {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Invoice #</TableHead>
-                    <TableHead>Supplier</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead>Payment</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="w-[80px]"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPurchases.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
-                        No purchases yet. Create your first purchase order!
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredPurchases.map((p) => (
-                      <TableRow key={p.id}>
-                        <TableCell className="text-muted-foreground">
-                          {new Date(p.created_at).toLocaleDateString("en-KE", { day: "2-digit", month: "short", year: "numeric" })}
-                        </TableCell>
-                        <TableCell className="font-medium">{p.invoice_number || p.id.slice(0, 8)}</TableCell>
-                        <TableCell>{p.suppliers?.name || "—"}</TableCell>
-                        <TableCell>{p.locations?.name || "—"}</TableCell>
-                        <TableCell className="text-right font-medium">{formatKES(p.total)}</TableCell>
-                        <TableCell>{paymentBadge(p.payment_status)}</TableCell>
-                        <TableCell>{statusBadge(p.status)}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button size="icon" variant="ghost" onClick={() => handleEditPurchase(p)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button size="icon" variant="ghost">
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Delete purchase {p.invoice_number || p.id.slice(0, 8)}?</AlertDialogTitle>
-                                  <AlertDialogDescription>This action cannot be undone. The purchase and all its line items will be permanently removed.</AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => deletePurchase.mutate(p.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+              {/* Mobile cards */}
+              <div className="md:hidden divide-y">
+                {filteredPurchases.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8 text-sm">
+                    No purchases yet. Create your first purchase order!
+                  </p>
+                ) : (
+                  filteredPurchases.map((p) => (
+                    <div key={p.id} className="p-3 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="font-medium text-sm truncate">
+                            {p.invoice_number || p.id.slice(0, 8)}
                           </div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {p.suppliers?.name || "—"} · {p.locations?.name || "—"}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground">
+                            {new Date(p.created_at).toLocaleDateString("en-KE", { day: "2-digit", month: "short", year: "numeric" })}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="font-semibold text-sm">{formatKES(p.total)}</div>
+                          <div className="flex gap-1 justify-end mt-1">
+                            {paymentBadge(p.payment_status)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        {statusBadge(p.status)}
+                        <div className="flex gap-1">
+                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleEditPurchase(p)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button size="icon" variant="ghost" className="h-8 w-8">
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete purchase {p.invoice_number || p.id.slice(0, 8)}?</AlertDialogTitle>
+                                <AlertDialogDescription>This action cannot be undone.</AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => deletePurchase.mutate(p.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden md:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Invoice #</TableHead>
+                      <TableHead>Supplier</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                      <TableHead>Payment</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="w-[80px]"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPurchases.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
+                          No purchases yet. Create your first purchase order!
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
+                    ) : (
+                      filteredPurchases.map((p) => (
+                        <TableRow key={p.id}>
+                          <TableCell className="text-muted-foreground">
+                            {new Date(p.created_at).toLocaleDateString("en-KE", { day: "2-digit", month: "short", year: "numeric" })}
+                          </TableCell>
+                          <TableCell className="font-medium">{p.invoice_number || p.id.slice(0, 8)}</TableCell>
+                          <TableCell>{p.suppliers?.name || "—"}</TableCell>
+                          <TableCell>{p.locations?.name || "—"}</TableCell>
+                          <TableCell className="text-right font-medium">{formatKES(p.total)}</TableCell>
+                          <TableCell>{paymentBadge(p.payment_status)}</TableCell>
+                          <TableCell>{statusBadge(p.status)}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              <Button size="icon" variant="ghost" onClick={() => handleEditPurchase(p)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button size="icon" variant="ghost">
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete purchase {p.invoice_number || p.id.slice(0, 8)}?</AlertDialogTitle>
+                                    <AlertDialogDescription>This action cannot be undone. The purchase and all its line items will be permanently removed.</AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => deletePurchase.mutate(p.id)} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
