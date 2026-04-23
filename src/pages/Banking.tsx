@@ -480,9 +480,10 @@ export default function Banking() {
             </DialogContent>
           </Dialog>
 
+          {accounts.some((a) => a.account_type === "loan" && Number(a.balance) > 0) && (
           <Dialog open={loanDialogOpen} onOpenChange={setLoanDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" disabled={!accounts.some((a) => a.account_type === "loan")}>
+              <Button variant="outline">
                 <CreditCard className="mr-2 h-4 w-4" /> Pay Loan
               </Button>
             </DialogTrigger>
@@ -550,6 +551,7 @@ export default function Banking() {
               </div>
             </DialogContent>
           </Dialog>
+          )}
         </div>
       </div>
 
