@@ -187,7 +187,7 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[calc(100vw-1rem)] sm:w-full p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>{editingPurchase ? "Edit Purchase Order" : "New Purchase Order"}</DialogTitle>
         </DialogHeader>
