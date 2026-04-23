@@ -75,6 +75,8 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
       setVatEnabledLocal(editingPurchase.vat_enabled ?? true);
       setNotes(editingPurchase.notes || "");
       setItems(editingItems || []);
+      setPaidThroughAccountId("");
+      setAmountPaid("");
     } else {
       setSupplierId("");
       setLocationId(currentLocation?.id || "");
@@ -84,6 +86,8 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
       setVatEnabledLocal(true);
       setNotes("");
       setItems([]);
+      setPaidThroughAccountId("");
+      setAmountPaid("");
     }
   }, [editingPurchase, editingItems, currentLocation?.id]);
 
