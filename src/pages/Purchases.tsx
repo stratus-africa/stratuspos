@@ -104,15 +104,17 @@ const Purchases = () => {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Purchases</h1>
-        <Button onClick={() => { setEditingPurchase(null); setEditingItems([]); setPurchaseDialogOpen(true); }}>
-          <Plus className="mr-2 h-4 w-4" /> New Purchase
+    <div className="space-y-3 sm:space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-xl sm:text-2xl font-bold">Purchases</h1>
+        <Button size="sm" className="sm:size-default" onClick={() => { setEditingPurchase(null); setEditingItems([]); setPurchaseDialogOpen(true); }}>
+          <Plus className="mr-1 sm:mr-2 h-4 w-4" />
+          <span className="hidden sm:inline">New Purchase</span>
+          <span className="sm:hidden">New</span>
         </Button>
       </div>
 
-      <Tabs defaultValue="purchases" className="space-y-4">
+      <Tabs defaultValue="purchases" className="space-y-3 sm:space-y-4">
         <TabsList>
           <TabsTrigger value="purchases"><TruckIcon className="mr-1 h-4 w-4" /> Purchases ({purchases.length})</TabsTrigger>
           <TabsTrigger value="suppliers"><Users className="mr-1 h-4 w-4" /> Suppliers</TabsTrigger>
