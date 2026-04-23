@@ -46,6 +46,7 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
   const { productsQuery } = useProducts();
   const { locations, currentLocation, business } = useBusiness();
   const { user } = useAuth();
+  const { data: bankAccounts } = useBankAccounts();
 
   const orgVatEnabled = (business as any)?.vat_enabled ?? true;
 
@@ -61,6 +62,8 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [addProductId, setAddProductId] = useState("");
+  const [paidThroughAccountId, setPaidThroughAccountId] = useState<string>("");
+  const [amountPaid, setAmountPaid] = useState<string>("");
 
   useEffect(() => {
     if (editingPurchase) {
