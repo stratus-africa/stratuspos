@@ -87,10 +87,6 @@ export function TopBar() {
           )}
           {isPOS && session.activeSession && (
             <>
-              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 border-emerald-200 gap-1 text-xs">
-                <Clock className="h-3 w-3" />
-                Register Open since {new Date(session.activeSession.opened_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </Badge>
               <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setExpenseOpen(true)}>
                 <Receipt className="h-3.5 w-3.5 mr-1" />
                 Expense
