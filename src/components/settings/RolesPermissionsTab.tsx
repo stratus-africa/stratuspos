@@ -476,7 +476,8 @@ export function RolesPermissionsTab() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditingRole(null)}>Cancel</Button>
-            <Button onClick={handleSaveRolePerms}>
+            <Button onClick={handleSaveRolePerms} disabled={savingPerms}>
+              {savingPerms && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Permissions
             </Button>
           </DialogFooter>

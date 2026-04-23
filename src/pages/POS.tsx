@@ -135,7 +135,7 @@ const POS = () => {
   }
 
   return (
-    <div className="flex flex-col lg:flex-row gap-4 h-[calc(100vh-6rem)]">
+    <div className="flex flex-col lg:flex-row gap-4 h-[calc(100dvh-6rem)] lg:h-[calc(100vh-6rem)] pb-[env(safe-area-inset-bottom)]">
 
       {/* Left: Product selection */}
       <div className="flex-1 flex flex-col min-h-0">
