@@ -86,6 +86,7 @@ const Purchases = () => {
       created_by: string;
     };
     items: PurchaseItem[];
+    paidThrough?: { bank_account_id: string; amount: number } | null;
   }) => {
     if (editingPurchase) {
       updatePurchase.mutate({ id: editingPurchase.id, purchase: data.purchase, items: data.items }, {
@@ -96,7 +97,7 @@ const Purchases = () => {
         },
       });
     } else {
-      createPurchase.mutate(data, {
+      createPurchase.mutate({ purchase: data.purchase, items: data.items, paidThrough: data.paidThrough }, {
         onSuccess: () => setPurchaseDialogOpen(false),
       });
     }
