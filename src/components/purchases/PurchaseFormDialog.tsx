@@ -123,6 +123,19 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
   const tax = vatEnabled ? subtotal * (taxRate / 100) : 0;
   const total = subtotal + tax;
 
+  const requiresPaidThrough = paymentStatus !== "unpaid" && !editingPurchase;
+
+  // Auto-fill amount paid based on payment status when total/status changes
+  useEffect(() => {
+    if (editingPurchase) return;
+    if (paymentStatus === "paid") {
+      setAmountPaid(total ? total.toFixed(2) : "");
+    } else if (paymentStatus === "unpaid") {
+      setAmountPaid("");
+      setPaidThroughAccountId("");
+    }
+  }, [paymentStatus, total, editingPurchase]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || items.length === 0) return;
@@ -134,6 +147,25 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
       toast.error(`Supplier "${selectedSupplier?.name}" has no KRA PIN. Add it before saving a VAT purchase.`);
       return;
     }
+
+    let paidThrough: { bank_account_id: string; amount: number } | null = null;
+    if (requiresPaidThrough) {
+      if (!paidThroughAccountId) {
+        toast.error("Select the bank account used to pay this purchase");
+        return;
+      }
+      const amt = parseFloat(amountPaid);
+      if (!amt || amt <= 0) {
+        toast.error("Enter a valid amount paid");
+        return;
+      }
+      if (amt > total + 0.01) {
+        toast.error("Amount paid cannot exceed the purchase total");
+        return;
+      }
+      paidThrough = { bank_account_id: paidThroughAccountId, amount: amt };
+    }
+
     onSubmit({
       purchase: {
         supplier_id: supplierId,
@@ -147,6 +179,7 @@ export function PurchaseFormDialog({ open, onOpenChange, onSubmit, isLoading, ed
         created_by: user.id,
       },
       items,
+      paidThrough,
     });
   };
 
