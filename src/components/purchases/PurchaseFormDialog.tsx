@@ -11,6 +11,7 @@ import { Plus, Trash2, AlertCircle, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { useSuppliers, type PurchaseItem, type Purchase } from "@/hooks/usePurchases";
 import { useProducts } from "@/hooks/useProducts";
+import { useBankAccounts } from "@/hooks/useBankAccounts";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { SupplierFormDialog } from "@/components/purchases/SupplierFormDialog";
@@ -33,6 +34,7 @@ interface Props {
       created_by: string;
     };
     items: PurchaseItem[];
+    paidThrough?: { bank_account_id: string; amount: number } | null;
   }) => void;
   isLoading?: boolean;
   editingPurchase?: Purchase | null;
