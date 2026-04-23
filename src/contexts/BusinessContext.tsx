@@ -15,6 +15,7 @@ interface Business {
   prevent_overselling?: boolean;
   theme_color?: string;
   business_type?: string;
+  kra_pin?: string | null;
 }
 
 interface Location {
