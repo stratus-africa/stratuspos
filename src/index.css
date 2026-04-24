@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -18,9 +18,12 @@
     --primary: 217 91% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --teal: 174 72% 40%;
+    --teal: 162 64% 38%;
     --teal-foreground: 0 0% 100%;
-    --teal-soft: 174 65% 95%;
+    --teal-soft: 158 64% 95%;
+    --teal-deep: 165 70% 28%;
+    --rust: 14 80% 48%;
+    --rust-foreground: 0 0% 100%;
 
     --secondary: 215 20% 95%;
     --secondary-foreground: 220 20% 20%;
