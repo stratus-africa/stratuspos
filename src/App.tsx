@@ -152,7 +152,8 @@ const App = () => (
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/landing" element={<Landing />} />
-                <Route path="/auth" element={<Auth />} />
+                <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/auth" element={<Navigate to="/onboarding" replace />} />
                 <Route path="/super-admin/login" element={<SuperAdminLogin />} />
                 <Route path="/super-admin/*" element={<SuperAdminRoutes />} />
                 <Route path="/*" element={<ProtectedRoutes />} />
