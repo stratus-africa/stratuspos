@@ -12,7 +12,6 @@ import { SuperAdminLayout } from "@/components/super-admin/SuperAdminLayout";
 import { FeatureGate } from "@/components/FeatureGate";
 
 // Lazy-loaded pages
-const Auth = lazy(() => import("./pages/Auth"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Index = lazy(() => import("./pages/Index"));
 const POS = lazy(() => import("./pages/POS"));
