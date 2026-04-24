@@ -15,6 +15,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ["Inter", "sans-serif"],
+        serif: ['"Playfair Display"', "serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -57,6 +58,16 @@ export default {
         warning: {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
+        },
+        teal: {
+          DEFAULT: "hsl(var(--teal))",
+          foreground: "hsl(var(--teal-foreground))",
+          soft: "hsl(var(--teal-soft))",
+          deep: "hsl(var(--teal-deep))",
+        },
+        rust: {
+          DEFAULT: "hsl(var(--rust))",
+          foreground: "hsl(var(--rust-foreground))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
