@@ -102,7 +102,7 @@ export default function Landing() {
             <a href="#faq" className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full">FAQ</a>
           </div>
           <div className="flex items-center gap-2 pr-1">
-            <Link to="/onboarding" className="hidden sm:inline text-sm text-muted-foreground hover:text-foreground px-3">Admin Login</Link>
+            <Link to="/onboarding" className="hidden sm:inline text-sm text-muted-foreground hover:text-foreground px-3">Login</Link>
             <Button asChild className="rounded-full bg-teal hover:bg-teal-deep text-teal-foreground h-9 px-5 shadow-md shadow-teal/20">
               <Link to="/onboarding">Sign Up Free <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
             </Button>
