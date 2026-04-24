@@ -107,9 +107,9 @@ const ProtectedRoutes = () => {
   const { needsOnboarding, loading: bizLoading, hasAccess, userRole, isSuspended } = useBusiness();
 
   if (authLoading || bizLoading) return <PageLoader />;
-  if (!user) return <Navigate to="/landing" replace />;
+  if (!user) return <Navigate to="/onboarding" replace />;
   if (isSuspended) return <BusinessSuspended />;
-  if (needsOnboarding) return <Suspense fallback={<PageLoader />}><Onboarding /></Suspense>;
+  if (needsOnboarding) return <Navigate to="/onboarding" replace />;
 
   // Default redirect based on role - cashiers go to POS
   if (userRole === "cashier") return <Navigate to="/pos" replace />;
