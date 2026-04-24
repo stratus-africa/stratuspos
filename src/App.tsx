@@ -12,7 +12,6 @@ import { SuperAdminLayout } from "@/components/super-admin/SuperAdminLayout";
 import { FeatureGate } from "@/components/FeatureGate";
 
 // Lazy-loaded pages
-const Auth = lazy(() => import("./pages/Auth"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const Index = lazy(() => import("./pages/Index"));
 const POS = lazy(() => import("./pages/POS"));
@@ -107,9 +106,9 @@ const ProtectedRoutes = () => {
   const { needsOnboarding, loading: bizLoading, hasAccess, userRole, isSuspended } = useBusiness();
 
   if (authLoading || bizLoading) return <PageLoader />;
-  if (!user) return <Navigate to="/landing" replace />;
+  if (!user) return <Navigate to="/onboarding" replace />;
   if (isSuspended) return <BusinessSuspended />;
-  if (needsOnboarding) return <Suspense fallback={<PageLoader />}><Onboarding /></Suspense>;
+  if (needsOnboarding) return <Navigate to="/onboarding" replace />;
 
   // Default redirect based on role - cashiers go to POS
   if (userRole === "cashier") return <Navigate to="/pos" replace />;
@@ -152,7 +151,8 @@ const App = () => (
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 <Route path="/landing" element={<Landing />} />
-                <Route path="/auth" element={<Auth />} />
+                <Route path="/onboarding" element={<Onboarding />} />
+                <Route path="/auth" element={<Navigate to="/onboarding" replace />} />
                 <Route path="/super-admin/login" element={<SuperAdminLogin />} />
                 <Route path="/super-admin/*" element={<SuperAdminRoutes />} />
                 <Route path="/*" element={<ProtectedRoutes />} />

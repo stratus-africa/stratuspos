@@ -102,9 +102,9 @@ export default function Landing() {
             <a href="#faq" className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full">FAQ</a>
           </div>
           <div className="flex items-center gap-2 pr-1">
-            <Link to="/auth" className="hidden sm:inline text-sm text-muted-foreground hover:text-foreground px-3">Admin Login</Link>
+            <Link to="/onboarding" className="hidden sm:inline text-sm text-muted-foreground hover:text-foreground px-3">Login</Link>
             <Button asChild className="rounded-full bg-teal hover:bg-teal-deep text-teal-foreground h-9 px-5 shadow-md shadow-teal/20">
-              <Link to="/auth">Sign Up Free <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
+              <Link to="/onboarding">Sign Up Free <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
             </Button>
           </div>
         </nav>
@@ -132,7 +132,7 @@ export default function Landing() {
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button asChild size="lg" className="rounded-xl bg-rust hover:bg-rust/90 text-rust-foreground h-12 px-7 text-base shadow-lg shadow-rust/20">
-              <Link to="/auth">Start Free Trial <ArrowRight className="ml-2 h-4 w-4" /></Link>
+              <Link to="/onboarding">Start Free Trial <ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
             <Button asChild variant="outline" size="lg" className="rounded-xl bg-background border-border h-12 px-7 text-base">
               <a href="#features">Learn More</a>
@@ -317,7 +317,7 @@ export default function Landing() {
                       }`}
                       asChild
                     >
-                      <Link to="/auth">Start Free Trial</Link>
+                      <Link to="/onboarding">Start Free Trial</Link>
                     </Button>
                     <ul className="space-y-3">
                       <li className="flex items-start gap-2.5 text-sm text-foreground/90">
@@ -392,7 +392,7 @@ export default function Landing() {
                 Launch your workspace in under 60 seconds. Free to start.
               </p>
               <Button size="lg" asChild className="rounded-xl bg-rust hover:bg-rust/90 text-rust-foreground h-12 px-8 text-base shadow-lg">
-                <Link to="/auth">Start Free Trial <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                <Link to="/onboarding">Start Free Trial <ArrowRight className="ml-2 h-4 w-4" /></Link>
               </Button>
             </div>
           </div>
@@ -409,7 +409,7 @@ export default function Landing() {
             <span className="font-bold text-foreground">StratusPOS</span>
           </div>
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <Link to="/auth" className="hover:text-foreground">Login</Link>
+            <Link to="/onboarding" className="hover:text-foreground">Login</Link>
             <Link to="/super-admin/login" className="hover:text-foreground">Admin</Link>
             <span className="hidden sm:inline">© {new Date().getFullYear()} StratusPOS</span>
           </div>
