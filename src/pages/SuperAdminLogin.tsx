@@ -144,7 +144,7 @@ export default function SuperAdminLogin() {
                 <Checkbox checked={remember} onCheckedChange={(v) => setRemember(!!v)} />
                 Remember me
               </label>
-              <Link to="/auth" className="text-sm font-medium text-teal hover:text-teal-deep">
+              <Link to="/onboarding" className="text-sm font-medium text-teal hover:text-teal-deep">
                 Forgot password?
               </Link>
             </div>
