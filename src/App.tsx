@@ -28,6 +28,7 @@ const JournalEntries = lazy(() => import("./pages/JournalEntries"));
 const Banking = lazy(() => import("./pages/Banking"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Landing = lazy(() => import("./pages/Landing"));
+const SuperAdminLogin = lazy(() => import("./pages/SuperAdminLogin"));
 
 const SuperAdminDashboard = lazy(() => import("./pages/super-admin/SuperAdminDashboard"));
 const SuperAdminBusinesses = lazy(() => import("./pages/super-admin/SuperAdminBusinesses"));
@@ -152,6 +153,7 @@ const App = () => (
               <Routes>
                 <Route path="/landing" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/super-admin/login" element={<SuperAdminLogin />} />
                 <Route path="/super-admin/*" element={<SuperAdminRoutes />} />
                 <Route path="/*" element={<ProtectedRoutes />} />
               </Routes>
