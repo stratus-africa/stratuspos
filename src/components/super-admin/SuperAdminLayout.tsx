@@ -53,8 +53,6 @@ const navGroups: NavGroup[] = [
     items: [
       { title: "Overview", url: "/super-admin/payments", icon: BarChart2 },
       { title: "Transactions", url: "/super-admin/transactions", icon: Receipt },
-      { title: "Pending Payments", url: "/super-admin/pending-payments", icon: Hourglass },
-      { title: "Invoices", url: "/super-admin/invoices", icon: FileText },
     ],
   },
   {
@@ -111,10 +109,10 @@ export function SuperAdminLayout({ children }: { children: React.ReactNode }) {
         >
           {/* Brand */}
           <div className="px-5 py-5 flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white font-bold shadow-sm">
-              $
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-sm">
+              <Zap className="h-4 w-4" />
             </div>
-            <span className="text-base font-bold tracking-tight">Stocky SaaS</span>
+            <span className="text-base font-bold tracking-tight">StratusPOS</span>
           </div>
 
           {/* Nav groups */}
