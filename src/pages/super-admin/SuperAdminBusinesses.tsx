@@ -15,7 +15,7 @@ import {
 import { format } from "date-fns";
 import { Search, Ban, CheckCircle2, Pencil, Eye, Loader2, Plus, Trash2, CreditCard } from "lucide-react";
 import { toast } from "sonner";
-import { BusinessDetailDialog } from "@/components/super-admin/BusinessDetailDialog";
+import { useNavigate } from "react-router-dom";
 import { AddBusinessDialog } from "@/components/super-admin/AddBusinessDialog";
 
 interface SubInfo {
@@ -63,8 +63,8 @@ export default function SuperAdminBusinesses() {
   const [saving, setSaving] = useState(false);
 
   const [masquerading, setMasquerading] = useState<string | null>(null);
-  const [detailBiz, setDetailBiz] = useState<BusinessRow | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const navigate = useNavigate();
 
   const [deleteBiz, setDeleteBiz] = useState<BusinessRow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -346,7 +346,7 @@ export default function SuperAdminBusinesses() {
                     <TableCell className="font-medium">
                       <button
                         className="text-left hover:underline text-primary cursor-pointer"
-                        onClick={() => setDetailBiz(biz)}
+                        onClick={() => navigate(`/super-admin/businesses/${biz.id}`)}
                       >
                         {biz.name}
                       </button>
@@ -511,12 +511,6 @@ export default function SuperAdminBusinesses() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      <BusinessDetailDialog
-        businessId={detailBiz?.id || null}
-        businessName={detailBiz?.name || ""}
-        onClose={() => setDetailBiz(null)}
-      />
 
       <AddBusinessDialog
         open={showAdd}
