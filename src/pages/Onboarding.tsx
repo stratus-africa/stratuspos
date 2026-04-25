@@ -93,7 +93,7 @@ const Onboarding = () => {
             <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
               <Zap className="h-5 w-5" />
             </div>
-            <span className="text-2xl font-bold tracking-tight">Stocky SaaS</span>
+            <span className="text-2xl font-bold tracking-tight">StratusPOS</span>
           </div>
 
           {user ? <BusinessStep /> : <AuthStep />}
@@ -103,7 +103,7 @@ const Onboarding = () => {
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
-            © {new Date().getFullYear()} Stocky SaaS. All rights reserved.
+            © {new Date().getFullYear()} StratusPOS. All rights reserved.
           </p>
         </div>
       </main>

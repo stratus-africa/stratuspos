@@ -98,7 +98,7 @@ export default function SuperAdminLogin() {
             <div className="h-11 w-11 rounded-full bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white font-bold shadow-md shadow-emerald-500/20">
               $
             </div>
-            <span className="text-2xl font-bold tracking-tight">Stocky SaaS</span>
+            <span className="text-2xl font-bold tracking-tight">StratusPOS</span>
           </div>
 
           <div>
@@ -177,8 +177,8 @@ export default function SuperAdminLogin() {
             <div className="space-y-1.5">
               <DemoRow
                 label="Email"
-                value="superadmin@stockysaas.site"
-                onCopy={() => copy("superadmin@stockysaas.site", "email")}
+                value="superadmin@stratuspos.site"
+                onCopy={() => copy("superadmin@stratuspos.site", "email")}
                 copied={copied === "email"}
               />
               <DemoRow
@@ -204,7 +204,7 @@ export default function SuperAdminLogin() {
           </Button>
 
           <p className="text-xs text-center text-muted-foreground">
-            © {new Date().getFullYear()} Stocky SaaS. All rights reserved.
+            © {new Date().getFullYear()} StratusPOS. All rights reserved.
           </p>
         </div>
       </main>
