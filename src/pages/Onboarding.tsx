@@ -10,13 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
-  Package, Store, MapPin, Briefcase, CheckCircle2, ArrowLeft, ArrowRight,
-  Mail, Lock, User as UserIcon,
+  Box, MapPin, Briefcase, CheckCircle2, ArrowLeft, ArrowRight,
+  Mail, Lock, User as UserIcon, Eye, EyeOff, Building2, Zap,
 } from "lucide-react";
 import { BUSINESS_TYPE_OPTIONS, BusinessType } from "@/lib/themes";
 
 const HIGHLIGHTS = [
-  "Dedicated workspace & team accounts",
+  "Dedicated workspace & database",
   "POS, inventory, purchases & sales",
   "Multi-warehouse & barcode support",
   "Ready in under 60 seconds",
@@ -29,8 +29,8 @@ const Onboarding = () => {
 
   if (authLoading || (user && (bizLoading || saLoading))) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal" />
+      <div className="flex min-h-screen items-center justify-center bg-white">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
       </div>
     );
   }
@@ -40,65 +40,70 @@ const Onboarding = () => {
   // Authenticated user with business → app
   if (user && !needsOnboarding) return <Navigate to="/" replace />;
 
-  return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-background">
-      {/* Left panel */}
-      <aside className="relative hidden lg:flex flex-col justify-between p-12 overflow-hidden bg-gradient-to-br from-teal via-teal to-teal-deep text-teal-foreground">
-        <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-teal-foreground/10 blur-3xl" aria-hidden />
-        <div className="absolute -bottom-40 -right-20 w-[500px] h-[500px] rounded-full bg-teal-foreground/10 blur-3xl" aria-hidden />
-        <div className="absolute top-1/3 right-1/4 w-32 h-32 rounded-3xl bg-teal-foreground/5 backdrop-blur-sm" aria-hidden />
-        <div className="absolute bottom-1/4 left-1/3 w-24 h-24 rounded-full bg-teal-foreground/5 backdrop-blur-sm" aria-hidden />
+  const isBusinessStep = !!user;
 
-        <Link to="/landing" className="relative flex items-center gap-2 text-teal-foreground/90 hover:text-teal-foreground transition-colors text-sm">
-          <ArrowLeft className="h-4 w-4" /> Back to homepage
-        </Link>
+  return (
+    <div className="min-h-screen grid lg:grid-cols-2 bg-white">
+      {/* Left: green gradient panel */}
+      <aside className="relative hidden lg:flex flex-col justify-between p-12 overflow-hidden bg-gradient-to-br from-emerald-400 via-emerald-500 to-teal-600 text-white">
+        <div className="absolute -top-32 -left-32 w-[450px] h-[450px] rounded-full bg-white/15 blur-2xl" aria-hidden />
+        <div className="absolute -bottom-40 -right-20 w-[500px] h-[500px] rounded-full bg-white/10 blur-3xl" aria-hidden />
+        <div className="absolute top-[55%] right-[28%] w-32 h-32 rounded-full bg-white/10" aria-hidden />
+        <div className="absolute bottom-[18%] left-[25%] w-24 h-24 rounded-3xl bg-white/10" aria-hidden />
+
+        <div />
 
         <div className="relative max-w-md">
-          <div className="h-14 w-14 rounded-2xl bg-teal-foreground/15 backdrop-blur-sm border border-teal-foreground/20 flex items-center justify-center mb-8">
-            <Package className="h-7 w-7" />
+          <div className="h-14 w-14 rounded-2xl bg-white/15 backdrop-blur-sm border border-white/20 flex items-center justify-center mb-8 shadow-md">
+            <Box className="h-7 w-7" />
           </div>
-          <h1 className="font-serif text-4xl lg:text-5xl leading-tight tracking-tight mb-5">
-            {user ? "Launch your business in minutes" : "Run your shop with confidence"}
+          <h1 className="text-4xl lg:text-5xl font-bold leading-tight tracking-tight mb-5">
+            {isBusinessStep ? "Launch your business in minutes" : "Run your shop with confidence"}
           </h1>
-          <p className="text-teal-foreground/80 leading-relaxed mb-10">
-            {user
-              ? "Get your own dedicated workspace with full inventory management, and everything you need to run your business."
+          <p className="text-white/85 leading-relaxed mb-10 text-base">
+            {isBusinessStep
+              ? "Get your own dedicated workspace with a custom subdomain, full inventory management, and everything you need to run your business."
               : "Create an account to access POS, inventory, sales, and accounting — purpose-built for Kenyan retail."}
           </p>
 
-          <ul className="space-y-4 pt-6 border-t border-teal-foreground/20">
+          <ul className="space-y-4 pt-8 border-t border-white/25">
             {HIGHLIGHTS.map(h => (
-              <li key={h} className="flex items-center gap-3 text-teal-foreground/95">
-                <CheckCircle2 className="h-5 w-5 shrink-0" />
-                <span>{h}</span>
+              <li key={h} className="flex items-center gap-3 text-white">
+                <span className="h-7 w-7 rounded-full bg-white/15 border border-white/25 flex items-center justify-center shrink-0">
+                  <CheckCircle2 className="h-4 w-4" />
+                </span>
+                <span className="text-[15px]">{h}</span>
               </li>
             ))}
           </ul>
         </div>
 
-        <div className="relative text-xs text-teal-foreground/60">
-          © {new Date().getFullYear()} StratusPOS. All rights reserved.
-        </div>
+        <div className="relative" />
       </aside>
 
       {/* Right panel — form */}
       <main className="flex items-center justify-center p-6 sm:p-12">
-        <div className="w-full max-w-md space-y-7">
+        <div className="w-full max-w-sm space-y-6">
           <Link to="/landing" className="lg:hidden inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Back
           </Link>
 
-          <div className="flex items-center gap-2.5">
-            <div className="h-10 w-10 rounded-xl bg-teal flex items-center justify-center">
-              <Store className="h-5 w-5 text-teal-foreground" />
+          {/* Brand */}
+          <div className="flex items-center gap-3">
+            <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+              <Zap className="h-5 w-5" />
             </div>
-            <span className="text-xl font-bold tracking-tight">StratusPOS</span>
+            <span className="text-2xl font-bold tracking-tight">Stocky SaaS</span>
           </div>
 
           {user ? <BusinessStep /> : <AuthStep />}
 
+          <Button asChild variant="outline" className="w-full h-11 rounded-lg font-medium">
+            <Link to="/landing"><ArrowLeft className="mr-2 h-4 w-4" /> Back to homepage</Link>
+          </Button>
+
           <p className="text-xs text-center text-muted-foreground">
-            © {new Date().getFullYear()} StratusPOS. All rights reserved.
+            © {new Date().getFullYear()} Stocky SaaS. All rights reserved.
           </p>
         </div>
       </main>
@@ -115,7 +120,7 @@ const AuthStep = () => {
   return (
     <>
       <div>
-        <h2 className="font-serif text-3xl sm:text-4xl text-foreground tracking-tight mb-2">
+        <h2 className="text-3xl font-bold tracking-tight mb-2">
           {tab === "signup" ? "Create your account" : "Welcome back"}
         </h2>
         <p className="text-muted-foreground text-sm">
@@ -130,10 +135,10 @@ const AuthStep = () => {
           <TabsTrigger value="signup">Sign Up</TabsTrigger>
           <TabsTrigger value="login">Login</TabsTrigger>
         </TabsList>
-        <TabsContent value="signup" className="mt-6">
+        <TabsContent value="signup" className="mt-5">
           <SignUpForm submitting={submitting} setSubmitting={setSubmitting} />
         </TabsContent>
-        <TabsContent value="login" className="mt-6">
+        <TabsContent value="login" className="mt-5">
           <LoginForm submitting={submitting} setSubmitting={setSubmitting} />
         </TabsContent>
       </Tabs>
@@ -146,9 +151,19 @@ const SignUpForm = ({ submitting, setSubmitting }: { submitting: boolean; setSub
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (password !== confirm) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
     setSubmitting(true);
     const { error } = await signUp(email, password, fullName);
     if (error) toast.error(error.message);
@@ -157,20 +172,60 @@ const SignUpForm = ({ submitting, setSubmitting }: { submitting: boolean; setSub
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      <FieldWithIcon icon={UserIcon} id="su-name" label="Full name" placeholder="Jane Wanjiku">
-        <Input id="su-name" value={fullName} onChange={(e) => setFullName(e.target.value)} required className="pl-10 h-11 rounded-lg focus-visible:ring-teal" placeholder="Jane Wanjiku" />
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <FieldWithIcon icon={UserIcon} id="su-name" label="Full name">
+        <Input id="su-name" value={fullName} onChange={(e) => setFullName(e.target.value)} required className="pl-10 h-11 rounded-lg focus-visible:ring-emerald-400 focus-visible:ring-offset-0" placeholder="Jane Wanjiku" />
       </FieldWithIcon>
-      <FieldWithIcon icon={Mail} id="su-email" label="Email">
-        <Input id="su-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="pl-10 h-11 rounded-lg focus-visible:ring-teal" placeholder="you@business.com" />
+      <FieldWithIcon icon={Mail} id="su-email" label="Admin email">
+        <Input id="su-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="pl-10 h-11 rounded-lg focus-visible:ring-emerald-400 focus-visible:ring-offset-0" placeholder="you@company.com" />
       </FieldWithIcon>
-      <FieldWithIcon icon={Lock} id="su-password" label="Password">
-        <Input id="su-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} className="pl-10 h-11 rounded-lg focus-visible:ring-teal" placeholder="At least 6 characters" />
-      </FieldWithIcon>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label htmlFor="su-pwd" className="text-sm font-medium">Password</Label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              id="su-pwd"
+              type={showPwd ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={8}
+              className="pl-10 pr-9 h-11 rounded-lg focus-visible:ring-emerald-400 focus-visible:ring-offset-0"
+              placeholder="Min. 8 chars"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPwd(s => !s)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="su-confirm" className="text-sm font-medium">Confirm</Label>
+          <div className="relative">
+            <CheckCircle2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              id="su-confirm"
+              type={showPwd ? "text" : "password"}
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              required
+              minLength={8}
+              className="pl-10 h-11 rounded-lg focus-visible:ring-emerald-400 focus-visible:ring-offset-0"
+              placeholder="Repeat"
+            />
+          </div>
+        </div>
+      </div>
+
       <Button
         type="submit"
         disabled={submitting}
-        className="w-full h-12 rounded-lg bg-gradient-to-r from-teal to-teal-deep hover:opacity-90 text-teal-foreground text-base shadow-md shadow-teal/20"
+        className="w-full h-11 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-sm font-semibold shadow-md shadow-emerald-500/20"
       >
         {submitting ? "Creating account..." : (<>Create account <ArrowRight className="ml-2 h-4 w-4" /></>)}
       </Button>
@@ -182,6 +237,7 @@ const LoginForm = ({ submitting, setSubmitting }: { submitting: boolean; setSubm
   const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPwd, setShowPwd] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,17 +248,36 @@ const LoginForm = ({ submitting, setSubmitting }: { submitting: boolean; setSubm
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <FieldWithIcon icon={Mail} id="li-email" label="Email">
-        <Input id="li-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="pl-10 h-11 rounded-lg focus-visible:ring-teal" placeholder="you@business.com" />
+        <Input id="li-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="pl-10 h-11 rounded-lg focus-visible:ring-emerald-400 focus-visible:ring-offset-0" placeholder="you@business.com" />
       </FieldWithIcon>
-      <FieldWithIcon icon={Lock} id="li-password" label="Password">
-        <Input id="li-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="pl-10 h-11 rounded-lg focus-visible:ring-teal" placeholder="Your password" />
-      </FieldWithIcon>
+      <div className="space-y-1.5">
+        <Label htmlFor="li-password" className="text-sm font-medium">Password</Label>
+        <div className="relative">
+          <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            id="li-password"
+            type={showPwd ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="pl-10 pr-10 h-11 rounded-lg focus-visible:ring-emerald-400 focus-visible:ring-offset-0"
+            placeholder="Your password"
+          />
+          <button
+            type="button"
+            onClick={() => setShowPwd(s => !s)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
+      </div>
       <Button
         type="submit"
         disabled={submitting}
-        className="w-full h-12 rounded-lg bg-gradient-to-r from-teal to-teal-deep hover:opacity-90 text-teal-foreground text-base shadow-md shadow-teal/20"
+        className="w-full h-11 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-sm font-semibold shadow-md shadow-emerald-500/20"
       >
         {submitting ? "Signing in..." : (<>Sign in <ArrowRight className="ml-2 h-4 w-4" /></>)}
       </Button>
@@ -212,9 +287,9 @@ const LoginForm = ({ submitting, setSubmitting }: { submitting: boolean; setSubm
 
 const FieldWithIcon = ({
   icon: Icon, id, label, children,
-}: { icon: React.ElementType; id: string; label: string; placeholder?: string; children: React.ReactNode }) => (
-  <div className="space-y-2">
-    <Label htmlFor={id} className="text-foreground">{label}</Label>
+}: { icon: React.ElementType; id: string; label: string; children: React.ReactNode }) => (
+  <div className="space-y-1.5">
+    <Label htmlFor={id} className="text-sm font-medium">{label}</Label>
     <div className="relative">
       <Icon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
       {children}
@@ -245,11 +320,11 @@ const BusinessStep = () => {
   return (
     <>
       <div>
-        <h2 className="font-serif text-3xl sm:text-4xl text-foreground tracking-tight mb-2">
+        <h2 className="text-3xl font-bold tracking-tight mb-2">
           Create your workspace
         </h2>
         <p className="text-muted-foreground text-sm">
-          Set up your business and first location to get started.
+          Set up your business and admin location to get started.
         </p>
       </div>
 
@@ -259,34 +334,30 @@ const BusinessStep = () => {
           <div
             key={i}
             className={`h-1.5 flex-1 rounded-full transition-colors ${
-              i < filled ? "bg-gradient-to-r from-teal to-teal-deep" : "bg-muted"
+              i < filled ? "bg-gradient-to-r from-emerald-500 to-teal-600" : "bg-muted"
             }`}
           />
         ))}
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="space-y-2">
-          <Label htmlFor="business-name" className="text-foreground">Company name</Label>
-          <div className="relative">
-            <Store className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="business-name"
-              placeholder="e.g. Mama Njeri's Shop"
-              value={businessName}
-              onChange={(e) => setBusinessName(e.target.value)}
-              className="pl-10 h-11 rounded-lg focus-visible:ring-teal"
-              required
-            />
-          </div>
-        </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <FieldWithIcon icon={Building2} id="business-name" label="Company name">
+          <Input
+            id="business-name"
+            placeholder="Acme Inc."
+            value={businessName}
+            onChange={(e) => setBusinessName(e.target.value)}
+            className="pl-10 h-11 rounded-lg focus-visible:ring-emerald-400 focus-visible:ring-offset-0"
+            required
+          />
+        </FieldWithIcon>
 
-        <div className="space-y-2">
-          <Label htmlFor="business-type" className="text-foreground">Business type</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="business-type" className="text-sm font-medium">Business type</Label>
           <div className="relative">
             <Briefcase className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground z-10 pointer-events-none" />
             <Select value={businessType} onValueChange={(v) => setBusinessType(v as BusinessType)}>
-              <SelectTrigger id="business-type" className="pl-10 h-11 rounded-lg focus:ring-teal">
+              <SelectTrigger id="business-type" className="pl-10 h-11 rounded-lg focus:ring-emerald-400 focus:ring-offset-0">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -305,26 +376,21 @@ const BusinessStep = () => {
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="location-name" className="text-foreground">First location</Label>
-          <div className="relative">
-            <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              id="location-name"
-              placeholder="e.g. Main Branch"
-              value={locationName}
-              onChange={(e) => setLocationName(e.target.value)}
-              className="pl-10 h-11 rounded-lg focus-visible:ring-teal"
-              required
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">You can add more warehouses and stores later.</p>
-        </div>
+        <FieldWithIcon icon={MapPin} id="location-name" label="First location">
+          <Input
+            id="location-name"
+            placeholder="e.g. Main Branch"
+            value={locationName}
+            onChange={(e) => setLocationName(e.target.value)}
+            className="pl-10 h-11 rounded-lg focus-visible:ring-emerald-400 focus-visible:ring-offset-0"
+            required
+          />
+        </FieldWithIcon>
 
         <Button
           type="submit"
           disabled={isSubmitting}
-          className="w-full h-12 rounded-lg bg-gradient-to-r from-teal to-teal-deep hover:opacity-90 text-teal-foreground text-base shadow-md shadow-teal/20"
+          className="w-full h-11 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white text-sm font-semibold shadow-md shadow-emerald-500/20"
         >
           {isSubmitting ? "Setting up..." : (<>Create workspace <ArrowRight className="ml-2 h-4 w-4" /></>)}
         </Button>
