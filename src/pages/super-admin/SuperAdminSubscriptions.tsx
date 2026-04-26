@@ -146,6 +146,43 @@ export default function SuperAdminSubscriptions() {
     fetchAll();
   };
 
+  const canCancel = (r: SubRow) =>
+    r.status !== "canceled" && r.status !== "cancelled";
+
+  const handleCancel = async () => {
+    if (!cancelTarget) return;
+    setCanceling(true);
+    try {
+      // Try server-side cancel via Paystack edge function. If the row has no
+      // Paystack subscription (e.g. comp / free plan), fall back to a direct
+      // status update so the super admin can still revoke access.
+      const { error: fnError } = await supabase.functions.invoke(
+        "paystack-manage-subscription",
+        { body: { action: "cancel", subscriptionId: cancelTarget.id } }
+      );
+
+      if (fnError) {
+        const { error: dbError } = await supabase
+          .from("subscriptions")
+          .update({ status: "canceled", cancel_at_period_end: true })
+          .eq("id", cancelTarget.id);
+        if (dbError) throw dbError;
+      }
+
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === cancelTarget.id ? { ...r, status: "canceled" } : r
+        )
+      );
+      toast.success(`Subscription for ${cancelTarget.tenantName} cancelled.`);
+      setCancelTarget(null);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to cancel subscription");
+    } finally {
+      setCanceling(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
