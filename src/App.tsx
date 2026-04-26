@@ -34,6 +34,7 @@ const SuperAdminBusinesses = lazy(() => import("./pages/super-admin/SuperAdminBu
 const SuperAdminUsers = lazy(() => import("./pages/super-admin/SuperAdminUsers"));
 const SuperAdminActivity = lazy(() => import("./pages/super-admin/SuperAdminActivity"));
 const SuperAdminPackages = lazy(() => import("./pages/super-admin/SuperAdminPackages"));
+const SuperAdminPackageEdit = lazy(() => import("./pages/super-admin/SuperAdminPackageEdit"));
 const SuperAdminLanding = lazy(() => import("./pages/super-admin/SuperAdminLanding"));
 const SuperAdminTenantDetail = lazy(() => import("./pages/super-admin/SuperAdminTenantDetail"));
 const SuperAdminSubscriptions = lazy(() => import("./pages/super-admin/SuperAdminSubscriptions"));
