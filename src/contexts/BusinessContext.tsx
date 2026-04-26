@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "./AuthContext";
 import { applyTheme, DEFAULT_THEME } from "@/lib/themes";
@@ -51,18 +51,18 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const { user } = useAuth();
   const [business, setBusiness] = useState<Business | null>(null);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
+  const [currentLocation, setCurrentLocationState] = useState<Location | null>(null);
   const [loading, setLoading] = useState(true);
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [userRole, setUserRole] = useState<AppRole | null>(null);
   const [isSuspended, setIsSuspended] = useState(false);
   const [isMasquerading, setIsMasquerading] = useState(false);
 
-  const fetchBusiness = async () => {
+  const fetchBusiness = useCallback(async () => {
     if (!user) {
       setBusiness(null);
       setLocations([]);
-      setCurrentLocation(null);
+      setCurrentLocationState(null);
       setLoading(false);
       setNeedsOnboarding(false);
       setUserRole(null);
@@ -74,9 +74,9 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     try {
       // Check for masquerade mode (super admin viewing as another business)
       const masqueradeId = localStorage.getItem("masquerade_business_id");
-      
+
       let businessId: string | null = null;
-      
+
       if (masqueradeId) {
         // Verify user is super admin
         const { data: isSA } = await supabase.rpc("is_super_admin", { _user_id: user.id });
@@ -89,11 +89,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
 
       if (!businessId) {
-        const { data: profile } = await supabase
-          .from("profiles")
-          .select("business_id")
-          .eq("id", user.id)
-          .single();
+        const { data: profile } = await supabase.from("profiles").select("business_id").eq("id", user.id).single();
         businessId = profile?.business_id || null;
         setIsMasquerading(false);
       }
@@ -104,11 +100,7 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         return;
       }
 
-      const { data: biz } = await supabase
-        .from("businesses")
-        .select("*")
-        .eq("id", businessId)
-        .single();
+      const { data: biz } = await supabase.from("businesses").select("*").eq("id", businessId).single();
 
       if (biz) {
         setBusiness(biz as Business);
@@ -135,9 +127,12 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const locationList = (locs || []) as Location[];
         setLocations(locationList);
 
-        const savedLocId = localStorage.getItem("currentLocationId");
-        const savedLoc = locationList.find((l) => l.id === savedLocId);
-        setCurrentLocation(savedLoc || locationList[0] || null);
+        // Defer localStorage access to avoid blocking
+        requestAnimationFrame(() => {
+          const savedLocId = localStorage.getItem("currentLocationId");
+          const savedLoc = locationList.find((l) => l.id === savedLocId);
+          setCurrentLocationState(savedLoc || locationList[0] || null);
+        });
       } else {
         setNeedsOnboarding(true);
       }
@@ -145,88 +140,111 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       setNeedsOnboarding(true);
     }
     setLoading(false);
-  };
+  }, [user]);
 
-  const createBusiness = async (name: string, locationName: string, businessType: string = "general") => {
-    if (!user) return { error: new Error("Not authenticated") };
+  const createBusiness = useCallback(
+    async (name: string, locationName: string, businessType: string = "general") => {
+      if (!user) return { error: new Error("Not authenticated") };
 
-    try {
-      const businessId = crypto.randomUUID();
+      try {
+        const businessId = crypto.randomUUID();
 
-      const { error: bizError } = await supabase
-        .from("businesses")
-        .insert({ id: businessId, name, business_type: businessType } as any);
+        const { error: bizError } = await supabase
+          .from("businesses")
+          .insert({ id: businessId, name, business_type: businessType } as any);
 
-      if (bizError) throw bizError;
+        if (bizError) throw bizError;
 
-      const { error: profileError } = await supabase
-        .from("profiles")
-        .update({ business_id: businessId })
-        .eq("id", user.id);
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .update({ business_id: businessId })
+          .eq("id", user.id);
 
-      if (profileError) throw profileError;
+        if (profileError) throw profileError;
 
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({ user_id: user.id, role: "admin", business_id: businessId });
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .insert({ user_id: user.id, role: "admin", business_id: businessId });
 
-      if (roleError) throw roleError;
+        if (roleError) throw roleError;
 
-      const { error: locError } = await supabase
-        .from("locations")
-        .insert({ business_id: businessId, name: locationName, type: "store" });
+        const { error: locError } = await supabase
+          .from("locations")
+          .insert({ business_id: businessId, name: locationName, type: "store" });
 
-      if (locError) throw locError;
+        if (locError) throw locError;
 
-      await fetchBusiness();
-      return { error: null };
-    } catch (err) {
-      return { error: err as Error };
-    }
-  };
+        await fetchBusiness();
+        return { error: null };
+      } catch (err) {
+        return { error: err as Error };
+      }
+    },
+    [user, fetchBusiness],
+  );
 
-  const handleSetCurrentLocation = (location: Location) => {
-    setCurrentLocation(location);
-    localStorage.setItem("currentLocationId", location.id);
-  };
+  const handleSetCurrentLocation = useCallback((location: Location) => {
+    setCurrentLocationState(location);
+    // Defer localStorage write to avoid blocking
+    requestAnimationFrame(() => {
+      localStorage.setItem("currentLocationId", location.id);
+    });
+  }, []);
 
-  const hasAccess = (requiredRoles: AppRole[]) => {
-    if (isMasquerading) return true; // Super admin has full access when masquerading
-    if (!userRole) return false;
-    return requiredRoles.includes(userRole);
-  };
+  const hasAccess = useCallback(
+    (requiredRoles: AppRole[]) => {
+      if (isMasquerading) return true; // Super admin has full access when masquerading
+      if (!userRole) return false;
+      return requiredRoles.includes(userRole);
+    },
+    [isMasquerading, userRole],
+  );
 
-  const stopMasquerade = () => {
+  const stopMasquerade = useCallback(() => {
     localStorage.removeItem("masquerade_business_id");
     setIsMasquerading(false);
     fetchBusiness();
-  };
+  }, [fetchBusiness]);
 
   useEffect(() => {
     fetchBusiness();
-  }, [user]);
+  }, [user, fetchBusiness]);
 
-  return (
-    <BusinessContext.Provider
-      value={{
-        business,
-        locations,
-        currentLocation,
-        setCurrentLocation: handleSetCurrentLocation,
-        loading,
-        needsOnboarding,
-        isSuspended,
-        createBusiness,
-        refreshBusiness: fetchBusiness,
-        userRole: isMasquerading ? "admin" : userRole,
-        hasAccess,
-        isMasquerading,
-        stopMasquerade,
-      }}
-    >
-      {children}
-    </BusinessContext.Provider>
+  // Memoize context value to prevent unnecessary re-renders
+  const value = useMemo<BusinessContextType>(
+    () => ({
+      business,
+      locations,
+      currentLocation,
+      setCurrentLocation: handleSetCurrentLocation,
+      loading,
+      needsOnboarding,
+      isSuspended,
+      createBusiness,
+      refreshBusiness: fetchBusiness,
+      userRole: isMasquerading ? "admin" : userRole,
+      hasAccess,
+      isMasquerading,
+      stopMasquerade,
+    }),
+    [
+      business,
+      locations,
+      currentLocation,
+      handleSetCurrentLocation,
+      loading,
+      needsOnboarding,
+      isSuspended,
+      createBusiness,
+      fetchBusiness,
+      isMasquerading,
+      userRole,
+      hasAccess,
+      stopMasquerade,
+    ],
   );
+
+  return <BusinessContext.Provider value={value}>{children}</BusinessContext.Provider>;
 };
 
 export const useBusiness = () => {
