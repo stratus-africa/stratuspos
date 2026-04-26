@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Tag, Save, Loader2, X, AlertTriangle, Trash2, Check,
+  ArrowLeft, Tag, Save, Loader2, AlertTriangle, Trash2, Check,
   Package, Users, Warehouse, Contact, Truck, Info, ShoppingCart, Briefcase,
   Calculator, Store, ArrowLeftRight, Wrench, Sparkles, ListChecks,
 } from "lucide-react";
@@ -60,8 +60,8 @@ const emptyForm: Form = {
   max_suppliers: 10,
 };
 
-const fmtUsd = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(n);
+const fmtKes = (n: number) =>
+  `KES ${new Intl.NumberFormat("en-KE", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n)}`;
 
 export default function SuperAdminPackageEdit() {
   const { id } = useParams<{ id: string }>();
@@ -218,20 +218,13 @@ export default function SuperAdminPackageEdit() {
   }
 
   return (
-    <div className="space-y-6 relative">
-      {/* Close button (top center) */}
-      <button
-        onClick={() => navigate("/super-admin/packages")}
-        className="absolute -top-2 left-1/2 -translate-x-1/2 h-11 w-11 rounded-full bg-foreground/80 hover:bg-foreground text-background flex items-center justify-center transition-colors z-10"
-        aria-label="Close"
-      >
-        <X className="h-5 w-5" />
-      </button>
-
-      {/* Header */}
-      <div className="pt-12">
+    <div className="space-y-6">
+      {/* Header — flush to top, no close button */}
+      <div>
         <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
-          <Link to="/super-admin/packages" className="hover:text-foreground">Plans</Link>
+          <Link to="/super-admin/packages" className="hover:text-foreground inline-flex items-center gap-1">
+            <ArrowLeft className="h-3 w-3" /> Plans
+          </Link>
           <span>/</span>
           <span className="text-foreground font-medium">{form.name || "New plan"}</span>
         </div>
