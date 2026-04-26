@@ -277,31 +277,31 @@ export default function SuperAdminPackageEdit() {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Monthly price <span className="text-red-500">*</span></Label>
+                <Label className="text-xs">Monthly price (KES) <span className="text-red-500">*</span></Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-semibold">KES</span>
                   <Input
                     type="number"
                     min="0"
-                    step="0.01"
+                    step="1"
                     value={form.monthly_price_kes}
                     onChange={(e) => setForm({ ...form, monthly_price_kes: Number(e.target.value) })}
-                    className="h-10 pl-7"
+                    className="h-10 pl-12"
                   />
                 </div>
-                <p className="text-[11px] text-muted-foreground">Price charged per month.</p>
+                <p className="text-[11px] text-muted-foreground">Price charged per month in Kenyan Shillings.</p>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Yearly price <span className="text-red-500">*</span></Label>
+                <Label className="text-xs">Yearly price (KES) <span className="text-red-500">*</span></Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-xs font-semibold">KES</span>
                   <Input
                     type="number"
                     min="0"
-                    step="0.01"
+                    step="1"
                     value={form.yearly_price_kes}
                     onChange={(e) => setForm({ ...form, yearly_price_kes: Number(e.target.value) })}
-                    className="h-10 pl-7"
+                    className="h-10 pl-12"
                   />
                 </div>
                 <p className="text-[11px] text-muted-foreground">Price charged per year. Set 0 to disable yearly billing.</p>

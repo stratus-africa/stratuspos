@@ -38,8 +38,8 @@ const PALETTES = [
   { iconBg: "bg-blue-100", iconFg: "text-blue-600" },
 ];
 
-const fmtUsd = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 }).format(n);
+const fmtKes = (n: number) =>
+  `KES ${new Intl.NumberFormat("en-KE", { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(n)}`;
 
 const isUnlimited = (n: number) => n < 0 || n >= 9999;
 
@@ -168,11 +168,11 @@ export default function SuperAdminPackages() {
                 {/* Pricing */}
                 <div className="px-5 pb-4">
                   <div className="flex items-baseline gap-1">
-                    <span className="text-3xl font-bold tracking-tight">{fmtUsd(monthly)}</span>
+                    <span className="text-3xl font-bold tracking-tight">{fmtKes(monthly)}</span>
                     <span className="text-sm text-muted-foreground">/ mo</span>
                   </div>
                   <div className="flex items-center gap-2 mt-1">
-                    <span className="text-sm text-muted-foreground">{fmtUsd(yearly)} / yr</span>
+                    <span className="text-sm text-muted-foreground">{fmtKes(yearly)} / yr</span>
                     {savePct > 0 && (
                       <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] py-0 h-5">
                         Save {savePct}%
