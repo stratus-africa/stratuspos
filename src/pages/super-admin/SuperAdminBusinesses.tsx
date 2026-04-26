@@ -67,6 +67,21 @@ export default function SuperAdminBusinesses() {
   const [masquerading, setMasquerading] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [lastViewedId, setLastViewedId] = useState<string | null>(
+    () => sessionStorage.getItem(LAST_TENANT_KEY)
+  );
+
+  // Refresh highlight whenever we land back on the list
+  useEffect(() => {
+    setLastViewedId(sessionStorage.getItem(LAST_TENANT_KEY));
+  }, [location.key]);
+
+  const openTenant = (id: string) => {
+    sessionStorage.setItem(LAST_TENANT_KEY, id);
+    setLastViewedId(id);
+    navigate(`/super-admin/businesses/${id}`);
+  };
 
   const [deleteBiz, setDeleteBiz] = useState<BusinessRow | null>(null);
   const [deleting, setDeleting] = useState(false);
