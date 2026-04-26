@@ -15,8 +15,10 @@ import {
 import { format } from "date-fns";
 import { Search, Ban, CheckCircle2, Pencil, Eye, Loader2, Plus, Trash2, CreditCard } from "lucide-react";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { AddBusinessDialog } from "@/components/super-admin/AddBusinessDialog";
+
+const LAST_TENANT_KEY = "super_admin_last_tenant_id";
 
 interface SubInfo {
   status: string;
