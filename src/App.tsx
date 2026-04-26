@@ -81,6 +81,8 @@ const SuperAdminRoutes = () => {
           <Route path="/subscriptions" element={<SuperAdminSubscriptions />} />
           <Route path="/users" element={<SuperAdminUsers />} />
           <Route path="/packages" element={<SuperAdminPackages />} />
+          <Route path="/packages/new" element={<SuperAdminPackageEdit />} />
+          <Route path="/packages/:id/edit" element={<SuperAdminPackageEdit />} />
           <Route path="/landing" element={<SuperAdminLanding />} />
           <Route path="/activity" element={<SuperAdminActivity />} />
           <Route path="*" element={<NotFound />} />
