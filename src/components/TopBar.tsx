@@ -43,7 +43,7 @@ export function TopBar() {
 
   return (
     <>
-      <header className="h-12 flex items-center justify-between border-b bg-card px-4 shrink-0">
+      <header className="h-14 flex items-center justify-between border-b border-border bg-white px-4 sm:px-6 shrink-0 sticky top-0 z-20">
         <div className="flex items-center gap-3">
           <SidebarTrigger />
           {business && (

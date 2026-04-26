@@ -120,14 +120,16 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="border-b border-sidebar-border px-4 py-3">
-        <div className="flex items-center gap-2">
-          <Store className="h-6 w-6 text-sidebar-primary" />
+      <SidebarHeader className="border-b border-sidebar-border px-4 py-4">
+        <div className="flex items-center gap-2.5">
+          <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-sm shrink-0">
+            <Store className="h-4 w-4" />
+          </div>
           {!collapsed && (
-            <div className="flex flex-col">
-              <span className="text-sm font-semibold text-sidebar-foreground">StratusPOS</span>
+            <div className="flex flex-col min-w-0">
+              <span className="text-base font-bold tracking-tight text-sidebar-foreground">StratusPOS</span>
               {business && (
-                <span className="text-xs text-sidebar-foreground/60 truncate max-w-[140px]">
+                <span className="text-xs text-muted-foreground truncate max-w-[140px]">
                   {business.name}
                 </span>
               )}
@@ -148,7 +150,7 @@ export function AppSidebar() {
         {!collapsed && isSuperAdmin && (
           <Link
             to="/super-admin"
-            className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-red-400 hover:bg-sidebar-accent/50 transition-colors"
+            className="flex items-center gap-2 px-2 py-1.5 rounded-md text-xs text-emerald-700 hover:bg-emerald-50 transition-colors"
           >
             <Shield className="h-3.5 w-3.5" />
             Super Admin Panel
@@ -163,7 +165,7 @@ export function AppSidebar() {
         )}
         <Button
           variant="ghost"
-          className="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+          className="w-full justify-start text-muted-foreground hover:text-foreground hover:bg-muted"
           onClick={signOut}
         >
           <LogOut className="mr-2 h-4 w-4" />

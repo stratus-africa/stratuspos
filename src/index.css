@@ -7,15 +7,16 @@
 @layer base {
   :root {
     --background: 210 20% 98%;
-    --foreground: 220 20% 10%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 10%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 10%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 217 91% 50%;
+    /* Emerald primary — matches Super Admin aesthetic */
+    --primary: 160 84% 39%;
     --primary-foreground: 0 0% 100%;
 
     --teal: 162 64% 38%;
@@ -45,22 +46,23 @@
 
     --border: 214 20% 90%;
     --input: 214 20% 90%;
-    --ring: 217 91% 50%;
+    --ring: 160 84% 39%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 213 31% 91%;
-    --sidebar-primary: 217 91% 60%;
+    /* Sidebar — white surface with emerald active state, matches Super Admin */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 25% 30%;
+    --sidebar-primary: 160 84% 39%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217 33% 17%;
-    --sidebar-accent-foreground: 213 31% 91%;
-    --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-accent: 152 76% 96%;
+    --sidebar-accent-foreground: 161 94% 24%;
+    --sidebar-border: 214 20% 92%;
+    --sidebar-ring: 160 84% 39%;
 
-    /* Themed alternating row tint — overridden at runtime by applyTheme() */
-    --table-alt-row: 217 91% 96%;
-    --primary-glow: 217 91% 62%;
+    /* Themed alternating row tint */
+    --table-alt-row: 152 60% 97%;
+    --primary-glow: 160 84% 50%;
   }
 
   .dark {
