@@ -306,8 +306,14 @@ export default function SuperAdminSubscriptions() {
                       >
                         <Eye className="h-3 w-3 mr-1" /> View
                       </Button>
-                      <Button size="sm" variant="outline" className="h-8 text-xs">
-                        <Pencil className="h-3 w-3 mr-1" /> Edit
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                        onClick={() => setCancelTarget(r)}
+                        disabled={!canCancel(r)}
+                      >
+                        <Ban className="h-3 w-3 mr-1" /> Cancel
                       </Button>
                     </div>
                   </TableCell>
@@ -324,6 +330,32 @@ export default function SuperAdminSubscriptions() {
           </TableBody>
         </Table>
       </div>
+
+      <AlertDialog open={!!cancelTarget} onOpenChange={(o) => !o && setCancelTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel this subscription?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will cancel the subscription for{" "}
+              <span className="font-semibold text-foreground">{cancelTarget?.tenantName}</span>
+              {cancelTarget?.current_period_end && (
+                <> at the end of the current period ({format(new Date(cancelTarget.current_period_end), "MMM d, yyyy")})</>
+              )}
+              . The tenant will lose access to paid features once the period ends.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={canceling}>Keep subscription</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleCancel(); }}
+              disabled={canceling}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {canceling ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Cancelling…</> : "Yes, cancel"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
