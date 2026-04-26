@@ -6,11 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import {
   RefreshCw, CheckCircle2, Hourglass, Clock, PauseCircle, XCircle, Search,
-  Eye, Pencil, Loader2,
+  Eye, Ban, Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 type SubRow = {
   id: string;
