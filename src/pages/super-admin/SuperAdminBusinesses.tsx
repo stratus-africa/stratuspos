@@ -15,8 +15,11 @@ import {
 import { format } from "date-fns";
 import { Search, Ban, CheckCircle2, Pencil, Eye, Loader2, Plus, Trash2, CreditCard } from "lucide-react";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import { AddBusinessDialog } from "@/components/super-admin/AddBusinessDialog";
+
+const LAST_TENANT_KEY = "super_admin_last_tenant_id";
 
 interface SubInfo {
   status: string;
@@ -65,6 +68,21 @@ export default function SuperAdminBusinesses() {
   const [masquerading, setMasquerading] = useState<string | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const [lastViewedId, setLastViewedId] = useState<string | null>(
+    () => sessionStorage.getItem(LAST_TENANT_KEY)
+  );
+
+  // Refresh highlight whenever we land back on the list
+  useEffect(() => {
+    setLastViewedId(sessionStorage.getItem(LAST_TENANT_KEY));
+  }, [location.key]);
+
+  const openTenant = (id: string) => {
+    sessionStorage.setItem(LAST_TENANT_KEY, id);
+    setLastViewedId(id);
+    navigate(`/super-admin/businesses/${id}`);
+  };
 
   const [deleteBiz, setDeleteBiz] = useState<BusinessRow | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -342,11 +360,17 @@ export default function SuperAdminBusinesses() {
                 const subBadge = SUB_BADGES[subKey];
                 const subActive = isSubscriptionActive(sub);
                 return (
-                  <TableRow key={biz.id} className={!biz.is_active ? "opacity-60" : ""}>
+                  <TableRow
+                    key={biz.id}
+                    className={cn(
+                      !biz.is_active && "opacity-60",
+                      lastViewedId === biz.id && "bg-emerald-50/60 hover:bg-emerald-50"
+                    )}
+                  >
                     <TableCell className="font-medium">
                       <button
                         className="text-left hover:underline text-primary cursor-pointer"
-                        onClick={() => navigate(`/super-admin/businesses/${biz.id}`)}
+                        onClick={() => openTenant(biz.id)}
                       >
                         {biz.name}
                       </button>

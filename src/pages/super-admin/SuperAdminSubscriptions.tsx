@@ -6,11 +6,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
 import {
   RefreshCw, CheckCircle2, Hourglass, Clock, PauseCircle, XCircle, Search,
-  Eye, Pencil, Loader2,
+  Eye, Ban, Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 type SubRow = {
   id: string;
@@ -53,6 +58,8 @@ export default function SuperAdminSubscriptions() {
   const [rows, setRows] = useState<SubRow[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [cancelTarget, setCancelTarget] = useState<SubRow | null>(null);
+  const [canceling, setCanceling] = useState(false);
 
   const fetchAll = async () => {
     const [subsRes, plansRes] = await Promise.all([
@@ -137,6 +144,43 @@ export default function SuperAdminSubscriptions() {
   const refresh = () => {
     setRefreshing(true);
     fetchAll();
+  };
+
+  const canCancel = (r: SubRow) =>
+    r.status !== "canceled" && r.status !== "cancelled";
+
+  const handleCancel = async () => {
+    if (!cancelTarget) return;
+    setCanceling(true);
+    try {
+      // Try server-side cancel via Paystack edge function. If the row has no
+      // Paystack subscription (e.g. comp / free plan), fall back to a direct
+      // status update so the super admin can still revoke access.
+      const { error: fnError } = await supabase.functions.invoke(
+        "paystack-manage-subscription",
+        { body: { action: "cancel", subscriptionId: cancelTarget.id } }
+      );
+
+      if (fnError) {
+        const { error: dbError } = await supabase
+          .from("subscriptions")
+          .update({ status: "canceled", cancel_at_period_end: true })
+          .eq("id", cancelTarget.id);
+        if (dbError) throw dbError;
+      }
+
+      setRows((prev) =>
+        prev.map((r) =>
+          r.id === cancelTarget.id ? { ...r, status: "canceled" } : r
+        )
+      );
+      toast.success(`Subscription for ${cancelTarget.tenantName} cancelled.`);
+      setCancelTarget(null);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to cancel subscription");
+    } finally {
+      setCanceling(false);
+    }
   };
 
   if (loading) {
@@ -262,8 +306,14 @@ export default function SuperAdminSubscriptions() {
                       >
                         <Eye className="h-3 w-3 mr-1" /> View
                       </Button>
-                      <Button size="sm" variant="outline" className="h-8 text-xs">
-                        <Pencil className="h-3 w-3 mr-1" /> Edit
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-xs text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
+                        onClick={() => setCancelTarget(r)}
+                        disabled={!canCancel(r)}
+                      >
+                        <Ban className="h-3 w-3 mr-1" /> Cancel
                       </Button>
                     </div>
                   </TableCell>
@@ -280,6 +330,32 @@ export default function SuperAdminSubscriptions() {
           </TableBody>
         </Table>
       </div>
+
+      <AlertDialog open={!!cancelTarget} onOpenChange={(o) => !o && setCancelTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel this subscription?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will cancel the subscription for{" "}
+              <span className="font-semibold text-foreground">{cancelTarget?.tenantName}</span>
+              {cancelTarget?.current_period_end && (
+                <> at the end of the current period ({format(new Date(cancelTarget.current_period_end), "MMM d, yyyy")})</>
+              )}
+              . The tenant will lose access to paid features once the period ends.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={canceling}>Keep subscription</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); handleCancel(); }}
+              disabled={canceling}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+            >
+              {canceling ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Cancelling…</> : "Yes, cancel"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
