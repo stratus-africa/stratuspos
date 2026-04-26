@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,9 +12,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   Box, MapPin, Briefcase, CheckCircle2, ArrowLeft, ArrowRight,
-  Mail, Lock, User as UserIcon, Eye, EyeOff, Building2, Zap,
+  Mail, Lock, User as UserIcon, Eye, EyeOff, Building2, Zap, Tag, Loader2,
 } from "lucide-react";
 import { BUSINESS_TYPE_OPTIONS, BusinessType } from "@/lib/themes";
+
+interface Plan {
+  id: string;
+  name: string;
+  monthly_price_kes: number;
+  yearly_price_kes: number;
+  trial_days: number;
+  max_products: number;
+  max_users: number;
+  max_locations: number;
+}
+
+const fmtKes = (n: number) =>
+  `KES ${new Intl.NumberFormat("en-KE", { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n)}`;
 
 const HIGHLIGHTS = [
   "Dedicated workspace & database",
@@ -301,19 +316,63 @@ const FieldWithIcon = ({
 
 const BusinessStep = () => {
   const { createBusiness } = useBusiness();
+  const { user } = useAuth();
   const [businessName, setBusinessName] = useState("");
   const [locationName, setLocationName] = useState("");
   const [businessType, setBusinessType] = useState<BusinessType>("general");
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [selectedPlanId, setSelectedPlanId] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const filled = [!!businessName, !!businessType, !!locationName].filter(Boolean).length;
+  // Load active public plans for the signup picker.
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from("subscription_packages")
+        .select("id, name, monthly_price_kes, yearly_price_kes, trial_days, max_products, max_users, max_locations")
+        .eq("is_active", true)
+        .order("monthly_price_kes", { ascending: true });
+      const list = (data as Plan[]) || [];
+      setPlans(list);
+      // Default to the cheapest non-zero plan, or the first available.
+      const firstPaid = list.find(p => Number(p.monthly_price_kes) > 0) || list[0];
+      if (firstPaid) setSelectedPlanId(firstPaid.id);
+      setPlansLoading(false);
+    })();
+  }, []);
+
+  const filled = [!!businessName, !!businessType, !!locationName, !!selectedPlanId].filter(Boolean).length;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (plans.length > 0 && !selectedPlanId) {
+      toast.error("Please choose a plan to continue");
+      return;
+    }
     setIsSubmitting(true);
     const { error } = await createBusiness(businessName, locationName, businessType);
-    if (error) toast.error(error.message);
-    else toast.success("Business created successfully!");
+    if (error) {
+      toast.error(error.message);
+      setIsSubmitting(false);
+      return;
+    }
+    // Persist the chosen plan as a trialing subscription so the tenant inherits its features.
+    if (selectedPlanId && user) {
+      const plan = plans.find(p => p.id === selectedPlanId);
+      const trialDays = Math.max(0, plan?.trial_days ?? 14);
+      const now = new Date();
+      const trialEnd = new Date(now.getTime() + trialDays * 86400000);
+      await supabase.from("subscriptions").insert({
+        user_id: user.id,
+        product_id: selectedPlanId,
+        status: trialDays > 0 ? "trialing" : "active",
+        current_period_start: now.toISOString(),
+        current_period_end: trialEnd.toISOString(),
+        environment: "test",
+      } as any);
+    }
+    toast.success("Business created successfully!");
     setIsSubmitting(false);
   };
 
@@ -324,13 +383,13 @@ const BusinessStep = () => {
           Create your workspace
         </h2>
         <p className="text-muted-foreground text-sm">
-          Set up your business and admin location to get started.
+          Set up your business, choose a plan, and we'll get you up and running.
         </p>
       </div>
 
       {/* Progress dashes */}
       <div className="flex gap-2">
-        {[0, 1, 2].map(i => (
+        {[0, 1, 2, 3].map(i => (
           <div
             key={i}
             className={`h-1.5 flex-1 rounded-full transition-colors ${
@@ -386,6 +445,69 @@ const BusinessStep = () => {
             required
           />
         </FieldWithIcon>
+
+        {/* Plan picker — sourced from active subscription_packages */}
+        <div className="space-y-2">
+          <Label className="text-sm font-medium flex items-center gap-1.5">
+            <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+            Choose a plan
+          </Label>
+          {plansLoading ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-3">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading plans…
+            </div>
+          ) : plans.length === 0 ? (
+            <p className="text-xs text-muted-foreground">
+              No plans configured yet — you'll be set up on the default tier.
+            </p>
+          ) : (
+            <div className="grid gap-2">
+              {plans.map((p) => {
+                const selected = selectedPlanId === p.id;
+                const monthly = Number(p.monthly_price_kes || 0);
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setSelectedPlanId(p.id)}
+                    className={`text-left rounded-lg border p-3 transition-all flex items-center justify-between gap-3 ${
+                      selected
+                        ? "border-emerald-500 bg-emerald-50/60 ring-1 ring-emerald-500/30"
+                        : "border-border bg-white hover:border-emerald-300"
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-sm">{p.name}</p>
+                        {p.trial_days > 0 && (
+                          <span className="text-[10px] font-semibold uppercase tracking-wide bg-emerald-100 text-emerald-700 rounded px-1.5 py-0.5">
+                            {p.trial_days}-day trial
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        {p.max_products < 0 ? "Unlimited" : p.max_products.toLocaleString()} products ·{" "}
+                        {p.max_users < 0 ? "∞" : p.max_users} user{p.max_users === 1 ? "" : "s"} ·{" "}
+                        {p.max_locations < 0 ? "∞" : p.max_locations} location{p.max_locations === 1 ? "" : "s"}
+                      </p>
+                    </div>
+                    <div className="text-right shrink-0">
+                      <p className="text-sm font-bold">{monthly === 0 ? "Free" : fmtKes(monthly)}</p>
+                      {monthly > 0 && <p className="text-[10px] text-muted-foreground">/ month</p>}
+                    </div>
+                    <div
+                      className={`h-4 w-4 rounded-full shrink-0 flex items-center justify-center ml-1 ${
+                        selected ? "bg-emerald-600 text-white" : "border border-border"
+                      }`}
+                    >
+                      {selected && <CheckCircle2 className="h-3 w-3" />}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
 
         <Button
           type="submit"
