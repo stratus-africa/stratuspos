@@ -82,33 +82,10 @@ function parseHSL(triplet: string): { h: number; s: number; l: number } {
   return { h, s, l };
 }
 
-export function applyTheme(themeKey: string | undefined | null) {
-  const theme = THEMES[(themeKey as ThemeKey) || DEFAULT_THEME] || THEMES[DEFAULT_THEME];
-  const root = document.documentElement;
-  const { h, s } = parseHSL(theme.primary);
-
-  // Core primary tokens
-  root.style.setProperty("--primary", theme.primary);
-  root.style.setProperty("--ring", theme.primary);
-  root.style.setProperty("--primary-glow", theme.primaryGlow);
-  root.style.setProperty("--table-alt-row", theme.alt);
-
-  // Sidebar — derive a deep shade of the theme color so the whole nav reflects the theme
-  // background: very dark + slightly desaturated; accent: a touch lighter for hover/active
-  const sidebarBg = `${h} ${Math.min(s, 45)}% 14%`;
-  const sidebarAccent = `${h} ${Math.min(s, 50)}% 22%`;
-  const sidebarBorder = `${h} ${Math.min(s, 40)}% 20%`;
-
-  root.style.setProperty("--sidebar-background", sidebarBg);
-  root.style.setProperty("--sidebar-foreground", "210 40% 96%");
-  root.style.setProperty("--sidebar-primary", theme.primaryGlow);
-  root.style.setProperty("--sidebar-primary-foreground", "0 0% 100%");
-  root.style.setProperty("--sidebar-accent", sidebarAccent);
-  root.style.setProperty("--sidebar-accent-foreground", "0 0% 100%");
-  root.style.setProperty("--sidebar-border", sidebarBorder);
-  root.style.setProperty("--sidebar-ring", theme.primaryGlow);
-
-  root.dataset.theme = theme.key;
+export function applyTheme(_themeKey: string | undefined | null) {
+  // Theme is now fixed (emerald) to match Super Admin aesthetic.
+  // We only set the data attribute for any CSS that may target it; tokens come from index.css.
+  document.documentElement.dataset.theme = "emerald";
 }
 
 // Business types — drives industry-specific feature gating
