@@ -359,11 +359,17 @@ export default function SuperAdminBusinesses() {
                 const subBadge = SUB_BADGES[subKey];
                 const subActive = isSubscriptionActive(sub);
                 return (
-                  <TableRow key={biz.id} className={!biz.is_active ? "opacity-60" : ""}>
+                  <TableRow
+                    key={biz.id}
+                    className={cn(
+                      !biz.is_active && "opacity-60",
+                      lastViewedId === biz.id && "bg-emerald-50/60 hover:bg-emerald-50"
+                    )}
+                  >
                     <TableCell className="font-medium">
                       <button
                         className="text-left hover:underline text-primary cursor-pointer"
-                        onClick={() => navigate(`/super-admin/businesses/${biz.id}`)}
+                        onClick={() => openTenant(biz.id)}
                       >
                         {biz.name}
                       </button>
