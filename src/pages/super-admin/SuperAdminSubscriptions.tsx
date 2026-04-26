@@ -58,6 +58,8 @@ export default function SuperAdminSubscriptions() {
   const [rows, setRows] = useState<SubRow[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [cancelTarget, setCancelTarget] = useState<SubRow | null>(null);
+  const [canceling, setCanceling] = useState(false);
 
   const fetchAll = async () => {
     const [subsRes, plansRes] = await Promise.all([
