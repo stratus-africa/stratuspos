@@ -481,11 +481,11 @@ export default function SuperAdminPackageEdit() {
               </div>
               <div className="flex items-center justify-between">
                 <dt className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Monthly</dt>
-                <dd className="font-semibold">{fmtUsd(form.monthly_price_kes)} / mo</dd>
+                <dd className="font-semibold">{fmtKes(form.monthly_price_kes)} / mo</dd>
               </div>
               <div className="flex items-center justify-between">
                 <dt className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Yearly</dt>
-                <dd className="font-semibold">{fmtUsd(form.yearly_price_kes)} / yr</dd>
+                <dd className="font-semibold">{fmtKes(form.yearly_price_kes)} / yr</dd>
               </div>
               <div className="flex items-center justify-between">
                 <dt className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Limits</dt>
