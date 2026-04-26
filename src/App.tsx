@@ -34,6 +34,7 @@ const SuperAdminBusinesses = lazy(() => import("./pages/super-admin/SuperAdminBu
 const SuperAdminUsers = lazy(() => import("./pages/super-admin/SuperAdminUsers"));
 const SuperAdminActivity = lazy(() => import("./pages/super-admin/SuperAdminActivity"));
 const SuperAdminPackages = lazy(() => import("./pages/super-admin/SuperAdminPackages"));
+const SuperAdminPackageEdit = lazy(() => import("./pages/super-admin/SuperAdminPackageEdit"));
 const SuperAdminLanding = lazy(() => import("./pages/super-admin/SuperAdminLanding"));
 const SuperAdminTenantDetail = lazy(() => import("./pages/super-admin/SuperAdminTenantDetail"));
 const SuperAdminSubscriptions = lazy(() => import("./pages/super-admin/SuperAdminSubscriptions"));
@@ -80,6 +81,8 @@ const SuperAdminRoutes = () => {
           <Route path="/subscriptions" element={<SuperAdminSubscriptions />} />
           <Route path="/users" element={<SuperAdminUsers />} />
           <Route path="/packages" element={<SuperAdminPackages />} />
+          <Route path="/packages/new" element={<SuperAdminPackageEdit />} />
+          <Route path="/packages/:id/edit" element={<SuperAdminPackageEdit />} />
           <Route path="/landing" element={<SuperAdminLanding />} />
           <Route path="/activity" element={<SuperAdminActivity />} />
           <Route path="*" element={<NotFound />} />
