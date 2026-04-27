@@ -388,43 +388,83 @@ export default function SuperAdminTenantDetail() {
 
         {/* Right column - 1/3 */}
         <div className="space-y-5">
+          {/* Assign / change plan */}
+          <section className="bg-white border border-border rounded-xl p-5">
+            <div className="flex items-center gap-2 pb-3 border-b border-border">
+              <Package className="h-4 w-4 text-muted-foreground" />
+              <h3 className="font-semibold text-sm">Assign plan</h3>
+            </div>
+            <div className="pt-4 space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Assigning a plan activates the subscription. Cancelled subscriptions will be reactivated.
+              </p>
+              <Select value={assigningPlanId} onValueChange={setAssigningPlanId}>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Choose a plan…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {plans.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name} — KES {Number(p.monthly_price_kes || 0).toLocaleString("en-KE")}/mo
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={assignPlan}
+                disabled={!assigningPlanId || acting === "assign"}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {acting === "assign" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />}
+                Assign & activate
+              </Button>
+            </div>
+          </section>
+
+          {/* Users */}
           <section className="bg-white border border-border rounded-xl p-5">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2">
-                <Globe className="h-4 w-4 text-muted-foreground" />
-                <h3 className="font-semibold text-sm">Domains</h3>
+                <UsersIcon className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-semibold text-sm">Users</h3>
               </div>
-              <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">1 domain</Badge>
+              <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
+                {users.length} user{users.length === 1 ? "" : "s"}
+              </Badge>
             </div>
 
-            <div className="pt-4 space-y-3">
-              <div className="rounded-lg border border-border p-3 flex items-center justify-between">
-                <div className="flex items-start gap-2 min-w-0">
-                  <LinkIcon className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {biz.name.toLowerCase().replace(/\s+/g, "")}.stratuspos.app
-                    </p>
-                    <p className="text-xs text-muted-foreground">Subdomain: {biz.name.toLowerCase().replace(/\s+/g, "").slice(0, 12)}</p>
+            <div className="pt-4 space-y-2">
+              {users.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">No users for this tenant yet.</p>
+              ) : (
+                users.map((u) => (
+                  <div
+                    key={u.user_id}
+                    className="rounded-lg border border-border p-3 flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold shrink-0">
+                        {(u.full_name || u.email || u.user_id).charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{u.full_name || u.email || "Unnamed user"}</p>
+                        {u.email && <p className="text-xs text-muted-foreground truncate">{u.email}</p>}
+                      </div>
+                    </div>
+                    <Badge
+                      className={
+                        u.role === "admin"
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0"
+                          : u.role === "manager"
+                          ? "bg-blue-50 text-blue-700 border border-blue-200 shrink-0"
+                          : "bg-muted text-muted-foreground border border-border shrink-0"
+                      }
+                    >
+                      {u.role}
+                    </Badge>
                   </div>
-                </div>
-                <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-                  <span className="h-1.5 w-1.5 rounded-full bg-current mr-1.5" /> Active
-                </Badge>
-              </div>
-
-              <div>
-                <Label>Add Subdomain</Label>
-                <div className="flex gap-2 mt-1.5">
-                  <div className="flex-1 flex items-center rounded-md border border-border bg-background overflow-hidden">
-                    <Input placeholder="myshop" className="border-0 focus-visible:ring-0 h-9 text-sm" />
-                    <span className="px-2.5 text-xs text-muted-foreground border-l border-border h-9 flex items-center bg-muted/40">.stratuspos.app</span>
-                  </div>
-                  <Button className="bg-emerald-600 hover:bg-emerald-700 text-white h-9">
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Add
-                  </Button>
-                </div>
-              </div>
+                ))
+              )}
             </div>
           </section>
         </div>
