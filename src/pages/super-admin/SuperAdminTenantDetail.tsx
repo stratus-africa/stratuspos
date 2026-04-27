@@ -19,6 +19,7 @@ type Biz = {
   created_at: string;
   updated_at: string;
   currency: string;
+  owner_id: string | null;
 };
 
 type Sub = {
