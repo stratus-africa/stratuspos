@@ -89,7 +89,7 @@ export default function SuperAdminPackageEdit() {
 
   const [form, setForm] = useState<Form>(emptyForm);
   const [featureToggles, setFeatureToggles] = useState<Record<string, boolean>>(
-    Object.fromEntries(ALL_FEATURES.map((f) => [f.key, true]))
+    Object.fromEntries(ALL_FEATURES.map((f) => [f.key, DEFAULT_ON_FEATURES.has(f.key)]))
   );
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);
