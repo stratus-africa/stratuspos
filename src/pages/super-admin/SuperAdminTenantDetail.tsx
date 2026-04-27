@@ -52,6 +52,13 @@ const STATUS_BADGE: Record<string, string> = {
   suspended: "bg-orange-50 text-orange-700 border border-orange-200",
 };
 
+type TenantUser = {
+  user_id: string;
+  role: string;
+  email: string | null;
+  full_name: string | null;
+};
+
 export default function SuperAdminTenantDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -61,7 +68,9 @@ export default function SuperAdminTenantDetail() {
   const [sub, setSub] = useState<Sub | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [features, setFeatures] = useState<Feature[]>([]);
+  const [users, setUsers] = useState<TenantUser[]>([]);
   const [counts, setCounts] = useState({ products: 0, users: 0, locations: 0, customers: 0, suppliers: 0 });
+  const [assigningPlanId, setAssigningPlanId] = useState<string>("");
 
   useEffect(() => {
     if (!id) return;
@@ -72,30 +81,50 @@ export default function SuperAdminTenantDetail() {
   const fetchAll = async () => {
     if (!id) return;
     setLoading(true);
-    const [bizRes, plansRes, featRes, prodCnt, userCnt, locCnt, custCnt, suppCnt, ownerRow] = await Promise.all([
+    const [bizRes, plansRes, featRes, prodCnt, locCnt, custCnt, suppCnt, rolesRes] = await Promise.all([
       supabase.from("businesses").select("*").eq("id", id).maybeSingle(),
       supabase.from("subscription_packages").select("*").eq("is_active", true).order("sort_order"),
       supabase.from("package_features").select("*"),
       supabase.from("products").select("id", { count: "exact", head: true }).eq("business_id", id),
-      supabase.from("user_roles").select("id", { count: "exact", head: true }).eq("business_id", id),
       supabase.from("locations").select("id", { count: "exact", head: true }).eq("business_id", id),
       supabase.from("customers").select("id", { count: "exact", head: true }).eq("business_id", id),
       supabase.from("suppliers").select("id", { count: "exact", head: true }).eq("business_id", id),
-      supabase.from("user_roles").select("user_id").eq("business_id", id).eq("role", "admin").limit(1).maybeSingle(),
+      supabase.from("user_roles").select("user_id,role").eq("business_id", id),
     ]);
 
     setBiz(bizRes.data as Biz | null);
     setPlans((plansRes.data || []) as Plan[]);
     setFeatures((featRes.data || []) as Feature[]);
+
+    const roleRows = (rolesRes.data || []) as { user_id: string; role: string }[];
+    const userIds = Array.from(new Set(roleRows.map((r) => r.user_id)));
+    let profileMap: Record<string, { email: string | null; full_name: string | null }> = {};
+    if (userIds.length > 0) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id,email,full_name")
+        .in("id", userIds);
+      (profs || []).forEach((p: any) => {
+        profileMap[p.id] = { email: p.email, full_name: p.full_name };
+      });
+    }
+    const tenantUsers: TenantUser[] = roleRows.map((r) => ({
+      user_id: r.user_id,
+      role: r.role,
+      email: profileMap[r.user_id]?.email ?? null,
+      full_name: profileMap[r.user_id]?.full_name ?? null,
+    }));
+    setUsers(tenantUsers);
+
     setCounts({
       products: prodCnt.count || 0,
-      users: userCnt.count || 0,
+      users: userIds.length,
       locations: locCnt.count || 0,
       customers: custCnt.count || 0,
       suppliers: suppCnt.count || 0,
     });
 
-    const ownerId = (bizRes.data as any)?.owner_id || ownerRow.data?.user_id;
+    const ownerId = (bizRes.data as any)?.owner_id || roleRows.find((r) => r.role === "admin")?.user_id;
     if (ownerId) {
       const { data: subs } = await supabase
         .from("subscriptions")
@@ -104,9 +133,62 @@ export default function SuperAdminTenantDetail() {
         .order("created_at", { ascending: false })
         .limit(1);
       setSub((subs?.[0] as Sub) || null);
+    } else {
+      setSub(null);
     }
     setLoading(false);
   };
+
+  const assignPlan = async () => {
+    if (!biz || !assigningPlanId) return;
+    const plan = plans.find((p) => p.id === assigningPlanId);
+    if (!plan) return;
+    const ownerId = biz.owner_id || users.find((u) => u.role === "admin")?.user_id;
+    if (!ownerId) {
+      toast.error("This tenant has no owner/admin user to attach a subscription to.");
+      return;
+    }
+    setActing("assign");
+    try {
+      const productKey = plan.paddle_product_id || plan.id;
+      const periodEnd = new Date();
+      periodEnd.setDate(periodEnd.getDate() + 30);
+
+      if (sub) {
+        const { error } = await supabase
+          .from("subscriptions")
+          .update({
+            status: "active",
+            cancel_at_period_end: false,
+            product_id: productKey,
+            plan_code: plan.name,
+            current_period_start: new Date().toISOString(),
+            current_period_end: periodEnd.toISOString(),
+          })
+          .eq("id", sub.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("subscriptions").insert({
+          user_id: ownerId,
+          status: "active",
+          environment: "live",
+          product_id: productKey,
+          plan_code: plan.name,
+          current_period_start: new Date().toISOString(),
+          current_period_end: periodEnd.toISOString(),
+        });
+        if (error) throw error;
+      }
+      toast.success(`Plan "${plan.name}" assigned. Subscription is now active.`);
+      setAssigningPlanId("");
+      await fetchAll();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to assign plan");
+    } finally {
+      setActing(null);
+    }
+  };
+
 
   const currentPlan: Plan | null = (() => {
     if (!sub) return plans[0] ?? null;
