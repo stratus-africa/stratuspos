@@ -70,13 +70,26 @@ export function SubscriptionTab() {
     openCheckout({ packageId, interval: billingInterval });
   };
 
+  const extractFnError = async (error: any, fallback: string) => {
+    let msg = error?.message || fallback;
+    const ctx: any = error?.context;
+    if (ctx && typeof ctx.json === "function") {
+      try {
+        const body = await ctx.json();
+        if (body?.error) msg = body.error;
+      } catch { /* ignore */ }
+    }
+    return msg;
+  };
+
   const handleManageBilling = async () => {
     setPortalLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("paystack-manage-subscription", {
         body: {},
       });
-      if (error || !data?.url) throw new Error(error?.message || data?.error || "Could not open portal");
+      if (error) throw new Error(await extractFnError(error, "Could not open portal"));
+      if (!data?.url) throw new Error(data?.error || "Could not open portal");
       window.open(data.url, "_blank");
     } catch (e: any) {
       toast.error(e.message || "Failed to open billing portal");
@@ -92,7 +105,8 @@ export function SubscriptionTab() {
       const { data, error } = await supabase.functions.invoke("paystack-manage-subscription", {
         body: { action: "cancel" },
       });
-      if (error || !data?.ok) throw new Error(error?.message || data?.error || "Could not cancel");
+      if (error) throw new Error(await extractFnError(error, "Could not cancel"));
+      if (!data?.ok) throw new Error(data?.error || "Could not cancel");
       toast.success("Subscription set to cancel at period end");
     } catch (e: any) {
       toast.error(e.message || "Failed to cancel");

@@ -358,19 +358,32 @@ const BusinessStep = () => {
       return;
     }
     // Persist the chosen plan as a trialing subscription so the tenant inherits its features.
+    // Guard against duplicates if the user retries / refreshes signup by checking for an
+    // existing row keyed on (user_id, product_id) and updating it in place.
     if (selectedPlanId && user) {
       const plan = plans.find(p => p.id === selectedPlanId);
       const trialDays = Math.max(0, plan?.trial_days ?? 14);
       const now = new Date();
       const trialEnd = new Date(now.getTime() + trialDays * 86400000);
-      await supabase.from("subscriptions").insert({
+      const payload = {
         user_id: user.id,
         product_id: selectedPlanId,
         status: trialDays > 0 ? "trialing" : "active",
         current_period_start: now.toISOString(),
         current_period_end: trialEnd.toISOString(),
         environment: "test",
-      } as any);
+      };
+      const { data: existing } = await supabase
+        .from("subscriptions")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("product_id", selectedPlanId)
+        .maybeSingle();
+      if (existing?.id) {
+        await supabase.from("subscriptions").update(payload as any).eq("id", existing.id);
+      } else {
+        await supabase.from("subscriptions").insert(payload as any);
+      }
     }
     toast.success("Business created successfully!");
     setIsSubmitting(false);
