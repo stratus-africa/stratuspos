@@ -37,6 +37,7 @@ const SuperAdminPackages = lazy(() => import("./pages/super-admin/SuperAdminPack
 const SuperAdminPackageEdit = lazy(() => import("./pages/super-admin/SuperAdminPackageEdit"));
 const SuperAdminLanding = lazy(() => import("./pages/super-admin/SuperAdminLanding"));
 const SuperAdminTenantDetail = lazy(() => import("./pages/super-admin/SuperAdminTenantDetail"));
+const SuperAdminTenantEdit = lazy(() => import("./pages/super-admin/SuperAdminTenantEdit"));
 const SuperAdminSubscriptions = lazy(() => import("./pages/super-admin/SuperAdminSubscriptions"));
 
 const queryClient = new QueryClient({
@@ -78,6 +79,7 @@ const SuperAdminRoutes = () => {
           <Route path="/" element={<SuperAdminDashboard />} />
           <Route path="/businesses" element={<SuperAdminBusinesses />} />
           <Route path="/businesses/:id" element={<SuperAdminTenantDetail />} />
+          <Route path="/businesses/:id/edit" element={<SuperAdminTenantEdit />} />
           <Route path="/subscriptions" element={<SuperAdminSubscriptions />} />
           <Route path="/users" element={<SuperAdminUsers />} />
           <Route path="/packages" element={<SuperAdminPackages />} />
@@ -113,7 +115,7 @@ const ProtectedRoutes = () => {
   const { needsOnboarding, loading: bizLoading, hasAccess, userRole, isSuspended } = useBusiness();
 
   if (authLoading || bizLoading) return <PageLoader />;
-  if (!user) return <Navigate to="/onboarding" replace />;
+  if (!user) return <Navigate to="/landing" replace />;
   if (isSuspended) return <BusinessSuspended />;
   if (needsOnboarding) return <Navigate to="/onboarding" replace />;
 
