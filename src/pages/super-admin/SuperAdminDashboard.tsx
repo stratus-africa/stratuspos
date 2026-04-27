@@ -1,411 +1,353 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-import { Card } from "@/components/ui/card";
 import {
-  Building2,
-  CheckCircle2,
-  Tag,
-  PieChart as PieChartIcon,
-  ArrowRight,
-  CalendarDays,
-  TrendingUp,
-  BarChart2,
-  Zap,
-  Plus,
-  CreditCard,
-  ExternalLink,
-} from "lucide-react";
-import { format, subMonths, startOfMonth } from "date-fns";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
+import { format, startOfMonth, subMonths } from "date-fns";
+import {
+  DollarSign, RefreshCcw, FileText, Percent, CheckCircle2, Clock, XCircle, RotateCcw,
+  TrendingUp, PieChart as PieChartIcon, Loader2,
+} from "lucide-react";
 
-interface PlatformStats {
-  totalTenants: number;
-  activeTrial: number;
-  activePlans: number;
-  totalSubscriptions: number;
-  activeSubs: number;
-  trialSubs: number;
-}
+type Sub = {
+  id: string;
+  status: string;
+  user_id: string;
+  product_id: string | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
 
-interface MonthlyTenants {
-  month: string;
-  tenants: number;
-}
-
-interface PlanBucket {
+type Pkg = {
+  id: string;
   name: string;
-  count: number;
-}
+  monthly_price_kes: number;
+  yearly_price_kes: number;
+  paddle_product_id: string | null;
+};
+
+const fmtKes = (n: number) =>
+  `KES ${new Intl.NumberFormat("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0)}`;
+
+const STATUS_BADGE: Record<string, string> = {
+  active: "bg-emerald-50 text-emerald-700",
+  trialing: "bg-blue-50 text-blue-700",
+  past_due: "bg-amber-50 text-amber-700",
+  canceled: "bg-rose-50 text-rose-700",
+  paused: "bg-muted text-muted-foreground",
+};
+
+const STATUS_DOT: Record<string, string> = {
+  active: "bg-emerald-500",
+  trialing: "bg-blue-500",
+  past_due: "bg-amber-500",
+  canceled: "bg-rose-500",
+  paused: "bg-muted-foreground",
+};
 
 export default function SuperAdminDashboard() {
-  const { user } = useAuth();
-  const [stats, setStats] = useState<PlatformStats>({
-    totalTenants: 0,
-    activeTrial: 0,
-    activePlans: 0,
-    totalSubscriptions: 0,
-    activeSubs: 0,
-    trialSubs: 0,
-  });
-  const [tenantsTrend, setTenantsTrend] = useState<MonthlyTenants[]>([]);
-  const [planBuckets, setPlanBuckets] = useState<PlanBucket[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const userName = (user?.user_metadata as any)?.full_name || "Super Admin";
-  const greeting = (() => {
-    const h = new Date().getHours();
-    if (h < 12) return "Good morning";
-    if (h < 18) return "Good afternoon";
-    return "Good evening";
-  })();
+  const [subs, setSubs] = useState<Sub[]>([]);
+  const [packages, setPackages] = useState<Pkg[]>([]);
 
   useEffect(() => {
-    const fetchAll = async () => {
-      const [bizRes, packagesRes, subsRes, allBizRes] = await Promise.all([
-        supabase.from("businesses").select("id", { count: "exact", head: true }).eq("is_active", true),
-        supabase.from("subscription_packages").select("id", { count: "exact", head: true }).eq("is_active", true),
-        supabase.from("subscriptions").select("status, plan_code"),
-        supabase.from("businesses").select("id, created_at"),
+    (async () => {
+      const [subsRes, pkgRes] = await Promise.all([
+        supabase
+          .from("subscriptions")
+          .select("id,status,user_id,product_id,current_period_start,current_period_end,created_at,updated_at")
+          .order("created_at", { ascending: false }),
+        supabase.from("subscription_packages").select("id,name,monthly_price_kes,yearly_price_kes,paddle_product_id"),
       ]);
-
-      const subs = subsRes.data || [];
-      const activeSubs = subs.filter((s) => s.status === "active").length;
-      const trialSubs = subs.filter((s) => s.status === "trialing").length;
-
-      setStats({
-        totalTenants: bizRes.count || 0,
-        activeTrial: activeSubs + trialSubs,
-        activePlans: packagesRes.count || 0,
-        totalSubscriptions: subs.length,
-        activeSubs,
-        trialSubs,
-      });
-
-      // Monthly tenants for last 6 months
-      const monthMap = new Map<string, number>();
-      for (let i = 5; i >= 0; i--) {
-        const m = format(startOfMonth(subMonths(new Date(), i)), "yyyy-MM");
-        monthMap.set(m, 0);
-      }
-      (allBizRes.data || []).forEach((b) => {
-        const m = format(new Date(b.created_at), "yyyy-MM");
-        if (monthMap.has(m)) monthMap.set(m, (monthMap.get(m) || 0) + 1);
-      });
-      // Cumulative
-      let cum = 0;
-      const trend = Array.from(monthMap.entries()).map(([month, n]) => {
-        cum += n;
-        return { month, tenants: cum };
-      });
-      setTenantsTrend(trend);
-
-      // Subscriptions by plan (top 5)
-      const planMap = new Map<string, number>();
-      subs.forEach((s) => {
-        const key = s.plan_code || "Unassigned";
-        planMap.set(key, (planMap.get(key) || 0) + 1);
-      });
-      const buckets = Array.from(planMap.entries())
-        .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5);
-      setPlanBuckets(buckets);
-
+      setSubs((subsRes.data || []) as Sub[]);
+      setPackages((pkgRes.data || []) as Pkg[]);
       setLoading(false);
-    };
-    fetchAll();
+    })();
   }, []);
+
+  const planByProduct = useMemo(() => {
+    const m = new Map<string, Pkg>();
+    packages.forEach((p) => p.paddle_product_id && m.set(p.paddle_product_id, p));
+    return m;
+  }, [packages]);
+
+  const planFor = (s: Sub): Pkg | undefined => (s.product_id ? planByProduct.get(s.product_id) : undefined);
+  const amountFor = (s: Sub) => Number(planFor(s)?.monthly_price_kes ?? 0);
+
+  const totals = useMemo(() => {
+    let totalRevenue = 0;
+    let monthlyRevenue = 0;
+    let paid = 0,
+      pending = 0,
+      failed = 0,
+      refunded = 0;
+
+    const now = new Date();
+    const startOfThisMonth = startOfMonth(now);
+
+    subs.forEach((s) => {
+      const amt = amountFor(s);
+      if (s.status === "active" || s.status === "trialing") {
+        totalRevenue += amt;
+        paid += 1;
+        const created = s.created_at ? new Date(s.created_at) : null;
+        if (created && created >= startOfThisMonth) monthlyRevenue += amt;
+      } else if (s.status === "past_due") {
+        pending += 1;
+      } else if (s.status === "canceled") {
+        failed += 1;
+      } else if (s.status === "paused") {
+        refunded += 1;
+      }
+    });
+
+    return {
+      totalRevenue,
+      monthlyRevenue,
+      totalTransactions: subs.length,
+      totalTax: 0,
+      paid,
+      pending,
+      failed,
+      refunded,
+    };
+  }, [subs, packages]);
+
+  const revenueByMonth = useMemo(() => {
+    const months: { month: string; revenue: number }[] = [];
+    const map = new Map<string, number>();
+    for (let i = 11; i >= 0; i--) {
+      const m = format(startOfMonth(subMonths(new Date(), i)), "yyyy-MM");
+      map.set(m, 0);
+    }
+    subs.forEach((s) => {
+      if (!s.created_at) return;
+      const m = format(new Date(s.created_at), "yyyy-MM");
+      if (map.has(m)) map.set(m, (map.get(m) || 0) + amountFor(s));
+    });
+    map.forEach((revenue, key) => {
+      months.push({ month: format(new Date(key + "-01"), "MMM yyyy"), revenue });
+    });
+    return months;
+  }, [subs, packages]);
+
+  const planBreakdown = useMemo(() => {
+    const acc = new Map<string, { count: number; revenue: number }>();
+    subs.forEach((s) => {
+      const p = planFor(s);
+      const name = p?.name || "Unassigned";
+      const cur = acc.get(name) || { count: 0, revenue: 0 };
+      cur.count += 1;
+      cur.revenue += amountFor(s);
+      acc.set(name, cur);
+    });
+    const total = totals.totalTransactions || 1;
+    return Array.from(acc.entries())
+      .map(([name, v]) => ({ name, count: v.count, revenue: v.revenue, share: (v.count / total) * 100 }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 4);
+  }, [subs, packages, totals.totalTransactions]);
+
+  const recent = subs.slice(0, 5);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500" />
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
-  const statCards = [
+  const stats = [
     {
-      label: "Total Tenants",
-      value: stats.totalTenants,
-      icon: Building2,
-      iconBg: "bg-indigo-50",
-      iconColor: "text-indigo-500",
-      link: "/super-admin/businesses",
-      linkLabel: "View all tenants",
+      label: "Total Revenue",
+      value: fmtKes(totals.totalRevenue),
+      icon: DollarSign,
+      iconBg: "bg-emerald-600",
     },
     {
-      label: "Active / Trial",
-      value: stats.activeTrial,
-      icon: CheckCircle2,
-      iconBg: "bg-emerald-50",
-      iconColor: "text-emerald-500",
-      link: "/super-admin/subscriptions",
-      linkLabel: "View subscriptions",
+      label: "Monthly Revenue",
+      value: fmtKes(totals.monthlyRevenue),
+      icon: RefreshCcw,
+      iconBg: "bg-emerald-500",
     },
     {
-      label: "Active Plans",
-      value: stats.activePlans,
-      icon: Tag,
-      iconBg: "bg-blue-50",
-      iconColor: "text-blue-500",
-      link: "/super-admin/packages",
-      linkLabel: "Manage plans",
+      label: "Total Transactions",
+      value: String(totals.totalTransactions),
+      icon: FileText,
+      iconBg: "bg-blue-500",
     },
     {
-      label: "Total Subscriptions",
-      value: stats.totalSubscriptions,
-      icon: PieChartIcon,
-      iconBg: "bg-amber-50",
-      iconColor: "text-amber-500",
-      link: "/super-admin/subscriptions",
-      linkLabel: `${stats.activeSubs} active, ${stats.trialSubs} trial`,
+      label: "Total Tax",
+      value: fmtKes(totals.totalTax),
+      icon: Percent,
+      iconBg: "bg-amber-500",
     },
   ];
 
-  const donutData = [
-    { name: "Active", value: stats.activeSubs || 0 },
-    { name: "Trial", value: stats.trialSubs || 0 },
-  ];
-  const COLORS = ["hsl(160 84% 39%)", "hsl(217 91% 60%)"];
-  const totalDonut = donutData.reduce((s, d) => s + d.value, 0);
-
-  const quickActions = [
-    {
-      title: "Manage tenants",
-      description: "View and manage all tenants",
-      icon: Building2,
-      iconBg: "bg-emerald-50",
-      iconColor: "text-emerald-500",
-      link: "/super-admin/businesses",
-    },
-    {
-      title: "Create new plan",
-      description: "Add a new billing plan",
-      icon: Plus,
-      iconBg: "bg-emerald-50",
-      iconColor: "text-emerald-500",
-      link: "/super-admin/packages",
-    },
-    {
-      title: "Subscriptions",
-      description: "Monitor all subscriptions",
-      icon: CreditCard,
-      iconBg: "bg-blue-50",
-      iconColor: "text-blue-500",
-      link: "/super-admin/subscriptions",
-    },
-    {
-      title: "Visit landing page",
-      description: "Preview your public site",
-      icon: ExternalLink,
-      iconBg: "bg-amber-50",
-      iconColor: "text-amber-500",
-      link: "/landing",
-    },
+  const statusCards = [
+    { label: "Paid", value: totals.paid, icon: CheckCircle2, color: "text-emerald-600", iconBg: "bg-emerald-100" },
+    { label: "Pending", value: totals.pending, icon: Clock, color: "text-amber-600", iconBg: "bg-amber-100" },
+    { label: "Failed", value: totals.failed, icon: XCircle, color: "text-rose-600", iconBg: "bg-rose-100" },
+    { label: "Refunded", value: totals.refunded, icon: RotateCcw, color: "text-blue-600", iconBg: "bg-blue-100" },
   ];
 
   return (
     <div className="space-y-5">
-      {/* Greeting */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-            {greeting}, {userName}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Welcome back! Here's an overview of your SaaS platform.
-          </p>
-        </div>
-        <div className="inline-flex items-center gap-2 h-8 px-3 rounded-full bg-white border border-border text-xs font-medium text-foreground/70">
-          <CalendarDays className="h-3.5 w-3.5 text-emerald-500" />
-          {format(new Date(), "EEEE, MMM d, yyyy")}
-        </div>
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Payments Overview</h1>
+        <p className="text-sm text-muted-foreground mt-1">Revenue, transactions, and payment analytics.</p>
       </div>
 
-      {/* Stat Cards */}
+      {/* Top stats */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {statCards.map((card) => (
-          <Card key={card.label} className="p-5 bg-white border-border shadow-none hover:shadow-sm transition-shadow">
-            <div className={`h-10 w-10 rounded-lg ${card.iconBg} flex items-center justify-center mb-4`}>
-              <card.icon className={`h-5 w-5 ${card.iconColor}`} />
+        {stats.map((s) => (
+          <div key={s.label} className="bg-white border border-border rounded-xl p-5 flex items-center gap-4">
+            <div className={`h-11 w-11 rounded-lg ${s.iconBg} flex items-center justify-center text-white shrink-0`}>
+              <s.icon className="h-5 w-5" />
             </div>
-            <div className="text-3xl font-bold tracking-tight">{card.value}</div>
-            <div className="text-[11px] uppercase tracking-wider text-muted-foreground mt-1 font-medium">
-              {card.label}
+            <div className="min-w-0">
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">{s.label}</div>
+              <div className="text-2xl font-bold tracking-tight truncate">{s.value}</div>
             </div>
-            <div className="border-t border-border mt-4 pt-3">
-              <Link
-                to={card.link}
-                className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700"
-              >
-                {card.linkLabel}
-                <ArrowRight className="h-3 w-3" />
-              </Link>
+          </div>
+        ))}
+      </div>
+
+      {/* Status cards */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        {statusCards.map((s) => (
+          <div key={s.label} className="bg-white border border-border rounded-xl p-5 flex items-center justify-between">
+            <div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">{s.label}</div>
+              <div className={`text-3xl font-bold tracking-tight ${s.color}`}>{s.value}</div>
             </div>
-          </Card>
+            <div className={`h-9 w-9 rounded-full ${s.iconBg} flex items-center justify-center`}>
+              <s.icon className={`h-4 w-4 ${s.color}`} />
+            </div>
+          </div>
         ))}
       </div>
 
       {/* Charts row */}
       <div className="grid gap-4 lg:grid-cols-3">
-        {/* Tenants trend */}
-        <Card className="lg:col-span-2 p-5 bg-white border-border shadow-none">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-emerald-500" />
-              <h3 className="text-sm font-semibold">Tenants created (last 6 months)</h3>
-            </div>
-            <span className="text-[10px] px-2 py-1 rounded-full bg-muted text-muted-foreground font-medium">
-              Last 6 months
-            </span>
+        <div className="lg:col-span-2 bg-white border border-border rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <TrendingUp className="h-4 w-4 text-emerald-500" />
+            <h3 className="text-sm font-semibold">Revenue (Last 12 Months)</h3>
           </div>
-          <div className="h-[260px]">
+          <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={tenantsTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <AreaChart data={revenueByMonth} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="tenantGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="hsl(160 84% 39%)" stopOpacity={0.25} />
+                  <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="hsl(160 84% 39%)" stopOpacity={0.3} />
                     <stop offset="100%" stopColor="hsl(160 84% 39%)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="month" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
-                <Tooltip
-                  contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))" }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="tenants"
-                  stroke="hsl(160 84% 39%)"
-                  strokeWidth={2.5}
-                  fill="url(#tenantGrad)"
-                  dot={{ r: 3, fill: "hsl(160 84% 39%)" }}
-                  activeDot={{ r: 5 }}
-                />
+                <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))" }} formatter={(v: number) => fmtKes(v)} />
+                <Area type="monotone" dataKey="revenue" stroke="hsl(160 84% 39%)" strokeWidth={2.5} fill="url(#revGrad)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
-        </Card>
+        </div>
 
-        {/* Subscription status donut */}
-        <Card className="p-5 bg-white border-border shadow-none">
+        <div className="bg-white border border-border rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <PieChartIcon className="h-4 w-4 text-emerald-500" />
-            <h3 className="text-sm font-semibold">Subscription status</h3>
+            <h3 className="text-sm font-semibold">By Plan</h3>
           </div>
-          <div className="h-[260px] relative">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={totalDonut > 0 ? donutData : [{ name: "Empty", value: 1 }]}
-                  innerRadius={70}
-                  outerRadius={100}
-                  paddingAngle={totalDonut > 0 ? 2 : 0}
-                  dataKey="value"
-                  stroke="none"
-                >
-                  {(totalDonut > 0 ? donutData : [{ name: "Empty", value: 1 }]).map((_, i) => (
-                    <Cell key={i} fill={totalDonut > 0 ? COLORS[i % COLORS.length] : "hsl(var(--muted))"} />
-                  ))}
-                </Pie>
-                {totalDonut > 0 && (
-                  <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))" }} />
-                )}
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-xs text-muted-foreground">Total</span>
-              <span className="text-2xl font-bold">{totalDonut}</span>
-            </div>
-          </div>
-          <div className="flex items-center justify-center gap-4 text-xs mt-2">
-            <div className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              <span>Active</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-blue-500" />
-              <span>Trial</span>
-            </div>
-          </div>
-        </Card>
-      </div>
-
-      {/* Bottom row */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {/* Subscriptions by plan */}
-        <Card className="p-5 bg-white border-border shadow-none">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <BarChart2 className="h-4 w-4 text-emerald-500" />
-              <h3 className="text-sm font-semibold">Subscriptions by plan (top 5)</h3>
-            </div>
-            <span className="text-[10px] px-2 py-1 rounded-full bg-muted text-muted-foreground font-medium">
-              Top 5
-            </span>
-          </div>
-          <div className="h-[260px]">
-            {planBuckets.length === 0 ? (
-              <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
-                No subscriptions yet
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={planBuckets} layout="vertical" margin={{ left: 10, right: 30 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
-                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fill: "hsl(var(--foreground))" }} width={100} />
-                  <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))" }} />
-                  <Bar dataKey="count" fill="hsl(160 84% 45%)" radius={[0, 6, 6, 0]} barSize={32}>
-                    {planBuckets.map((entry, i) => (
-                      <Cell key={i} fill="hsl(160 70% 50%)" />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+          <div className="space-y-4">
+            {planBreakdown.length === 0 && (
+              <p className="text-sm text-muted-foreground">No subscriptions yet.</p>
             )}
-          </div>
-        </Card>
-
-        {/* Quick actions */}
-        <Card className="p-5 bg-white border-border shadow-none">
-          <div className="flex items-center gap-2 mb-4">
-            <Zap className="h-4 w-4 text-emerald-500" />
-            <h3 className="text-sm font-semibold">Quick actions</h3>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            {quickActions.map((qa) => (
-              <Link
-                key={qa.title}
-                to={qa.link}
-                className="group p-4 rounded-lg border border-border hover:border-emerald-200 hover:bg-emerald-50/30 transition-all flex flex-col items-center text-center"
-              >
-                <div className={`h-10 w-10 rounded-lg ${qa.iconBg} flex items-center justify-center mb-2`}>
-                  <qa.icon className={`h-5 w-5 ${qa.iconColor}`} />
+            {planBreakdown.map((p) => (
+              <div key={p.name}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-sm font-medium">{p.name}</p>
+                  <p className="text-sm font-semibold">{fmtKes(p.revenue)}</p>
                 </div>
-                <div className="text-sm font-semibold">{qa.title}</div>
-                <div className="text-[11px] text-muted-foreground mt-0.5">{qa.description}</div>
-              </Link>
+                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                  <div className="h-full bg-emerald-500" style={{ width: `${Math.max(2, p.share)}%` }} />
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  {p.count} transaction{p.count === 1 ? "" : "s"} · {p.share.toFixed(1)}%
+                </p>
+              </div>
             ))}
           </div>
-        </Card>
+        </div>
+      </div>
+
+      {/* Recent payments */}
+      <div className="bg-white border border-border rounded-xl">
+        <div className="p-5 flex items-center justify-between border-b border-border">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4 text-emerald-500" />
+            <h3 className="text-sm font-semibold">Recent Payments</h3>
+          </div>
+          <Link
+            to="/super-admin/subscriptions"
+            className="text-xs px-3 py-1.5 rounded-md border border-border hover:bg-muted font-medium"
+          >
+            View all
+          </Link>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/30">
+              <tr className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                <th className="text-left font-semibold py-2.5 px-5">Reference</th>
+                <th className="text-left font-semibold py-2.5 px-5">Tenant</th>
+                <th className="text-left font-semibold py-2.5 px-5">Plan</th>
+                <th className="text-left font-semibold py-2.5 px-5">Amount</th>
+                <th className="text-left font-semibold py-2.5 px-5">Status</th>
+                <th className="text-left font-semibold py-2.5 px-5">Date</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {recent.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-muted-foreground">No payments yet.</td>
+                </tr>
+              )}
+              {recent.map((s, i) => {
+                const p = planFor(s);
+                const ref = `SUB-${(s.id || "").slice(0, 8).toUpperCase()}`;
+                return (
+                  <tr key={s.id} className="hover:bg-muted/20">
+                    <td className="py-3 px-5">
+                      <Link to="/super-admin/subscriptions" className="text-emerald-700 hover:underline font-medium">
+                        {ref}
+                      </Link>
+                    </td>
+                    <td className="py-3 px-5 font-mono text-xs text-muted-foreground truncate max-w-[260px]">
+                      {s.user_id}
+                    </td>
+                    <td className="py-3 px-5">{p?.name || "—"}</td>
+                    <td className="py-3 px-5 font-semibold">{fmtKes(amountFor(s))}</td>
+                    <td className="py-3 px-5">
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE[s.status] || "bg-muted text-muted-foreground"}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[s.status] || "bg-muted-foreground"}`} />
+                        {s.status}
+                      </span>
+                    </td>
+                    <td className="py-3 px-5 text-muted-foreground">
+                      {s.created_at ? format(new Date(s.created_at), "MMM dd, yyyy") : "—"}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

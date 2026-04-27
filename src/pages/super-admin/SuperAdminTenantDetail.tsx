@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import {
-  ChevronRight, Pencil, PauseCircle, XCircle, Trash2, Info, Globe, Link as LinkIcon,
-  Plus, Package, Users as UsersIcon, Warehouse, ShoppingCart, Truck, CheckCircle2, Loader2,
+  ChevronRight, Pencil, PauseCircle, XCircle, Trash2, Info, Users as UsersIcon,
+  Package, Warehouse, ShoppingCart, Truck, CheckCircle2, Loader2,
 } from "lucide-react";
 
 type Biz = {
@@ -19,6 +19,7 @@ type Biz = {
   created_at: string;
   updated_at: string;
   currency: string;
+  owner_id: string | null;
 };
 
 type Sub = {
@@ -52,6 +53,13 @@ const STATUS_BADGE: Record<string, string> = {
   suspended: "bg-orange-50 text-orange-700 border border-orange-200",
 };
 
+type TenantUser = {
+  user_id: string;
+  role: string;
+  email: string | null;
+  full_name: string | null;
+};
+
 export default function SuperAdminTenantDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -61,7 +69,9 @@ export default function SuperAdminTenantDetail() {
   const [sub, setSub] = useState<Sub | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [features, setFeatures] = useState<Feature[]>([]);
+  const [users, setUsers] = useState<TenantUser[]>([]);
   const [counts, setCounts] = useState({ products: 0, users: 0, locations: 0, customers: 0, suppliers: 0 });
+  const [assigningPlanId, setAssigningPlanId] = useState<string>("");
 
   useEffect(() => {
     if (!id) return;
@@ -72,30 +82,50 @@ export default function SuperAdminTenantDetail() {
   const fetchAll = async () => {
     if (!id) return;
     setLoading(true);
-    const [bizRes, plansRes, featRes, prodCnt, userCnt, locCnt, custCnt, suppCnt, ownerRow] = await Promise.all([
+    const [bizRes, plansRes, featRes, prodCnt, locCnt, custCnt, suppCnt, rolesRes] = await Promise.all([
       supabase.from("businesses").select("*").eq("id", id).maybeSingle(),
       supabase.from("subscription_packages").select("*").eq("is_active", true).order("sort_order"),
       supabase.from("package_features").select("*"),
       supabase.from("products").select("id", { count: "exact", head: true }).eq("business_id", id),
-      supabase.from("user_roles").select("id", { count: "exact", head: true }).eq("business_id", id),
       supabase.from("locations").select("id", { count: "exact", head: true }).eq("business_id", id),
       supabase.from("customers").select("id", { count: "exact", head: true }).eq("business_id", id),
       supabase.from("suppliers").select("id", { count: "exact", head: true }).eq("business_id", id),
-      supabase.from("user_roles").select("user_id").eq("business_id", id).eq("role", "admin").limit(1).maybeSingle(),
+      supabase.from("user_roles").select("user_id,role").eq("business_id", id),
     ]);
 
     setBiz(bizRes.data as Biz | null);
     setPlans((plansRes.data || []) as Plan[]);
     setFeatures((featRes.data || []) as Feature[]);
+
+    const roleRows = (rolesRes.data || []) as { user_id: string; role: string }[];
+    const userIds = Array.from(new Set(roleRows.map((r) => r.user_id)));
+    let profileMap: Record<string, { email: string | null; full_name: string | null }> = {};
+    if (userIds.length > 0) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id,email,full_name")
+        .in("id", userIds);
+      (profs || []).forEach((p: any) => {
+        profileMap[p.id] = { email: p.email, full_name: p.full_name };
+      });
+    }
+    const tenantUsers: TenantUser[] = roleRows.map((r) => ({
+      user_id: r.user_id,
+      role: r.role,
+      email: profileMap[r.user_id]?.email ?? null,
+      full_name: profileMap[r.user_id]?.full_name ?? null,
+    }));
+    setUsers(tenantUsers);
+
     setCounts({
       products: prodCnt.count || 0,
-      users: userCnt.count || 0,
+      users: userIds.length,
       locations: locCnt.count || 0,
       customers: custCnt.count || 0,
       suppliers: suppCnt.count || 0,
     });
 
-    const ownerId = (bizRes.data as any)?.owner_id || ownerRow.data?.user_id;
+    const ownerId = (bizRes.data as any)?.owner_id || roleRows.find((r) => r.role === "admin")?.user_id;
     if (ownerId) {
       const { data: subs } = await supabase
         .from("subscriptions")
@@ -104,9 +134,62 @@ export default function SuperAdminTenantDetail() {
         .order("created_at", { ascending: false })
         .limit(1);
       setSub((subs?.[0] as Sub) || null);
+    } else {
+      setSub(null);
     }
     setLoading(false);
   };
+
+  const assignPlan = async () => {
+    if (!biz || !assigningPlanId) return;
+    const plan = plans.find((p) => p.id === assigningPlanId);
+    if (!plan) return;
+    const ownerId = biz.owner_id || users.find((u) => u.role === "admin")?.user_id;
+    if (!ownerId) {
+      toast.error("This tenant has no owner/admin user to attach a subscription to.");
+      return;
+    }
+    setActing("assign");
+    try {
+      const productKey = plan.paddle_product_id || plan.id;
+      const periodEnd = new Date();
+      periodEnd.setDate(periodEnd.getDate() + 30);
+
+      if (sub) {
+        const { error } = await supabase
+          .from("subscriptions")
+          .update({
+            status: "active",
+            cancel_at_period_end: false,
+            product_id: productKey,
+            plan_code: plan.name,
+            current_period_start: new Date().toISOString(),
+            current_period_end: periodEnd.toISOString(),
+          })
+          .eq("id", sub.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("subscriptions").insert({
+          user_id: ownerId,
+          status: "active",
+          environment: "live",
+          product_id: productKey,
+          plan_code: plan.name,
+          current_period_start: new Date().toISOString(),
+          current_period_end: periodEnd.toISOString(),
+        });
+        if (error) throw error;
+      }
+      toast.success(`Plan "${plan.name}" assigned. Subscription is now active.`);
+      setAssigningPlanId("");
+      await fetchAll();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to assign plan");
+    } finally {
+      setActing(null);
+    }
+  };
+
 
   const currentPlan: Plan | null = (() => {
     if (!sub) return plans[0] ?? null;
@@ -199,7 +282,11 @@ export default function SuperAdminTenantDetail() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white h-9">
+          <Button
+            size="sm"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white h-9"
+            onClick={() => navigate(`/super-admin/businesses/${biz.id}/edit`)}
+          >
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>
           {biz.is_active ? (
@@ -305,43 +392,83 @@ export default function SuperAdminTenantDetail() {
 
         {/* Right column - 1/3 */}
         <div className="space-y-5">
+          {/* Assign / change plan */}
+          <section className="bg-white border border-border rounded-xl p-5">
+            <div className="flex items-center gap-2 pb-3 border-b border-border">
+              <Package className="h-4 w-4 text-muted-foreground" />
+              <h3 className="font-semibold text-sm">Assign plan</h3>
+            </div>
+            <div className="pt-4 space-y-3">
+              <p className="text-xs text-muted-foreground">
+                Assigning a plan activates the subscription. Cancelled subscriptions will be reactivated.
+              </p>
+              <Select value={assigningPlanId} onValueChange={setAssigningPlanId}>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Choose a plan…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {plans.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name} — KES {Number(p.monthly_price_kes || 0).toLocaleString("en-KE")}/mo
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={assignPlan}
+                disabled={!assigningPlanId || acting === "assign"}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                {acting === "assign" ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />}
+                Assign & activate
+              </Button>
+            </div>
+          </section>
+
+          {/* Users */}
           <section className="bg-white border border-border rounded-xl p-5">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2">
-                <Globe className="h-4 w-4 text-muted-foreground" />
-                <h3 className="font-semibold text-sm">Domains</h3>
+                <UsersIcon className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-semibold text-sm">Users</h3>
               </div>
-              <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">1 domain</Badge>
+              <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
+                {users.length} user{users.length === 1 ? "" : "s"}
+              </Badge>
             </div>
 
-            <div className="pt-4 space-y-3">
-              <div className="rounded-lg border border-border p-3 flex items-center justify-between">
-                <div className="flex items-start gap-2 min-w-0">
-                  <LinkIcon className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {biz.name.toLowerCase().replace(/\s+/g, "")}.stratuspos.app
-                    </p>
-                    <p className="text-xs text-muted-foreground">Subdomain: {biz.name.toLowerCase().replace(/\s+/g, "").slice(0, 12)}</p>
+            <div className="pt-4 space-y-2">
+              {users.length === 0 ? (
+                <p className="text-sm text-muted-foreground py-4 text-center">No users for this tenant yet.</p>
+              ) : (
+                users.map((u) => (
+                  <div
+                    key={u.user_id}
+                    className="rounded-lg border border-border p-3 flex items-center justify-between gap-3"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-bold shrink-0">
+                        {(u.full_name || u.email || u.user_id).charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{u.full_name || u.email || "Unnamed user"}</p>
+                        {u.email && <p className="text-xs text-muted-foreground truncate">{u.email}</p>}
+                      </div>
+                    </div>
+                    <Badge
+                      className={
+                        u.role === "admin"
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0"
+                          : u.role === "manager"
+                          ? "bg-blue-50 text-blue-700 border border-blue-200 shrink-0"
+                          : "bg-muted text-muted-foreground border border-border shrink-0"
+                      }
+                    >
+                      {u.role}
+                    </Badge>
                   </div>
-                </div>
-                <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-                  <span className="h-1.5 w-1.5 rounded-full bg-current mr-1.5" /> Active
-                </Badge>
-              </div>
-
-              <div>
-                <Label>Add Subdomain</Label>
-                <div className="flex gap-2 mt-1.5">
-                  <div className="flex-1 flex items-center rounded-md border border-border bg-background overflow-hidden">
-                    <Input placeholder="myshop" className="border-0 focus-visible:ring-0 h-9 text-sm" />
-                    <span className="px-2.5 text-xs text-muted-foreground border-l border-border h-9 flex items-center bg-muted/40">.stratuspos.app</span>
-                  </div>
-                  <Button className="bg-emerald-600 hover:bg-emerald-700 text-white h-9">
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Add
-                  </Button>
-                </div>
-              </div>
+                ))
+              )}
             </div>
           </section>
         </div>
