@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import {
-  ChevronRight, Pencil, PauseCircle, XCircle, Trash2, Info, Globe, Link as LinkIcon,
-  Plus, Package, Users as UsersIcon, Warehouse, ShoppingCart, Truck, CheckCircle2, Loader2,
+  ChevronRight, Pencil, PauseCircle, XCircle, Trash2, Info, Users as UsersIcon,
+  Package, Warehouse, ShoppingCart, Truck, CheckCircle2, Loader2,
 } from "lucide-react";
 
 type Biz = {
