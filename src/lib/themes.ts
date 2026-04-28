@@ -82,10 +82,26 @@ function parseHSL(triplet: string): { h: number; s: number; l: number } {
   return { h, s, l };
 }
 
-export function applyTheme(_themeKey: string | undefined | null) {
-  // Theme is now fixed (emerald) to match Super Admin aesthetic.
-  // We only set the data attribute for any CSS that may target it; tokens come from index.css.
-  document.documentElement.dataset.theme = "emerald";
+export function applyTheme(themeKey: string | undefined | null) {
+  const key = (themeKey || DEFAULT_THEME) as ThemeKey;
+  const theme = THEMES[key] || THEMES[DEFAULT_THEME];
+  const root = document.documentElement;
+
+  // Core primary tokens
+  root.style.setProperty("--primary", theme.primary);
+  root.style.setProperty("--primary-glow", theme.primaryGlow);
+  root.style.setProperty("--ring", theme.primary);
+  root.style.setProperty("--table-alt-row", theme.alt);
+
+  // Sidebar active state mirrors primary
+  root.style.setProperty("--sidebar-primary", theme.primary);
+  root.style.setProperty("--sidebar-ring", theme.primary);
+  root.style.setProperty("--sidebar-accent", theme.alt);
+  // Derive a deeper foreground for sidebar-accent text from the primary hue
+  const { h, s } = parseHSL(theme.primary);
+  root.style.setProperty("--sidebar-accent-foreground", `${h} ${Math.min(s + 10, 95)}% 24%`);
+
+  root.dataset.theme = key;
 }
 
 // Business types — drives industry-specific feature gating
