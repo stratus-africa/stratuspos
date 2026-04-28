@@ -24,6 +24,7 @@ import ReceiptDialog from "@/components/pos/ReceiptDialog";
 import StartDayDialog from "@/components/pos/StartDayDialog";
 import ManagerApprovalDialog from "@/components/pos/ManagerApprovalDialog";
 import BarcodeScanner from "@/components/BarcodeScanner";
+import { CartItemRow } from "@/components/pos/CartItemRow";
 import { logAudit } from "@/lib/audit";
 import { CartItem } from "@/hooks/usePOS";
 
@@ -346,7 +347,7 @@ const POS = () => {
               ) : (
                 <div className="space-y-2">
                   {pos.cart.map((item) => (
-                    <CartItemRow key={item.product.id} item={item} onUpdate={pos.updateCartItem} onRemove={pos.removeFromCart} />
+                    <CartItemRow key={item.product.id} item={item} onUpdate={pos.updateCartItem} onRemove={pos.removeFromCart} onBeforeRemove={handleBeforeRemove} />
                   ))}
                 </div>
               )}
@@ -455,50 +456,16 @@ const POS = () => {
 
       <BarcodeScanner open={scannerOpen} onOpenChange={setScannerOpen} onDetected={handleScanned} />
 
+      <ManagerApprovalDialog
+        open={approvalOpen}
+        onOpenChange={handleApprovalClosed}
+        onApproved={handleApproved}
+        title="Approve item removal"
+        description="A manager must approve removing this item already added to the cart."
+      />
+
     </div>
   );
 };
-
-function CartItemRow({ item, onUpdate, onRemove }: { item: CartItem; onUpdate: (id: string, u: Partial<CartItem>) => void; onRemove: (id: string) => void }) {
-  const lineTotal = item.unit_price * item.quantity - item.discount;
-  const allowDecimal = item.product.allow_decimal_quantity ?? false;
-  const step = allowDecimal ? 0.01 : 1;
-  const minQty = allowDecimal ? 0.01 : 1;
-  const decrementBy = allowDecimal ? 0.5 : 1;
-  return (
-    <div className="flex items-start gap-2 p-2 rounded border bg-background">
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm truncate">{item.product.name}</p>
-        <p className="text-xs text-muted-foreground">@ KES {Number(item.unit_price).toLocaleString()}</p>
-      </div>
-      <div className="flex items-center gap-1">
-        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => onUpdate(item.product.id, { quantity: Math.max(minQty, +(item.quantity - decrementBy).toFixed(3)) })}>
-          <Minus className="h-3 w-3" />
-        </Button>
-        <Input
-          className="w-14 h-7 text-center text-sm p-0"
-          type="number"
-          min={minQty}
-          step={step}
-          value={item.quantity}
-          onChange={(e) => {
-            const v = parseFloat(e.target.value);
-            if (Number.isNaN(v)) return;
-            onUpdate(item.product.id, { quantity: Math.max(minQty, v) });
-          }}
-        />
-        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => onUpdate(item.product.id, { quantity: +(item.quantity + (allowDecimal ? 0.5 : 1)).toFixed(3) })}>
-          <Plus className="h-3 w-3" />
-        </Button>
-      </div>
-      <div className="text-right min-w-[70px]">
-        <p className="font-semibold text-sm">KES {lineTotal.toLocaleString()}</p>
-      </div>
-      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onRemove(item.product.id)}>
-        <Trash2 className="h-3 w-3 text-destructive" />
-      </Button>
-    </div>
-  );
-}
 
 export default POS;
