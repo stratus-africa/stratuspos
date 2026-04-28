@@ -179,14 +179,16 @@ export function UserManagementTab() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={isAdmin ? 4 : 3} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
+                <TableCell colSpan={isAdmin ? 5 : 4} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
               </TableRow>
             ) : members.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isAdmin ? 4 : 3} className="text-center py-8 text-muted-foreground">No team members found.</TableCell>
+                <TableCell colSpan={isAdmin ? 5 : 4} className="text-center py-8 text-muted-foreground">No team members found.</TableCell>
               </TableRow>
             ) : (
-              members.map((m) => (
+              members.map((m) => {
+                const till = tills.find((t) => t.id === m.till_id);
+                return (
                 <TableRow key={m.user_id}>
                   <TableCell className="font-medium">
                     {m.full_name || "Unnamed User"}
@@ -198,6 +200,13 @@ export function UserManagementTab() {
                     <Badge variant={roleBadgeVariant(m.role)} className="flex items-center gap-1 w-fit capitalize">
                       {roleIcon(m.role)} {m.role}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {till ? (
+                      <Badge variant="outline" className="text-xs">{till.name}</Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50">
