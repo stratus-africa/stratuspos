@@ -77,7 +77,7 @@ export function PaymentAccountsTab() {
       <CardHeader>
         <CardTitle>Payment Method Accounts</CardTitle>
         <CardDescription>
-          Define which bank account receives money for each payment method.
+          Map each payment method to a bank account. The same bank account can be selected for multiple payment methods — for example, Cash and M-Pesa can both settle into one consolidated account.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
