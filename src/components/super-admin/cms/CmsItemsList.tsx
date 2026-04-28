@@ -29,6 +29,8 @@ interface ItemsListProps<T> {
   onAdd: (item: T) => Promise<void> | void;
   onUpdate: (index: number, item: T) => Promise<void> | void;
   onDelete: (index: number) => Promise<void> | void;
+  /** Optional. When provided, enables drag-and-drop reordering. Receives the new array. */
+  onReorder?: (next: T[]) => Promise<void> | void;
   addLabel?: string;
   itemLabel?: string;
   emptyMessage?: string;
@@ -36,7 +38,7 @@ interface ItemsListProps<T> {
 
 export function CmsItemsList<T>({
   title, icon, items, columns, newItemFactory, renderEditor, validateItem,
-  onAdd, onUpdate, onDelete, addLabel = "Add Item", itemLabel = "item",
+  onAdd, onUpdate, onDelete, onReorder, addLabel = "Add Item", itemLabel = "item",
   emptyMessage = "No items yet. Click Add to create one.",
 }: ItemsListProps<T>) {
   const [editIndex, setEditIndex] = useState<number | null>(null);
@@ -44,6 +46,20 @@ export function CmsItemsList<T>({
   const [saving, setSaving] = useState(false);
   const [deleteIdx, setDeleteIdx] = useState<number | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [overIdx, setOverIdx] = useState<number | null>(null);
+
+  const handleDrop = async (target: number) => {
+    if (!onReorder || dragIdx === null || dragIdx === target) {
+      setDragIdx(null); setOverIdx(null);
+      return;
+    }
+    const next = [...items];
+    const [moved] = next.splice(dragIdx, 1);
+    next.splice(target, 0, moved);
+    setDragIdx(null); setOverIdx(null);
+    await onReorder(next);
+  };
 
   const openAdd = () => { setDraft(newItemFactory()); setEditIndex(-1); };
   const openEdit = (i: number) => { setDraft({ ...items[i] }); setEditIndex(i); };
