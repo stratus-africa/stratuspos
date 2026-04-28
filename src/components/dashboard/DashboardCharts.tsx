@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, BarChart, Bar } from "recharts";
+import { XAxis, YAxis, CartesianGrid, BarChart, Bar } from "recharts";
 import { format, parseISO } from "date-fns";
 
 const chartConfig = {
@@ -23,13 +23,13 @@ export function DashboardCharts({ salesTrend, topProducts }: DashboardChartsProp
         <CardContent>
           {salesTrend.length > 0 ? (
             <ChartContainer config={chartConfig} className="h-[250px] w-full">
-              <AreaChart data={salesTrend}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <BarChart data={salesTrend} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
                 <XAxis dataKey="date" tickFormatter={(v) => format(parseISO(v), "dd MMM")} tick={{ fontSize: 11 }} interval="preserveStartEnd" />
                 <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
                 <ChartTooltip content={<ChartTooltipContent labelFormatter={(v) => format(parseISO(v as string), "dd MMM yyyy")} />} />
-                <Area type="monotone" dataKey="total" stroke="var(--color-total)" fill="var(--color-total)" fillOpacity={0.15} strokeWidth={2} />
-              </AreaChart>
+                <Bar dataKey="total" fill="var(--color-total)" radius={[4, 4, 0, 0]} maxBarSize={28} />
+              </BarChart>
             </ChartContainer>
           ) : (
             <p className="text-sm text-muted-foreground">No sales data yet.</p>
