@@ -1715,6 +1715,36 @@ export type Database = {
           },
         ]
       }
+      tills: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          location_id: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          location_id?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          location_id?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       units: {
         Row: {
           abbreviation: string | null
@@ -1755,18 +1785,21 @@ export type Database = {
           business_id: string
           id: string
           role: Database["public"]["Enums"]["app_role"]
+          till_id: string | null
           user_id: string
         }
         Insert: {
           business_id: string
           id?: string
           role: Database["public"]["Enums"]["app_role"]
+          till_id?: string | null
           user_id: string
         }
         Update: {
           business_id?: string
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
+          till_id?: string | null
           user_id?: string
         }
         Relationships: [
