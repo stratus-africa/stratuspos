@@ -68,8 +68,17 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
             {locations.length === 0 ? (
               <p className="text-sm text-destructive">No tills configured. Ask an admin to add a location.</p>
             ) : (
-              <Select value={locationId} onValueChange={setLocationId}>
-                <SelectTrigger id="till" className="h-10">
+              <Select
+                value={locationId}
+                onValueChange={(v) => {
+                  setLocationId(v);
+                  if (v) setTillError(null);
+                }}
+              >
+                <SelectTrigger
+                  id="till"
+                  className={`h-10 ${tillError ? "border-destructive ring-1 ring-destructive/30" : ""}`}
+                >
                   <SelectValue placeholder="Select your till" />
                 </SelectTrigger>
                 <SelectContent>
@@ -79,7 +88,10 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
                 </SelectContent>
               </Select>
             )}
-            {multipleTills && (
+            {tillError && (
+              <p className="text-xs text-destructive font-medium">{tillError}</p>
+            )}
+            {multipleTills && !tillError && (
               <p className="text-xs text-muted-foreground">
                 All tills settle into the same configured cash account at end of day.
               </p>
