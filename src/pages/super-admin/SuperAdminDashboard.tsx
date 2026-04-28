@@ -6,31 +6,12 @@ import {
 } from "recharts";
 import { format, startOfMonth, subMonths } from "date-fns";
 import {
-  DollarSign, RefreshCcw, FileText, Percent, CheckCircle2, Clock, XCircle, RotateCcw,
-  TrendingUp, PieChart as PieChartIcon, Loader2,
+  Building2, Users, Tag, CreditCard, Loader2, TrendingUp, Activity, Shield,
 } from "lucide-react";
 
-type Sub = {
-  id: string;
-  status: string;
-  user_id: string;
-  product_id: string | null;
-  current_period_start: string | null;
-  current_period_end: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-};
-
-type Pkg = {
-  id: string;
-  name: string;
-  monthly_price_kes: number;
-  yearly_price_kes: number;
-  paddle_product_id: string | null;
-};
-
-const fmtKes = (n: number) =>
-  `KES ${new Intl.NumberFormat("en-KE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n || 0)}`;
+type Sub = { id: string; status: string; user_id: string; product_id: string | null; created_at: string | null };
+type Biz = { id: string; name: string; is_active: boolean; created_at: string | null };
+type Profile = { id: string; full_name: string | null; email: string | null; created_at: string };
 
 const STATUS_BADGE: Record<string, string> = {
   active: "bg-emerald-50 text-emerald-700",
@@ -40,118 +21,62 @@ const STATUS_BADGE: Record<string, string> = {
   paused: "bg-muted text-muted-foreground",
 };
 
-const STATUS_DOT: Record<string, string> = {
-  active: "bg-emerald-500",
-  trialing: "bg-blue-500",
-  past_due: "bg-amber-500",
-  canceled: "bg-rose-500",
-  paused: "bg-muted-foreground",
-};
-
 export default function SuperAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [subs, setSubs] = useState<Sub[]>([]);
-  const [packages, setPackages] = useState<Pkg[]>([]);
+  const [businesses, setBusinesses] = useState<Biz[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [packagesCount, setPackagesCount] = useState(0);
+  const [superAdminCount, setSuperAdminCount] = useState(0);
 
   useEffect(() => {
     (async () => {
-      const [subsRes, pkgRes] = await Promise.all([
-        supabase
-          .from("subscriptions")
-          .select("id,status,user_id,product_id,current_period_start,current_period_end,created_at,updated_at")
-          .order("created_at", { ascending: false }),
-        supabase.from("subscription_packages").select("id,name,monthly_price_kes,yearly_price_kes,paddle_product_id"),
+      const [subsRes, bizRes, profRes, pkgRes, saRes] = await Promise.all([
+        supabase.from("subscriptions").select("id,status,user_id,product_id,created_at").order("created_at", { ascending: false }),
+        supabase.from("businesses").select("id,name,is_active,created_at").order("created_at", { ascending: false }),
+        supabase.from("profiles").select("id,full_name,email,created_at").order("created_at", { ascending: false }),
+        supabase.from("subscription_packages").select("id", { count: "exact", head: true }),
+        supabase.from("super_admins").select("id", { count: "exact", head: true }),
       ]);
       setSubs((subsRes.data || []) as Sub[]);
-      setPackages((pkgRes.data || []) as Pkg[]);
+      setBusinesses((bizRes.data || []) as Biz[]);
+      setProfiles((profRes.data || []) as Profile[]);
+      setPackagesCount(pkgRes.count || 0);
+      setSuperAdminCount(saRes.count || 0);
       setLoading(false);
     })();
   }, []);
 
-  const planByProduct = useMemo(() => {
-    const m = new Map<string, Pkg>();
-    packages.forEach((p) => p.paddle_product_id && m.set(p.paddle_product_id, p));
-    return m;
-  }, [packages]);
-
-  const planFor = (s: Sub): Pkg | undefined => (s.product_id ? planByProduct.get(s.product_id) : undefined);
-  const amountFor = (s: Sub) => Number(planFor(s)?.monthly_price_kes ?? 0);
-
-  const totals = useMemo(() => {
-    let totalRevenue = 0;
-    let monthlyRevenue = 0;
-    let paid = 0,
-      pending = 0,
-      failed = 0,
-      refunded = 0;
-
-    const now = new Date();
-    const startOfThisMonth = startOfMonth(now);
-
-    subs.forEach((s) => {
-      const amt = amountFor(s);
-      if (s.status === "active" || s.status === "trialing") {
-        totalRevenue += amt;
-        paid += 1;
-        const created = s.created_at ? new Date(s.created_at) : null;
-        if (created && created >= startOfThisMonth) monthlyRevenue += amt;
-      } else if (s.status === "past_due") {
-        pending += 1;
-      } else if (s.status === "canceled") {
-        failed += 1;
-      } else if (s.status === "paused") {
-        refunded += 1;
-      }
-    });
-
+  const stats = useMemo(() => {
+    const activeBiz = businesses.filter((b) => b.is_active).length;
+    const activeSubs = subs.filter((s) => s.status === "active" || s.status === "trialing").length;
     return {
-      totalRevenue,
-      monthlyRevenue,
-      totalTransactions: subs.length,
-      totalTax: 0,
-      paid,
-      pending,
-      failed,
-      refunded,
+      tenants: businesses.length,
+      activeBiz,
+      users: profiles.length,
+      activeSubs,
     };
-  }, [subs, packages]);
+  }, [businesses, subs, profiles]);
 
-  const revenueByMonth = useMemo(() => {
-    const months: { month: string; revenue: number }[] = [];
+  const signupsByMonth = useMemo(() => {
     const map = new Map<string, number>();
     for (let i = 11; i >= 0; i--) {
       const m = format(startOfMonth(subMonths(new Date(), i)), "yyyy-MM");
       map.set(m, 0);
     }
-    subs.forEach((s) => {
-      if (!s.created_at) return;
-      const m = format(new Date(s.created_at), "yyyy-MM");
-      if (map.has(m)) map.set(m, (map.get(m) || 0) + amountFor(s));
+    businesses.forEach((b) => {
+      if (!b.created_at) return;
+      const m = format(new Date(b.created_at), "yyyy-MM");
+      if (map.has(m)) map.set(m, (map.get(m) || 0) + 1);
     });
-    map.forEach((revenue, key) => {
-      months.push({ month: format(new Date(key + "-01"), "MMM yyyy"), revenue });
-    });
-    return months;
-  }, [subs, packages]);
+    return Array.from(map.entries()).map(([k, v]) => ({
+      month: format(new Date(k + "-01"), "MMM"),
+      tenants: v,
+    }));
+  }, [businesses]);
 
-  const planBreakdown = useMemo(() => {
-    const acc = new Map<string, { count: number; revenue: number }>();
-    subs.forEach((s) => {
-      const p = planFor(s);
-      const name = p?.name || "Unassigned";
-      const cur = acc.get(name) || { count: 0, revenue: 0 };
-      cur.count += 1;
-      cur.revenue += amountFor(s);
-      acc.set(name, cur);
-    });
-    const total = totals.totalTransactions || 1;
-    return Array.from(acc.entries())
-      .map(([name, v]) => ({ name, count: v.count, revenue: v.revenue, share: (v.count / total) * 100 }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 4);
-  }, [subs, packages, totals.totalTransactions]);
-
-  const recent = subs.slice(0, 5);
+  const recentBiz = businesses.slice(0, 5);
+  const recentUsers = profiles.slice(0, 5);
 
   if (loading) {
     return (
@@ -161,51 +86,22 @@ export default function SuperAdminDashboard() {
     );
   }
 
-  const stats = [
-    {
-      label: "Total Revenue",
-      value: fmtKes(totals.totalRevenue),
-      icon: DollarSign,
-      iconBg: "bg-emerald-600",
-    },
-    {
-      label: "Monthly Revenue",
-      value: fmtKes(totals.monthlyRevenue),
-      icon: RefreshCcw,
-      iconBg: "bg-emerald-500",
-    },
-    {
-      label: "Total Transactions",
-      value: String(totals.totalTransactions),
-      icon: FileText,
-      iconBg: "bg-blue-500",
-    },
-    {
-      label: "Total Tax",
-      value: fmtKes(totals.totalTax),
-      icon: Percent,
-      iconBg: "bg-amber-500",
-    },
-  ];
-
-  const statusCards = [
-    { label: "Paid", value: totals.paid, icon: CheckCircle2, color: "text-emerald-600", iconBg: "bg-emerald-100" },
-    { label: "Pending", value: totals.pending, icon: Clock, color: "text-amber-600", iconBg: "bg-amber-100" },
-    { label: "Failed", value: totals.failed, icon: XCircle, color: "text-rose-600", iconBg: "bg-rose-100" },
-    { label: "Refunded", value: totals.refunded, icon: RotateCcw, color: "text-blue-600", iconBg: "bg-blue-100" },
+  const cards = [
+    { label: "Total Tenants", value: stats.tenants, sub: `${stats.activeBiz} active`, icon: Building2, iconBg: "bg-emerald-600" },
+    { label: "Total Users", value: stats.users, sub: "Across all tenants", icon: Users, iconBg: "bg-blue-500" },
+    { label: "Active Subscriptions", value: stats.activeSubs, sub: `${subs.length} total`, icon: CreditCard, iconBg: "bg-violet-500" },
+    { label: "Plans", value: packagesCount, sub: `${superAdminCount} super admins`, icon: Tag, iconBg: "bg-amber-500" },
   ];
 
   return (
     <div className="space-y-5">
-      {/* Header */}
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Payments Overview</h1>
-        <p className="text-sm text-muted-foreground mt-1">Revenue, transactions, and payment analytics.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-sm text-muted-foreground mt-1">Tenants, users, and platform health at a glance.</p>
       </div>
 
-      {/* Top stats */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((s) => (
+        {cards.map((s) => (
           <div key={s.label} className="bg-white border border-border rounded-xl p-5 flex items-center gap-4">
             <div className={`h-11 w-11 rounded-lg ${s.iconBg} flex items-center justify-center text-white shrink-0`}>
               <s.icon className="h-5 w-5" />
@@ -213,47 +109,32 @@ export default function SuperAdminDashboard() {
             <div className="min-w-0">
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">{s.label}</div>
               <div className="text-2xl font-bold tracking-tight truncate">{s.value}</div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">{s.sub}</div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Status cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        {statusCards.map((s) => (
-          <div key={s.label} className="bg-white border border-border rounded-xl p-5 flex items-center justify-between">
-            <div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">{s.label}</div>
-              <div className={`text-3xl font-bold tracking-tight ${s.color}`}>{s.value}</div>
-            </div>
-            <div className={`h-9 w-9 rounded-full ${s.iconBg} flex items-center justify-center`}>
-              <s.icon className={`h-4 w-4 ${s.color}`} />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Charts row */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2 bg-white border border-border rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <TrendingUp className="h-4 w-4 text-emerald-500" />
-            <h3 className="text-sm font-semibold">Revenue (Last 12 Months)</h3>
+            <h3 className="text-sm font-semibold">Tenant Signups (Last 12 Months)</h3>
           </div>
           <div className="h-[280px]">
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={revenueByMonth} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+              <AreaChart data={signupsByMonth} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
+                  <linearGradient id="bizGrad" x1="0" y1="0" x2="0" y2="1">
                     <stop offset="0%" stopColor="hsl(160 84% 39%)" stopOpacity={0.3} />
                     <stop offset="100%" stopColor="hsl(160 84% 39%)" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                 <XAxis dataKey="month" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                <YAxis tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
-                <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))" }} formatter={(v: number) => fmtKes(v)} />
-                <Area type="monotone" dataKey="revenue" stroke="hsl(160 84% 39%)" strokeWidth={2.5} fill="url(#revGrad)" />
+                <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} />
+                <Tooltip contentStyle={{ borderRadius: 8, fontSize: 12, border: "1px solid hsl(var(--border))" }} />
+                <Area type="monotone" dataKey="tenants" stroke="hsl(160 84% 39%)" strokeWidth={2.5} fill="url(#bizGrad)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -261,92 +142,74 @@ export default function SuperAdminDashboard() {
 
         <div className="bg-white border border-border rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
-            <PieChartIcon className="h-4 w-4 text-emerald-500" />
-            <h3 className="text-sm font-semibold">By Plan</h3>
+            <Activity className="h-4 w-4 text-emerald-500" />
+            <h3 className="text-sm font-semibold">Subscription Status</h3>
           </div>
-          <div className="space-y-4">
-            {planBreakdown.length === 0 && (
-              <p className="text-sm text-muted-foreground">No subscriptions yet.</p>
-            )}
-            {planBreakdown.map((p) => (
-              <div key={p.name}>
-                <div className="flex items-center justify-between mb-1.5">
-                  <p className="text-sm font-medium">{p.name}</p>
-                  <p className="text-sm font-semibold">{fmtKes(p.revenue)}</p>
+          <div className="space-y-3">
+            {(["active", "trialing", "past_due", "canceled", "paused"] as const).map((st) => {
+              const c = subs.filter((s) => s.status === st).length;
+              return (
+                <div key={st} className="flex items-center justify-between text-sm">
+                  <span className={`inline-flex items-center gap-2 px-2 py-0.5 rounded-full text-xs font-medium capitalize ${STATUS_BADGE[st]}`}>
+                    {st.replace("_", " ")}
+                  </span>
+                  <span className="font-semibold">{c}</span>
                 </div>
-                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                  <div className="h-full bg-emerald-500" style={{ width: `${Math.max(2, p.share)}%` }} />
-                </div>
-                <p className="text-[11px] text-muted-foreground mt-1">
-                  {p.count} transaction{p.count === 1 ? "" : "s"} · {p.share.toFixed(1)}%
-                </p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Recent payments */}
-      <div className="bg-white border border-border rounded-xl">
-        <div className="p-5 flex items-center justify-between border-b border-border">
-          <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-emerald-500" />
-            <h3 className="text-sm font-semibold">Recent Payments</h3>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="bg-white border border-border rounded-xl">
+          <div className="p-5 flex items-center justify-between border-b border-border">
+            <div className="flex items-center gap-2">
+              <Building2 className="h-4 w-4 text-emerald-500" />
+              <h3 className="text-sm font-semibold">Recent Tenants</h3>
+            </div>
+            <Link to="/super-admin/businesses" className="text-xs px-3 py-1.5 rounded-md border border-border hover:bg-muted font-medium">
+              View all
+            </Link>
           </div>
-          <Link
-            to="/super-admin/subscriptions"
-            className="text-xs px-3 py-1.5 rounded-md border border-border hover:bg-muted font-medium"
-          >
-            View all
-          </Link>
+          <div className="divide-y divide-border">
+            {recentBiz.length === 0 && <p className="p-5 text-sm text-muted-foreground">No tenants yet.</p>}
+            {recentBiz.map((b) => (
+              <Link key={b.id} to={`/super-admin/businesses/${b.id}`} className="flex items-center justify-between p-4 hover:bg-muted/30">
+                <div className="min-w-0">
+                  <div className="font-medium text-sm truncate">{b.name}</div>
+                  <div className="text-xs text-muted-foreground">{b.created_at && format(new Date(b.created_at), "MMM dd, yyyy")}</div>
+                </div>
+                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${b.is_active ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+                  {b.is_active ? "Active" : "Suspended"}
+                </span>
+              </Link>
+            ))}
+          </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/30">
-              <tr className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                <th className="text-left font-semibold py-2.5 px-5">Reference</th>
-                <th className="text-left font-semibold py-2.5 px-5">Tenant</th>
-                <th className="text-left font-semibold py-2.5 px-5">Plan</th>
-                <th className="text-left font-semibold py-2.5 px-5">Amount</th>
-                <th className="text-left font-semibold py-2.5 px-5">Status</th>
-                <th className="text-left font-semibold py-2.5 px-5">Date</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {recent.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="py-8 text-center text-muted-foreground">No payments yet.</td>
-                </tr>
-              )}
-              {recent.map((s, i) => {
-                const p = planFor(s);
-                const ref = `SUB-${(s.id || "").slice(0, 8).toUpperCase()}`;
-                return (
-                  <tr key={s.id} className="hover:bg-muted/20">
-                    <td className="py-3 px-5">
-                      <Link to="/super-admin/subscriptions" className="text-emerald-700 hover:underline font-medium">
-                        {ref}
-                      </Link>
-                    </td>
-                    <td className="py-3 px-5 font-mono text-xs text-muted-foreground truncate max-w-[260px]">
-                      {s.user_id}
-                    </td>
-                    <td className="py-3 px-5">{p?.name || "—"}</td>
-                    <td className="py-3 px-5 font-semibold">{fmtKes(amountFor(s))}</td>
-                    <td className="py-3 px-5">
-                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_BADGE[s.status] || "bg-muted text-muted-foreground"}`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${STATUS_DOT[s.status] || "bg-muted-foreground"}`} />
-                        {s.status}
-                      </span>
-                    </td>
-                    <td className="py-3 px-5 text-muted-foreground">
-                      {s.created_at ? format(new Date(s.created_at), "MMM dd, yyyy") : "—"}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+
+        <div className="bg-white border border-border rounded-xl">
+          <div className="p-5 flex items-center justify-between border-b border-border">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-emerald-500" />
+              <h3 className="text-sm font-semibold">Recent Users</h3>
+            </div>
+            <Link to="/super-admin/users" className="text-xs px-3 py-1.5 rounded-md border border-border hover:bg-muted font-medium">
+              View all
+            </Link>
+          </div>
+          <div className="divide-y divide-border">
+            {recentUsers.length === 0 && <p className="p-5 text-sm text-muted-foreground">No users yet.</p>}
+            {recentUsers.map((u) => (
+              <Link key={u.id} to={`/super-admin/users/${u.id}`} className="flex items-center justify-between p-4 hover:bg-muted/30">
+                <div className="min-w-0">
+                  <div className="font-medium text-sm truncate">{u.full_name || "Unnamed"}</div>
+                  <div className="text-xs text-muted-foreground truncate">{u.email || "—"}</div>
+                </div>
+                <div className="text-xs text-muted-foreground">{format(new Date(u.created_at), "MMM dd")}</div>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </div>
