@@ -30,7 +30,7 @@ const POS = () => {
   const { query: customersQuery } = useCustomers();
   const pos = usePOS();
   const session = usePOSSession();
-  const { currentLocation } = useBusiness();
+  const { currentLocation, locations, setCurrentLocation } = useBusiness();
   const { inventoryQuery } = useInventory(currentLocation?.id);
 
   const isMobile = useIsMobile();
