@@ -14,7 +14,7 @@ import {
 import { toast } from "sonner";
 import { useProducts, useCategories } from "@/hooks/useProducts";
 import { useCustomers } from "@/hooks/useSales";
-import { usePOS, CartItem, PaymentEntry } from "@/hooks/usePOS";
+import { usePOS, PaymentEntry } from "@/hooks/usePOS";
 import { usePOSSession } from "@/hooks/usePOSSession";
 import { useInventory } from "@/hooks/useInventory";
 import { useBusiness } from "@/contexts/BusinessContext";
