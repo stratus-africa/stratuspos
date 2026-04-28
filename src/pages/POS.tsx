@@ -30,7 +30,7 @@ const POS = () => {
   const { query: customersQuery } = useCustomers();
   const pos = usePOS();
   const session = usePOSSession();
-  const { currentLocation } = useBusiness();
+  const { currentLocation, locations, setCurrentLocation } = useBusiness();
   const { inventoryQuery } = useInventory(currentLocation?.id);
 
   const isMobile = useIsMobile();
@@ -92,8 +92,12 @@ const POS = () => {
     }
   };
 
-  const handleStartDay = async (openingFloat: number) => {
-    await session.startDay(openingFloat);
+  const handleStartDay = async (openingFloat: number, locationId: string) => {
+    if (locationId && locationId !== currentLocation?.id) {
+      const picked = locations.find((l) => l.id === locationId);
+      if (picked) setCurrentLocation(picked);
+    }
+    await session.startDay(openingFloat, locationId);
     setStartDayOpen(false);
   };
 

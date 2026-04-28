@@ -15,6 +15,7 @@ import {
   Landmark,
   Lock,
   ShieldCheck,
+  UserCircle,
 } from "lucide-react";
 import { useFeatureLimit } from "@/components/FeatureGate";
 import { NavLink } from "@/components/NavLink";
@@ -73,6 +74,7 @@ const financeNav: NavItem[] = [
 
 const systemNav: NavItem[] = [
   { title: "Reports", url: "/reports", icon: BarChart3, roles: ["admin"], featureKey: "reports" },
+  { title: "Profile", url: "/profile", icon: UserCircle, roles: ["admin", "manager", "cashier"] },
   { title: "Settings", url: "/settings", icon: Settings, roles: ["admin"] },
 ];
 

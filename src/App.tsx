@@ -24,6 +24,7 @@ const Expenses = lazy(() => import("./pages/Expenses"));
 const Reports = lazy(() => import("./pages/Reports"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const ChartOfAccounts = lazy(() => import("./pages/ChartOfAccounts"));
+const Profile = lazy(() => import("./pages/Profile"));
 const JournalEntries = lazy(() => import("./pages/JournalEntries"));
 const Banking = lazy(() => import("./pages/Banking"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -141,6 +142,7 @@ const ProtectedRoutes = () => {
           <Route path="/banking" element={guard(["admin"], <FeatureGate featureKey="banking"><Banking /></FeatureGate>)} />
           <Route path="/reports" element={guard(["admin"], <FeatureGate featureKey="reports"><Reports /></FeatureGate>)} />
           <Route path="/settings" element={guard(["admin"], <SettingsPage />)} />
+          <Route path="/profile" element={guard(["admin", "manager", "cashier"], <Profile />)} />
           <Route path="/roles" element={<Navigate to="/settings?tab=roles" replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
