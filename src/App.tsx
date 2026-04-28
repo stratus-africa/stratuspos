@@ -146,6 +146,7 @@ const ProtectedRoutes = () => {
           <Route path="/banking" element={guard(["admin"], <FeatureGate featureKey="banking"><Banking /></FeatureGate>)} />
           <Route path="/reports" element={guard(["admin"], <FeatureGate featureKey="reports"><Reports /></FeatureGate>)} />
           <Route path="/settings" element={guard(["admin"], <SettingsPage />)} />
+          <Route path="/profile" element={<Profile />}/>
           <Route path="/roles" element={<Navigate to="/settings?tab=roles" replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
