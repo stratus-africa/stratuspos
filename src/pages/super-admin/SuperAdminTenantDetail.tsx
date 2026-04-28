@@ -199,7 +199,7 @@ export default function SuperAdminTenantDetail() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white h-9">
+          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white h-9" onClick={() => navigate(`/super-admin/businesses/${biz.id}/edit`)}>
             <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
           </Button>
           {biz.is_active ? (

@@ -194,6 +194,7 @@ export type Database = {
           owner_id: string | null
           phone: string | null
           prevent_overselling: boolean
+          status: string
           tax_rate: number | null
           theme_color: string
           timezone: string
@@ -217,6 +218,7 @@ export type Database = {
           owner_id?: string | null
           phone?: string | null
           prevent_overselling?: boolean
+          status?: string
           tax_rate?: number | null
           theme_color?: string
           timezone?: string
@@ -240,6 +242,7 @@ export type Database = {
           owner_id?: string | null
           phone?: string | null
           prevent_overselling?: boolean
+          status?: string
           tax_rate?: number | null
           theme_color?: string
           timezone?: string
@@ -1724,6 +1727,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tenant_domains: {
+        Row: {
+          business_id: string
+          created_at: string
+          domain: string
+          id: string
+          is_primary: boolean
+          updated_at: string
+          verified: boolean
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          domain: string
+          id?: string
+          is_primary?: boolean
+          updated_at?: string
+          verified?: boolean
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          domain?: string
+          id?: string
+          is_primary?: boolean
+          updated_at?: string
+          verified?: boolean
+        }
+        Relationships: []
       }
       tills: {
         Row: {

@@ -42,6 +42,7 @@ const SuperAdminLanding = lazy(() => import("./pages/super-admin/SuperAdminLandi
 const SuperAdminTenantDetail = lazy(() => import("./pages/super-admin/SuperAdminTenantDetail"));
 const SuperAdminSubscriptions = lazy(() => import("./pages/super-admin/SuperAdminSubscriptions"));
 const SuperAdminPaymentsOverview = lazy(() => import("./pages/super-admin/SuperAdminPaymentsOverview"));
+const SuperAdminBusinessEdit = lazy(() => import("./pages/super-admin/SuperAdminBusinessEdit"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -82,6 +83,7 @@ const SuperAdminRoutes = () => {
           <Route path="/" element={<SuperAdminDashboard />} />
           <Route path="/businesses" element={<SuperAdminBusinesses />} />
           <Route path="/businesses/:id" element={<SuperAdminTenantDetail />} />
+          <Route path="/businesses/:id/edit" element={<SuperAdminBusinessEdit />} />
           <Route path="/subscriptions" element={<SuperAdminSubscriptions />} />
           <Route path="/users" element={<SuperAdminUsers />} />
           <Route path="/packages" element={<SuperAdminPackages />} />
