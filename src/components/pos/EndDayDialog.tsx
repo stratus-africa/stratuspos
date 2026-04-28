@@ -100,7 +100,8 @@ export default function EndDayDialog({ open, onOpenChange, session, onConfirm }:
 
       for (const [method, amount] of Object.entries(paymentsByMethod)) {
         if (amount === 0) continue;
-        const accountId = methodToAccount.get(method);
+        const accountId =
+          method === "cash" ? cashAccountId : methodToAccount.get(method);
         if (accountId) {
           const current = accountExpected.get(accountId) || 0;
           accountExpected.set(accountId, current + amount);
