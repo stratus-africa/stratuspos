@@ -8,6 +8,7 @@ import { SubscriptionTab } from "@/components/settings/SubscriptionTab";
 import { RolesPermissionsTab } from "@/components/settings/RolesPermissionsTab";
 import { TaxSettingsTab } from "@/components/settings/TaxSettingsTab";
 import { PaymentAccountsTab } from "@/components/settings/PaymentAccountsTab";
+import { TillsTab } from "@/components/settings/TillsTab";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { useSearchParams } from "react-router-dom";
 import { useBusiness } from "@/contexts/BusinessContext";
