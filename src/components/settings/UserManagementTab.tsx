@@ -189,45 +189,46 @@ export function UserManagementTab() {
               members.map((m) => {
                 const till = tills.find((t) => t.id === m.till_id);
                 return (
-                <TableRow key={m.user_id}>
-                  <TableCell className="font-medium">
-                    {m.full_name || "Unnamed User"}
-                    {m.user_id === user?.id && (
-                      <span className="ml-2 text-xs text-muted-foreground">(You)</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={roleBadgeVariant(m.role)} className="flex items-center gap-1 w-fit capitalize">
-                      {roleIcon(m.role)} {m.role}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {till ? (
-                      <Badge variant="outline" className="text-xs">{till.name}</Badge>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50">
-                      Active
-                    </Badge>
-                  </TableCell>
-                  {isAdmin && (
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEditRole(m)}
-                        disabled={m.user_id === user?.id}
-                        title={m.user_id === user?.id ? "You can't change your own role" : "Change role"}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                  <TableRow key={m.user_id}>
+                    <TableCell className="font-medium">
+                      {m.full_name || "Unnamed User"}
+                      {m.user_id === user?.id && (
+                        <span className="ml-2 text-xs text-muted-foreground">(You)</span>
+                      )}
                     </TableCell>
-                  )}
-                </TableRow>
-              ))
+                    <TableCell>
+                      <Badge variant={roleBadgeVariant(m.role)} className="flex items-center gap-1 w-fit capitalize">
+                        {roleIcon(m.role)} {m.role}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {till ? (
+                        <Badge variant="outline" className="text-xs">{till.name}</Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50">
+                        Active
+                      </Badge>
+                    </TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEditRole(m)}
+                          disabled={m.user_id === user?.id}
+                          title={m.user_id === user?.id ? "You can't change your own role" : "Change role"}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
