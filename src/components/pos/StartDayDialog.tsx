@@ -127,6 +127,48 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
             )}
           </div>
 
+          {/* Cash Account assignment for this till */}
+          <div className="space-y-2">
+            <Label htmlFor="cash-account" className="flex items-center gap-1.5">
+              <Wallet className="h-4 w-4 text-muted-foreground" />
+              Assigned Cash Account
+            </Label>
+            {cashAccounts.length === 0 ? (
+              <p className="text-sm text-destructive">
+                No cash account configured. Ask an admin to add a cash-type bank account.
+              </p>
+            ) : (
+              <Select
+                value={cashAccountId}
+                onValueChange={(v) => {
+                  setCashAccountId(v);
+                  if (v) setCashAccountError(null);
+                }}
+              >
+                <SelectTrigger
+                  id="cash-account"
+                  className={`h-10 ${cashAccountError ? "border-destructive ring-1 ring-destructive/30" : ""}`}
+                >
+                  <SelectValue placeholder="Select cash account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cashAccounts.map((acc) => (
+                    <SelectItem key={acc.id} value={acc.id}>
+                      {acc.name} — KES {Number(acc.balance).toLocaleString()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {cashAccountError ? (
+              <p className="text-xs text-destructive font-medium">{cashAccountError}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                All cash collected at this till will settle into this account at end of day.
+              </p>
+            )}
+          </div>
+
           {/* Bank & Cash Account Balances */}
           {bankAccounts.length > 0 && (
             <div className="space-y-2">
