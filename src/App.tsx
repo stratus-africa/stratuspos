@@ -42,6 +42,7 @@ const SuperAdminLanding = lazy(() => import("./pages/super-admin/SuperAdminLandi
 const SuperAdminTenantDetail = lazy(() => import("./pages/super-admin/SuperAdminTenantDetail"));
 const SuperAdminSubscriptions = lazy(() => import("./pages/super-admin/SuperAdminSubscriptions"));
 const SuperAdminPaymentsOverview = lazy(() => import("./pages/super-admin/SuperAdminPaymentsOverview"));
+const SuperAdminBusinessEdit = lazy(() => import("./pages/super-admin/SuperAdminBusinessEdit"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
