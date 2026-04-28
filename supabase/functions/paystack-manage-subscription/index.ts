@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { corsHeaders, paystackFetch } from "../_shared/paystack.ts";
 
 Deno.serve(async (req) => {
@@ -20,14 +20,15 @@ Deno.serve(async (req) => {
     );
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: claims, error: claimsErr } = await supabase.auth.getClaims(token);
-    if (claimsErr || !claims?.claims) {
+    const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+    if (userErr || !userData?.user) {
+      console.error("auth.getUser failed", userErr);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = claims.claims.sub as string;
+    const userId = userData.user.id;
 
     const { action } = (await req.json().catch(() => ({}))) as { action?: string };
 

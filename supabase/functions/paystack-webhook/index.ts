@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.74.0";
 import { corsHeaders, paystackFetch, verifyPaystackSignature } from "../_shared/paystack.ts";
 
 Deno.serve(async (req) => {
