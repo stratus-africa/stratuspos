@@ -70,7 +70,7 @@ const SuperAdminRoutes = () => {
   const { isSuperAdmin, loading: saLoading } = useSuperAdmin();
 
   if (authLoading || saLoading) return <PageLoader />;
-  if (!user) return <Navigate to="/auth" replace />;
+  if (!user) return <Navigate to="/sign-in" replace />;
   if (!isSuperAdmin) return <Navigate to="/" replace />;
 
   return (
@@ -115,7 +115,7 @@ const ProtectedRoutes = () => {
   const { needsOnboarding, loading: bizLoading, hasAccess, userRole, isSuspended } = useBusiness();
 
   if (authLoading || bizLoading) return <PageLoader />;
-  if (!user) return <Navigate to="/onboarding" replace />;
+  if (!user) return <Navigate to="/sign-in" replace />;
   if (isSuspended) return <BusinessSuspended />;
   if (needsOnboarding) return <Navigate to="/onboarding" replace />;
 

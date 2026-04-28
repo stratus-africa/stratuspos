@@ -409,7 +409,7 @@ export default function Landing() {
             <span className="font-bold text-foreground">StratusPOS</span>
           </div>
           <div className="flex items-center gap-6 text-sm text-muted-foreground">
-            <Link to="/onboarding" className="hover:text-foreground">Login</Link>
+            <Link to="/sign-in" className="hover:text-foreground">Login</Link>
             <Link to="/super-admin/login" className="hover:text-foreground">Admin</Link>
             <span className="hidden sm:inline">© {new Date().getFullYear()} StratusPOS</span>
           </div>

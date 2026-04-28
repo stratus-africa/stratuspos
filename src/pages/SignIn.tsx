@@ -43,15 +43,17 @@ export default function SignIn() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     setSubmitting(true);
     const { error } = await signIn(email, password);
-    setSubmitting(false);
     if (error) {
+      setSubmitting(false);
       toast.error(error.message);
       return;
     }
     toast.success("Welcome back!");
-    navigate("/", { replace: true });
+    // Don't manually navigate — the route guard above will redirect
+    // once the auth + business contexts finish loading.
   };
 
   const handleForgotSubmit = async (e: React.FormEvent) => {
