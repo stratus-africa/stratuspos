@@ -51,6 +51,7 @@ const CmsTestimonials = lazy(() => import("./pages/super-admin/cms/CmsTestimonia
 const CmsFaq = lazy(() => import("./pages/super-admin/cms/CmsFaq"));
 const CmsPricing = lazy(() => import("./pages/super-admin/cms/CmsPricing"));
 const CmsCta = lazy(() => import("./pages/super-admin/cms/CmsCta"));
+const SuperAdminSettings = lazy(() => import("./pages/super-admin/SuperAdminSettings"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -108,6 +109,7 @@ const SuperAdminRoutes = () => {
           <Route path="/cms/faq" element={<CmsFaq />} />
           <Route path="/cms/pricing" element={<CmsPricing />} />
           <Route path="/cms/cta" element={<CmsCta />} />
+          <Route path="/settings" element={<SuperAdminSettings />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>

@@ -24,6 +24,7 @@ import {
   PanelLeft,
   Bell,
   Zap,
+  Settings2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -72,6 +73,12 @@ const navGroups: NavGroup[] = [
       { title: "Testimonials", url: "/super-admin/cms/testimonials", icon: MessageSquare },
       { title: "FAQ", url: "/super-admin/cms/faq", icon: HelpCircle },
       { title: "Call To Action", url: "/super-admin/cms/cta", icon: Zap },
+    ],
+  },
+  {
+    label: "System",
+    items: [
+      { title: "General Settings", url: "/super-admin/settings", icon: Settings2 },
     ],
   },
 ];

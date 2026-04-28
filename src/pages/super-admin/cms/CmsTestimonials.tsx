@@ -59,6 +59,7 @@ export default function CmsTestimonials() {
         onAdd={async (it) => { const n = [...items, it]; setItems(n); await persist(n); }}
         onUpdate={async (i, it) => { const n = items.map((x, idx) => idx === i ? it : x); setItems(n); await persist(n); }}
         onDelete={async (i) => { const n = items.filter((_, idx) => idx !== i); setItems(n); await persist(n); }}
+        onReorder={async (n) => { setItems(n); await persist(n); }}
         renderEditor={(item, set) => (
           <div className="space-y-3">
             <div className="space-y-1.5"><Label>Name</Label><Input value={item.name} onChange={(e) => set({ ...item, name: e.target.value })} /></div>

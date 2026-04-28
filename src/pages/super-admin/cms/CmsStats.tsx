@@ -49,6 +49,7 @@ export default function CmsStats() {
         onAdd={async (it) => { const n = [...items, it]; setItems(n); await persist(n); }}
         onUpdate={async (i, it) => { const n = items.map((x, idx) => idx === i ? it : x); setItems(n); await persist(n); }}
         onDelete={async (i) => { const n = items.filter((_, idx) => idx !== i); setItems(n); await persist(n); }}
+        onReorder={async (n) => { setItems(n); await persist(n); }}
         renderEditor={(item, set) => (
           <div className="space-y-3">
             <div className="space-y-1.5"><Label>Value</Label><Input value={item.value} onChange={(e) => set({ ...item, value: e.target.value })} placeholder="10K+" /></div>
