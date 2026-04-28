@@ -83,6 +83,7 @@ const SuperAdminRoutes = () => {
           <Route path="/" element={<SuperAdminDashboard />} />
           <Route path="/businesses" element={<SuperAdminBusinesses />} />
           <Route path="/businesses/:id" element={<SuperAdminTenantDetail />} />
+          <Route path="/businesses/:id/edit" element={<SuperAdminBusinessEdit />} />
           <Route path="/subscriptions" element={<SuperAdminSubscriptions />} />
           <Route path="/users" element={<SuperAdminUsers />} />
           <Route path="/packages" element={<SuperAdminPackages />} />
