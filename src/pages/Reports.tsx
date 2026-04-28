@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, Package, TrendingUp, ShoppingCart, Receipt } from "lucide-react";
+import { BarChart3, Package, TrendingUp, ShoppingCart, Receipt, ClipboardList } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/contexts/BusinessContext";
@@ -13,6 +13,7 @@ import InventoryReportTab from "@/components/reports/InventoryReportTab";
 import PnLReportTab from "@/components/reports/PnLReportTab";
 import PurchasesReportTab from "@/components/reports/PurchasesReportTab";
 import ExpensesReportTab from "@/components/reports/ExpensesReportTab";
+import AuditLogReportTab from "@/components/reports/AuditLogReportTab";
 
 const today = new Date().toISOString().split("T")[0];
 const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0];
@@ -106,10 +107,29 @@ const Reports = () => {
     enabled: !!business,
   });
 
+  const auditReport = useQuery({
+    queryKey: ["report-audit", business?.id, from, to],
+    queryFn: async () => {
+      if (!business) return [];
+      const { data, error } = await (supabase as any)
+        .from("audit_logs")
+        .select("*")
+        .eq("business_id", business.id)
+        .gte("created_at", `${from}T00:00:00`)
+        .lte("created_at", `${to}T23:59:59`)
+        .order("created_at", { ascending: false })
+        .limit(1000);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!business,
+  });
+
   const sales = salesReport.data || [];
   const expenses = expensesReport.data || [];
   const purchases = purchasesReport.data || [];
   const inventory = inventoryReport.data || [];
+  const auditLogs = auditReport.data || [];
 
   const totalRevenue = sales.reduce((s, r) => s + Number(r.total), 0);
   const totalTax = sales.reduce((s, r) => s + Number(r.tax), 0);
@@ -160,34 +180,48 @@ const Reports = () => {
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="sales">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="sales" className="gap-1"><BarChart3 className="h-4 w-4" /> Sales</TabsTrigger>
-          <TabsTrigger value="purchases" className="gap-1"><ShoppingCart className="h-4 w-4" /> Purchases</TabsTrigger>
-          <TabsTrigger value="expenses" className="gap-1"><Receipt className="h-4 w-4" /> Expenses</TabsTrigger>
-          <TabsTrigger value="inventory" className="gap-1"><Package className="h-4 w-4" /> Inventory</TabsTrigger>
-          <TabsTrigger value="pnl" className="gap-1"><TrendingUp className="h-4 w-4" /> P&L</TabsTrigger>
+      <Tabs defaultValue="sales" className="flex flex-col md:flex-row gap-4 md:gap-6">
+        <TabsList className="text-muted-foreground flex md:flex-col h-auto w-full md:w-52 bg-muted rounded-lg p-1.5 shrink-0 md:items-start md:justify-start overflow-x-auto md:overflow-visible flex-nowrap">
+          <TabsTrigger value="sales" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
+            <BarChart3 className="h-4 w-4" /> Sales
+          </TabsTrigger>
+          <TabsTrigger value="purchases" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
+            <ShoppingCart className="h-4 w-4" /> Purchases
+          </TabsTrigger>
+          <TabsTrigger value="expenses" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
+            <Receipt className="h-4 w-4" /> Expenses
+          </TabsTrigger>
+          <TabsTrigger value="inventory" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
+            <Package className="h-4 w-4" /> Inventory
+          </TabsTrigger>
+          <TabsTrigger value="pnl" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
+            <TrendingUp className="h-4 w-4" /> P&amp;L
+          </TabsTrigger>
+          <TabsTrigger value="audit" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
+            <ClipboardList className="h-4 w-4" /> Audit Trail
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="sales">
-          <SalesReportTab sales={sales} topProducts={topProducts} totalRevenue={totalRevenue} totalTax={totalTax} totalDiscount={totalDiscount} from={from} to={to} loading={loading} />
-        </TabsContent>
-
-        <TabsContent value="purchases">
-          <PurchasesReportTab purchases={purchases} from={from} to={to} loading={loading} />
-        </TabsContent>
-
-        <TabsContent value="expenses">
-          <ExpensesReportTab expenses={expenses} from={from} to={to} loading={loading} />
-        </TabsContent>
-
-        <TabsContent value="inventory">
-          <InventoryReportTab inventory={inventory} loading={loading} />
-        </TabsContent>
-
-        <TabsContent value="pnl">
-          <PnLReportTab totalRevenue={totalRevenue} totalCOGS={totalCOGS} grossProfit={grossProfit} totalExpenses={totalExpenses} netProfit={netProfit} expenseByCategory={expenseByCategory} from={from} to={to} loading={loading} />
-        </TabsContent>
+        <div className="flex-1 min-w-0">
+          <TabsContent value="sales" className="mt-0">
+            <SalesReportTab sales={sales} topProducts={topProducts} totalRevenue={totalRevenue} totalTax={totalTax} totalDiscount={totalDiscount} from={from} to={to} loading={loading} />
+          </TabsContent>
+          <TabsContent value="purchases" className="mt-0">
+            <PurchasesReportTab purchases={purchases} from={from} to={to} loading={loading} />
+          </TabsContent>
+          <TabsContent value="expenses" className="mt-0">
+            <ExpensesReportTab expenses={expenses} from={from} to={to} loading={loading} />
+          </TabsContent>
+          <TabsContent value="inventory" className="mt-0">
+            <InventoryReportTab inventory={inventory} loading={loading} />
+          </TabsContent>
+          <TabsContent value="pnl" className="mt-0">
+            <PnLReportTab totalRevenue={totalRevenue} totalCOGS={totalCOGS} grossProfit={grossProfit} totalExpenses={totalExpenses} netProfit={netProfit} expenseByCategory={expenseByCategory} from={from} to={to} loading={loading} />
+          </TabsContent>
+          <TabsContent value="audit" className="mt-0">
+            <AuditLogReportTab logs={auditLogs} loading={auditReport.isLoading} from={from} to={to} />
+          </TabsContent>
+        </div>
       </Tabs>
     </div>
   );
