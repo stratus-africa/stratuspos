@@ -29,13 +29,13 @@ const fmtKes = (n: number) =>
   `KES ${new Intl.NumberFormat("en-KE", { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n)}`;
 
 const HIGHLIGHTS = [
-  "Dedicated subdomain & database",
+  "Dedicated workspace & database",
   "POS, inventory, purchases & sales",
   "Multi-warehouse & barcode support",
   "Ready in under 60 seconds",
 ];
 
-const SUBDOMAIN_SUFFIX = ".stratuspos.app";
+
 
 const Onboarding = () => {
   const { user, loading: authLoading } = useAuth();
@@ -70,7 +70,7 @@ const Onboarding = () => {
             Launch your business<br />in minutes
           </h1>
           <p className="text-white/85 leading-relaxed mb-10 text-base">
-            Get your own dedicated workspace with a custom subdomain, full inventory management,
+            Get your own dedicated workspace with full inventory management,
             and everything you need to run your business.
           </p>
 
@@ -117,7 +117,7 @@ const Onboarding = () => {
   );
 };
 
-/* ---------------- Combined form: subdomain + workspace + admin account + plan ---------------- */
+/* ---------------- Combined form: workspace + admin account + plan ---------------- */
 
 const CreateWorkspaceForm = ({ hasUser }: { hasUser: boolean }) => {
   const { signUp } = useAuth();
