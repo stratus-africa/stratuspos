@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import {
   Box, CheckCircle2, ArrowLeft, ArrowRight,
-  Mail, Lock, Eye, EyeOff, Building2, Zap, Loader2, Globe, CreditCard,
+  Mail, Lock, Eye, EyeOff, Building2, Zap, Loader2, CreditCard,
 } from "lucide-react";
 
 interface Plan {
@@ -29,13 +29,13 @@ const fmtKes = (n: number) =>
   `KES ${new Intl.NumberFormat("en-KE", { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n)}`;
 
 const HIGHLIGHTS = [
-  "Dedicated subdomain & database",
+  "Dedicated workspace & database",
   "POS, inventory, purchases & sales",
   "Multi-warehouse & barcode support",
   "Ready in under 60 seconds",
 ];
 
-const SUBDOMAIN_SUFFIX = ".stratuspos.app";
+
 
 const Onboarding = () => {
   const { user, loading: authLoading } = useAuth();
@@ -70,7 +70,7 @@ const Onboarding = () => {
             Launch your business<br />in minutes
           </h1>
           <p className="text-white/85 leading-relaxed mb-10 text-base">
-            Get your own dedicated workspace with a custom subdomain, full inventory management,
+            Get your own dedicated workspace with full inventory management,
             and everything you need to run your business.
           </p>
 
@@ -117,14 +117,13 @@ const Onboarding = () => {
   );
 };
 
-/* ---------------- Combined form: subdomain + workspace + admin account + plan ---------------- */
+/* ---------------- Combined form: workspace + admin account + plan ---------------- */
 
 const CreateWorkspaceForm = ({ hasUser }: { hasUser: boolean }) => {
   const { signUp } = useAuth();
   const { user } = useAuth();
   const { createBusiness } = useBusiness();
 
-  const [subdomain, setSubdomain] = useState("");
   const [companyName, setCompanyName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -153,21 +152,13 @@ const CreateWorkspaceForm = ({ hasUser }: { hasUser: boolean }) => {
   }, []);
 
   const filled = useMemo(
-    () => [!!subdomain, !!companyName, !!email, password.length >= 8 && password === confirm].filter(Boolean).length,
-    [subdomain, companyName, email, password, confirm]
+    () => [!!companyName, !!email, password.length >= 8, password === confirm && password.length >= 8].filter(Boolean).length,
+    [companyName, email, password, confirm]
   );
-
-  const handleSubdomainChange = (v: string) => {
-    setSubdomain(v.toLowerCase().replace(/[^a-z0-9-]/g, ""));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!subdomain || subdomain.length < 3) {
-      toast.error("Subdomain must be at least 3 characters");
-      return;
-    }
     if (!companyName.trim()) {
       toast.error("Company name is required");
       return;
@@ -234,7 +225,7 @@ const CreateWorkspaceForm = ({ hasUser }: { hasUser: boolean }) => {
       <div>
         <h2 className="text-3xl font-bold tracking-tight mb-2">Create your workspace</h2>
         <p className="text-muted-foreground text-sm">
-          Set up your subdomain and admin account to get started.
+          Set up your admin account and we'll get your workspace ready.
         </p>
       </div>
 
@@ -251,29 +242,6 @@ const CreateWorkspaceForm = ({ hasUser }: { hasUser: boolean }) => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Subdomain with suffix */}
-        <div className="space-y-1.5">
-          <Label htmlFor="subdomain" className="text-sm font-medium">Subdomain</Label>
-          <div className="flex h-11 rounded-lg border border-input overflow-hidden focus-within:ring-2 focus-within:ring-emerald-400 focus-within:ring-offset-0">
-            <div className="flex items-center pl-3 pr-2 text-muted-foreground">
-              <Globe className="h-4 w-4" />
-            </div>
-            <input
-              id="subdomain"
-              value={subdomain}
-              onChange={(e) => handleSubdomainChange(e.target.value)}
-              placeholder="your-company"
-              className="flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-muted-foreground"
-              required
-              minLength={3}
-              disabled={hasUser}
-            />
-            <div className="flex items-center px-3 bg-muted/40 border-l border-input text-sm text-muted-foreground font-medium">
-              {SUBDOMAIN_SUFFIX}
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground">Lowercase letters, numbers, and hyphens only.</p>
-        </div>
 
         {/* Company name */}
         <div className="space-y-1.5">
