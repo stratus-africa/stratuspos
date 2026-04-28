@@ -8,6 +8,7 @@ export interface POSSession {
   id: string;
   business_id: string;
   location_id: string;
+  cash_account_id?: string | null;
   opened_by: string;
   closed_by: string | null;
   opening_float: number;
