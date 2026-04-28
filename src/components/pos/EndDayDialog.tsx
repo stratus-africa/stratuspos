@@ -313,6 +313,12 @@ export default function EndDayDialog({ open, onOpenChange, session, onConfirm }:
             {/* Session summary */}
             <div className="rounded-lg border p-3 bg-muted/50 text-sm space-y-1">
               <div className="flex justify-between">
+                <span className="text-muted-foreground flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5" /> Till
+                </span>
+                <span className="font-medium">{currentLocation?.name || "—"}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-muted-foreground">Opening Float</span>
                 <span className="font-medium">KES {Number(session.opening_float).toLocaleString()}</span>
               </div>
@@ -321,6 +327,66 @@ export default function EndDayDialog({ open, onOpenChange, session, onConfirm }:
                 <span className="font-medium">{new Date(session.opened_at).toLocaleTimeString()}</span>
               </div>
             </div>
+
+            {/* Cash reconciliation summary for selected till */}
+            {(() => {
+              const cashRow = reconciliations.find((r) => r.accountType === "cash");
+              if (!cashRow) return null;
+              const counted = parseFloat(cashRow.actualAmount);
+              const hasCount = !isNaN(counted);
+              const variance = hasCount ? counted - cashRow.expectedAmount : 0;
+              return (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 text-sm space-y-2">
+                  <div className="flex items-center gap-1.5 font-semibold text-emerald-700">
+                    <Wallet className="h-4 w-4" />
+                    Till Cash Reconciliation — {currentLocation?.name || "Till"}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 pt-1">
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Expected</div>
+                      <div className="font-semibold">KES {cashRow.expectedAmount.toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Counted</div>
+                      <div className="font-semibold">
+                        {hasCount ? `KES ${counted.toLocaleString()}` : "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Variance</div>
+                      <div
+                        className={`font-semibold ${
+                          !hasCount
+                            ? "text-muted-foreground"
+                            : variance === 0
+                            ? "text-emerald-600"
+                            : variance > 0
+                            ? "text-blue-600"
+                            : "text-destructive"
+                        }`}
+                      >
+                        {hasCount ? `${variance > 0 ? "+" : ""}KES ${variance.toLocaleString()}` : "—"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Multi-till settlement note */}
+            {multipleTills && (
+              <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-3 text-xs flex gap-2">
+                <Info className="h-4 w-4 text-blue-600 shrink-0 mt-0.5" />
+                <div className="space-y-1">
+                  <p className="font-medium text-blue-900">All tills settle to one cash account</p>
+                  <p className="text-blue-800/80">
+                    Cash counted at every till across this business is consolidated into the same
+                    configured cash account. The single line below represents that consolidated
+                    cash settlement.
+                  </p>
+                </div>
+              </div>
+            )}
 
             <Separator />
 
