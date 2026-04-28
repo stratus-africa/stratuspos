@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,7 +22,10 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import PaymentDialog from "@/components/pos/PaymentDialog";
 import ReceiptDialog from "@/components/pos/ReceiptDialog";
 import StartDayDialog from "@/components/pos/StartDayDialog";
+import ManagerApprovalDialog from "@/components/pos/ManagerApprovalDialog";
 import BarcodeScanner from "@/components/BarcodeScanner";
+import { logAudit } from "@/lib/audit";
+import { CartItem } from "@/hooks/usePOS";
 
 const POS = () => {
   const { productsQuery } = useProducts();
@@ -30,7 +33,7 @@ const POS = () => {
   const { query: customersQuery } = useCustomers();
   const pos = usePOS();
   const session = usePOSSession();
-  const { currentLocation, locations, setCurrentLocation } = useBusiness();
+  const { currentLocation, locations, setCurrentLocation, business, userRole } = useBusiness();
   const { inventoryQuery } = useInventory(currentLocation?.id);
 
   const isMobile = useIsMobile();
@@ -45,6 +48,47 @@ const POS = () => {
   const [startDayOpen, setStartDayOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [mobileCartExpanded, setMobileCartExpanded] = useState(false);
+  const [approvalOpen, setApprovalOpen] = useState(false);
+  const pendingRemoveResolver = useRef<((approved: boolean) => void) | null>(null);
+  const pendingRemoveItem = useRef<CartItem | null>(null);
+
+  const requireManagerToRemove = (business as any)?.pos_require_manager_to_remove_item ?? false;
+  // Admins/managers/stores managers don't need extra approval — they ARE the approvers.
+  const cashierNeedsApproval = requireManagerToRemove && userRole === "cashier";
+
+  const handleBeforeRemove = useCallback((item: CartItem): Promise<boolean> => {
+    if (!cashierNeedsApproval) return Promise.resolve(true);
+    return new Promise<boolean>((resolve) => {
+      pendingRemoveResolver.current = resolve;
+      pendingRemoveItem.current = item;
+      setApprovalOpen(true);
+    });
+  }, [cashierNeedsApproval]);
+
+  const handleApproved = useCallback(async (managerUserId: string) => {
+    if (business && pendingRemoveItem.current) {
+      await logAudit({
+        business_id: business.id,
+        action: "pos_item_removed",
+        entity_type: "product",
+        entity_id: pendingRemoveItem.current.product.id,
+        description: `Removed "${pendingRemoveItem.current.product.name}" (qty ${pendingRemoveItem.current.quantity}) from POS cart with manager approval`,
+        metadata: { approved_by: managerUserId, qty: pendingRemoveItem.current.quantity },
+      });
+    }
+    pendingRemoveResolver.current?.(true);
+    pendingRemoveResolver.current = null;
+    pendingRemoveItem.current = null;
+  }, [business]);
+
+  const handleApprovalClosed = useCallback((open: boolean) => {
+    setApprovalOpen(open);
+    if (!open && pendingRemoveResolver.current) {
+      pendingRemoveResolver.current(false);
+      pendingRemoveResolver.current = null;
+      pendingRemoveItem.current = null;
+    }
+  }, []);
 
   const handleScanned = (code: string) => {
     const match = (productsQuery.data ?? []).find(
