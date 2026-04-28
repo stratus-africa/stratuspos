@@ -39,7 +39,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
-type AppRole = "admin" | "manager" | "cashier";
+type AppRole = "admin" | "manager" | "cashier" | "stores_manager";
 
 interface NavItem {
   title: string;

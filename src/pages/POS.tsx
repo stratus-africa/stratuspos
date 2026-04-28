@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import {
 import { toast } from "sonner";
 import { useProducts, useCategories } from "@/hooks/useProducts";
 import { useCustomers } from "@/hooks/useSales";
-import { usePOS, CartItem, PaymentEntry } from "@/hooks/usePOS";
+import { usePOS, PaymentEntry } from "@/hooks/usePOS";
 import { usePOSSession } from "@/hooks/usePOSSession";
 import { useInventory } from "@/hooks/useInventory";
 import { useBusiness } from "@/contexts/BusinessContext";
@@ -22,7 +22,11 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import PaymentDialog from "@/components/pos/PaymentDialog";
 import ReceiptDialog from "@/components/pos/ReceiptDialog";
 import StartDayDialog from "@/components/pos/StartDayDialog";
+import ManagerApprovalDialog from "@/components/pos/ManagerApprovalDialog";
 import BarcodeScanner from "@/components/BarcodeScanner";
+import { CartItemRow } from "@/components/pos/CartItemRow";
+import { logAudit } from "@/lib/audit";
+import { CartItem } from "@/hooks/usePOS";
 
 const POS = () => {
   const { productsQuery } = useProducts();
@@ -30,7 +34,7 @@ const POS = () => {
   const { query: customersQuery } = useCustomers();
   const pos = usePOS();
   const session = usePOSSession();
-  const { currentLocation, locations, setCurrentLocation } = useBusiness();
+  const { currentLocation, locations, setCurrentLocation, business, userRole } = useBusiness();
   const { inventoryQuery } = useInventory(currentLocation?.id);
 
   const isMobile = useIsMobile();
@@ -45,6 +49,47 @@ const POS = () => {
   const [startDayOpen, setStartDayOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
   const [mobileCartExpanded, setMobileCartExpanded] = useState(false);
+  const [approvalOpen, setApprovalOpen] = useState(false);
+  const pendingRemoveResolver = useRef<((approved: boolean) => void) | null>(null);
+  const pendingRemoveItem = useRef<CartItem | null>(null);
+
+  const requireManagerToRemove = (business as any)?.pos_require_manager_to_remove_item ?? false;
+  // Admins/managers/stores managers don't need extra approval — they ARE the approvers.
+  const cashierNeedsApproval = requireManagerToRemove && userRole === "cashier";
+
+  const handleBeforeRemove = useCallback((item: CartItem): Promise<boolean> => {
+    if (!cashierNeedsApproval) return Promise.resolve(true);
+    return new Promise<boolean>((resolve) => {
+      pendingRemoveResolver.current = resolve;
+      pendingRemoveItem.current = item;
+      setApprovalOpen(true);
+    });
+  }, [cashierNeedsApproval]);
+
+  const handleApproved = useCallback(async (managerUserId: string) => {
+    if (business && pendingRemoveItem.current) {
+      await logAudit({
+        business_id: business.id,
+        action: "pos_item_removed",
+        entity_type: "product",
+        entity_id: pendingRemoveItem.current.product.id,
+        description: `Removed "${pendingRemoveItem.current.product.name}" (qty ${pendingRemoveItem.current.quantity}) from POS cart with manager approval`,
+        metadata: { approved_by: managerUserId, qty: pendingRemoveItem.current.quantity },
+      });
+    }
+    pendingRemoveResolver.current?.(true);
+    pendingRemoveResolver.current = null;
+    pendingRemoveItem.current = null;
+  }, [business]);
+
+  const handleApprovalClosed = useCallback((open: boolean) => {
+    setApprovalOpen(open);
+    if (!open && pendingRemoveResolver.current) {
+      pendingRemoveResolver.current(false);
+      pendingRemoveResolver.current = null;
+      pendingRemoveItem.current = null;
+    }
+  }, []);
 
   const handleScanned = (code: string) => {
     const match = (productsQuery.data ?? []).find(
@@ -302,7 +347,7 @@ const POS = () => {
               ) : (
                 <div className="space-y-2">
                   {pos.cart.map((item) => (
-                    <CartItemRow key={item.product.id} item={item} onUpdate={pos.updateCartItem} onRemove={pos.removeFromCart} />
+                    <CartItemRow key={item.product.id} item={item} onUpdate={pos.updateCartItem} onRemove={pos.removeFromCart} onBeforeRemove={handleBeforeRemove} />
                   ))}
                 </div>
               )}
@@ -411,50 +456,16 @@ const POS = () => {
 
       <BarcodeScanner open={scannerOpen} onOpenChange={setScannerOpen} onDetected={handleScanned} />
 
+      <ManagerApprovalDialog
+        open={approvalOpen}
+        onOpenChange={handleApprovalClosed}
+        onApproved={handleApproved}
+        title="Approve item removal"
+        description="A manager must approve removing this item already added to the cart."
+      />
+
     </div>
   );
 };
-
-function CartItemRow({ item, onUpdate, onRemove }: { item: CartItem; onUpdate: (id: string, u: Partial<CartItem>) => void; onRemove: (id: string) => void }) {
-  const lineTotal = item.unit_price * item.quantity - item.discount;
-  const allowDecimal = item.product.allow_decimal_quantity ?? false;
-  const step = allowDecimal ? 0.01 : 1;
-  const minQty = allowDecimal ? 0.01 : 1;
-  const decrementBy = allowDecimal ? 0.5 : 1;
-  return (
-    <div className="flex items-start gap-2 p-2 rounded border bg-background">
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm truncate">{item.product.name}</p>
-        <p className="text-xs text-muted-foreground">@ KES {Number(item.unit_price).toLocaleString()}</p>
-      </div>
-      <div className="flex items-center gap-1">
-        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => onUpdate(item.product.id, { quantity: Math.max(minQty, +(item.quantity - decrementBy).toFixed(3)) })}>
-          <Minus className="h-3 w-3" />
-        </Button>
-        <Input
-          className="w-14 h-7 text-center text-sm p-0"
-          type="number"
-          min={minQty}
-          step={step}
-          value={item.quantity}
-          onChange={(e) => {
-            const v = parseFloat(e.target.value);
-            if (Number.isNaN(v)) return;
-            onUpdate(item.product.id, { quantity: Math.max(minQty, v) });
-          }}
-        />
-        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => onUpdate(item.product.id, { quantity: +(item.quantity + (allowDecimal ? 0.5 : 1)).toFixed(3) })}>
-          <Plus className="h-3 w-3" />
-        </Button>
-      </div>
-      <div className="text-right min-w-[70px]">
-        <p className="font-semibold text-sm">KES {lineTotal.toLocaleString()}</p>
-      </div>
-      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onRemove(item.product.id)}>
-        <Trash2 className="h-3 w-3 text-destructive" />
-      </Button>
-    </div>
-  );
-}
 
 export default POS;

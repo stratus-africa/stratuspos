@@ -154,11 +154,31 @@ export function useSales() {
 
   const deleteSale = useMutation({
     mutationFn: async (id: string) => {
-      // Defensive cleanup: delete payments and items before the sale (FK now cascades, but this keeps old DBs safe)
+      // Snapshot for audit
+      const { data: saleSnap } = await supabase
+        .from("sales")
+        .select("invoice_number, total, business_id")
+        .eq("id", id)
+        .maybeSingle();
+
+      // Defensive cleanup: delete payments and items before the sale (FK now cascades, but this keeps old DBs safe).
+      // Bank transactions referencing this sale are removed automatically by a database trigger.
       await supabase.from("payments").delete().eq("sale_id", id);
       await supabase.from("sale_items").delete().eq("sale_id", id);
       const { error } = await supabase.from("sales").delete().eq("id", id);
       if (error) throw error;
+
+      if (saleSnap?.business_id) {
+        const { logAudit } = await import("@/lib/audit");
+        await logAudit({
+          business_id: saleSnap.business_id,
+          action: "sale_deleted",
+          entity_type: "sale",
+          entity_id: id,
+          description: `Deleted sale ${saleSnap.invoice_number || id} (KES ${Number(saleSnap.total || 0).toLocaleString()})`,
+          metadata: { invoice_number: saleSnap.invoice_number, total: saleSnap.total },
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales"] });

@@ -8,9 +8,11 @@ interface CartItemRowProps {
   item: CartItem;
   onUpdate: (id: string, u: Partial<CartItem>) => void;
   onRemove: (id: string) => void;
+  /** Optional async guard: return true to allow removal, false to block. */
+  onBeforeRemove?: (item: CartItem) => Promise<boolean> | boolean;
 }
 
-export const CartItemRow = memo(function CartItemRow({ item, onUpdate, onRemove }: CartItemRowProps) {
+export const CartItemRow = memo(function CartItemRow({ item, onUpdate, onRemove, onBeforeRemove }: CartItemRowProps) {
   const lineTotal = item.unit_price * item.quantity - item.discount;
   const allowDecimal = item.product.allow_decimal_quantity ?? false;
   const step = allowDecimal ? 0.01 : 1;
@@ -31,9 +33,13 @@ export const CartItemRow = memo(function CartItemRow({ item, onUpdate, onRemove 
     onUpdate(item.product.id, { quantity: Math.max(minQty, v) });
   }, [item.product.id, onUpdate, minQty]);
 
-  const handleRemove = useCallback(() => {
+  const handleRemove = useCallback(async () => {
+    if (onBeforeRemove) {
+      const ok = await onBeforeRemove(item);
+      if (!ok) return;
+    }
     onRemove(item.product.id);
-  }, [item.product.id, onRemove]);
+  }, [item, onRemove, onBeforeRemove]);
 
   return (
     <div className="flex items-start gap-2 p-2 rounded border bg-background">

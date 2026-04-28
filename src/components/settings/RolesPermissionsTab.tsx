@@ -13,9 +13,9 @@ import { useBusiness } from "@/contexts/BusinessContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { UserPlus, Shield, User, Crown, Pencil, Loader2, Users, ShieldCheck, Info } from "lucide-react";
+import { UserPlus, Shield, User, Crown, Pencil, Loader2, Users, ShieldCheck, Info, Warehouse } from "lucide-react";
 
-type AppRole = "admin" | "manager" | "cashier";
+type AppRole = "admin" | "manager" | "cashier" | "stores_manager";
 
 interface TeamMember {
   user_id: string;
@@ -30,6 +30,7 @@ const roleIcon = (role: string) => {
   switch (role) {
     case "admin": return <Crown className="h-3.5 w-3.5" />;
     case "manager": return <Shield className="h-3.5 w-3.5" />;
+    case "stores_manager": return <Warehouse className="h-3.5 w-3.5" />;
     default: return <User className="h-3.5 w-3.5" />;
   }
 };
@@ -38,6 +39,7 @@ const roleBadgeVariant = (role: string) => {
   switch (role) {
     case "admin": return "default" as const;
     case "manager": return "secondary" as const;
+    case "stores_manager": return "secondary" as const;
     default: return "outline" as const;
   }
 };
@@ -66,12 +68,18 @@ const defaultRolePermissions: Record<AppRole, string[]> = {
   cashier: [
     "Point of Sale (POS)",
   ],
+  stores_manager: [
+    "Products & Inventory",
+    "Sales & Purchases",
+    "Reports",
+  ],
 };
 
 const roleDescriptions: Record<AppRole, { label: string; description: string }> = {
   admin: { label: "Admin", description: "Full access to all features and settings." },
   manager: { label: "Manager", description: "Day-to-day operations management." },
   cashier: { label: "Cashier", description: "POS-only access for processing sales." },
+  stores_manager: { label: "Stores Manager", description: "Manages stock, purchases and inventory operations." },
 };
 
 export function RolesPermissionsTab() {
@@ -253,6 +261,7 @@ export function RolesPermissionsTab() {
     admin: members.filter((m) => m.role === "admin").length,
     manager: members.filter((m) => m.role === "manager").length,
     cashier: members.filter((m) => m.role === "cashier").length,
+    stores_manager: members.filter((m) => m.role === "stores_manager").length,
   };
 
   return (
@@ -280,18 +289,19 @@ export function RolesPermissionsTab() {
 
         {/* Team Members Tab */}
         <TabsContent value="members" className="mt-4">
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            {(["admin", "manager", "cashier"] as AppRole[]).map((role) => (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            {(["admin", "manager", "stores_manager", "cashier"] as AppRole[]).map((role) => (
               <Card key={role}>
                 <CardContent className="pt-4 pb-3">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-primary/10">
                       {role === "admin" ? <Crown className="h-4 w-4 text-primary" /> :
                        role === "manager" ? <Shield className="h-4 w-4 text-primary" /> :
+                       role === "stores_manager" ? <Warehouse className="h-4 w-4 text-primary" /> :
                        <User className="h-4 w-4 text-primary" />}
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground capitalize">{role}s</p>
+                      <p className="text-xs text-muted-foreground">{roleDescriptions[role].label}s</p>
                       <p className="text-lg font-bold">{roleCounts[role]}</p>
                     </div>
                   </div>
@@ -362,7 +372,7 @@ export function RolesPermissionsTab() {
         {/* Roles & Permissions Tab */}
         <TabsContent value="roles" className="mt-4">
           <div className="grid gap-4">
-            {(["admin", "manager", "cashier"] as AppRole[]).map((role) => {
+            {(["admin", "manager", "stores_manager", "cashier"] as AppRole[]).map((role) => {
               const info = roleDescriptions[role];
               const perms = rolePermissions[role];
               return (
@@ -372,6 +382,7 @@ export function RolesPermissionsTab() {
                       <div className="p-2 rounded-lg bg-primary/10">
                         {role === "admin" ? <Crown className="h-5 w-5 text-primary" /> :
                          role === "manager" ? <Shield className="h-5 w-5 text-primary" /> :
+                         role === "stores_manager" ? <Warehouse className="h-5 w-5 text-primary" /> :
                          <User className="h-5 w-5 text-primary" />}
                       </div>
                       <div className="flex-1">
@@ -437,6 +448,7 @@ export function RolesPermissionsTab() {
                 <SelectContent>
                   <SelectItem value="admin">Admin — Full access to all features</SelectItem>
                   <SelectItem value="manager">Manager — Inventory, sales & purchases</SelectItem>
+                  <SelectItem value="stores_manager">Stores Manager — Stock & inventory operations</SelectItem>
                   <SelectItem value="cashier">Cashier — POS access only</SelectItem>
                 </SelectContent>
               </Select>

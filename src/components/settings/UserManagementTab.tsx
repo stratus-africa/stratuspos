@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { UserPlus, Shield, User, Crown, Pencil, Loader2 } from "lucide-react";
 
-type AppRole = "admin" | "manager" | "cashier";
+type AppRole = "admin" | "manager" | "cashier" | "stores_manager";
 
 interface TeamMember {
   user_id: string;
@@ -241,6 +241,7 @@ export function UserManagementTab() {
                 <SelectContent>
                   <SelectItem value="admin">Admin — Full access to all features</SelectItem>
                   <SelectItem value="manager">Manager — Inventory, sales & purchases</SelectItem>
+                  <SelectItem value="stores_manager">Stores Manager — Stock & inventory</SelectItem>
                   <SelectItem value="cashier">Cashier — POS access only</SelectItem>
                 </SelectContent>
               </Select>
@@ -279,6 +280,7 @@ export function UserManagementTab() {
                 <SelectContent>
                   <SelectItem value="admin">Admin — Full access</SelectItem>
                   <SelectItem value="manager">Manager — Manage inventory & sales</SelectItem>
+                  <SelectItem value="stores_manager">Stores Manager — Stock & inventory</SelectItem>
                   <SelectItem value="cashier">Cashier — POS access only</SelectItem>
                 </SelectContent>
               </Select>

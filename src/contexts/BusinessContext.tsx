@@ -27,7 +27,7 @@ interface Location {
   is_active: boolean;
 }
 
-type AppRole = "admin" | "manager" | "cashier";
+type AppRole = "admin" | "manager" | "cashier" | "stores_manager";
 
 interface BusinessContextType {
   business: Business | null;
