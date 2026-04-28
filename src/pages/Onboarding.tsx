@@ -211,14 +211,18 @@ const CreateWorkspaceForm = ({ hasUser }: { hasUser: boolean }) => {
       const trialDays = Math.max(0, plan?.trial_days ?? 14);
       const now = new Date();
       const trialEnd = new Date(now.getTime() + trialDays * 86400000);
-      await supabase.from("subscriptions").insert({
-        user_id: user.id,
-        product_id: selectedPlanId,
-        status: trialDays > 0 ? "trialing" : "active",
-        current_period_start: now.toISOString(),
-        current_period_end: trialEnd.toISOString(),
-        environment: "test",
-      } as any);
+      // Upsert keyed on (user_id, product_id) so refresh/retry never creates duplicates.
+      await supabase.from("subscriptions").upsert(
+        {
+          user_id: user.id,
+          product_id: selectedPlanId,
+          status: trialDays > 0 ? "trialing" : "active",
+          current_period_start: now.toISOString(),
+          current_period_end: trialEnd.toISOString(),
+          environment: "test",
+        } as any,
+        { onConflict: "user_id,product_id" }
+      );
     }
 
     toast.success("Workspace created!");

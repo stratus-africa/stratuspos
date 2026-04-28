@@ -44,12 +44,19 @@ export function DashboardCharts({ salesTrend, topProducts }: DashboardChartsProp
         <CardContent>
           {topProducts.length > 0 ? (
             <ChartContainer config={chartConfig} className="h-[250px] w-full">
-              <BarChart data={topProducts} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis type="number" tickFormatter={(v) => `KES ${v.toLocaleString()}`} tick={{ fontSize: 11 }} />
-                <YAxis type="category" dataKey="product_name" width={100} tick={{ fontSize: 11 }} />
+              <BarChart data={topProducts} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                <XAxis
+                  dataKey="product_name"
+                  tick={{ fontSize: 11 }}
+                  interval={0}
+                  angle={-25}
+                  textAnchor="end"
+                  height={60}
+                />
+                <YAxis tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} tick={{ fontSize: 11 }} />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="total_revenue" name="Revenue" fill="var(--color-revenue)" radius={[0, 4, 4, 0]} />
+                <Bar dataKey="total_revenue" name="Revenue" fill="var(--color-revenue)" radius={[4, 4, 0, 0]} maxBarSize={56} />
               </BarChart>
             </ChartContainer>
           ) : (
