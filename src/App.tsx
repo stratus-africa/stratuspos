@@ -28,6 +28,7 @@ const Banking = lazy(() => import("./pages/Banking"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Landing = lazy(() => import("./pages/Landing"));
 const SuperAdminLogin = lazy(() => import("./pages/SuperAdminLogin"));
+const Profile = lazy(() => import("./pages/Profile"));
 
 const SuperAdminDashboard = lazy(() => import("./pages/super-admin/SuperAdminDashboard"));
 const SuperAdminBusinesses = lazy(() => import("./pages/super-admin/SuperAdminBusinesses"));
