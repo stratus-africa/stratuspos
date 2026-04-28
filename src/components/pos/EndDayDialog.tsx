@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Sunset, Loader2, Landmark, Wallet, AlertTriangle, ShieldCheck, ArrowRight } from "lucide-react";
+import { Sunset, Loader2, Landmark, Wallet, AlertTriangle, ShieldCheck, ArrowRight, Info, MapPin } from "lucide-react";
 import { useBankAccounts, BankAccount } from "@/hooks/useBankAccounts";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/contexts/BusinessContext";
@@ -37,7 +37,8 @@ export default function EndDayDialog({ open, onOpenChange, session, onConfirm }:
   const [adminApprovalStep, setAdminApprovalStep] = useState(false);
   const [verifyingAdmin, setVerifyingAdmin] = useState(false);
   const { data: bankAccounts = [] } = useBankAccounts();
-  const { business, currentLocation } = useBusiness();
+  const { business, currentLocation, locations } = useBusiness();
+  const multipleTills = locations.length > 1;
 
   // Calculate expected amounts per account from session payments
   useEffect(() => {
