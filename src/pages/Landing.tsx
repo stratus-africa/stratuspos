@@ -85,30 +85,30 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-teal-soft/40 via-background to-background text-foreground overflow-x-hidden">
-      {/* Floating pill navbar */}
-      <div className="sticky top-4 z-50 px-4">
-        <nav className="max-w-6xl mx-auto bg-background/90 backdrop-blur-xl border border-border/60 rounded-full shadow-lg shadow-teal/5 px-3 py-2 flex items-center justify-between gap-3">
-          <Link to="/landing" className="flex items-center gap-2 pl-3">
+      {/* Top navbar */}
+      <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/40">
+        <nav className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between gap-6">
+          <Link to="/landing" className="flex items-center gap-2">
             <div className="h-8 w-8 rounded-full bg-teal flex items-center justify-center">
               <Store className="h-4 w-4 text-teal-foreground" />
             </div>
             <span className="text-base font-bold tracking-tight text-foreground">StratusPOS</span>
           </Link>
-          <div className="hidden md:flex items-center gap-1 bg-muted/40 rounded-full px-2 py-1">
-            <a href="#features" className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full">Features</a>
-            <a href="#pricing" className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full">Pricing</a>
-            <a href="#how" className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full">How It Works</a>
-            <a href="#testimonials" className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full">Testimonials</a>
-            <a href="#faq" className="px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors rounded-full">FAQ</a>
+          <div className="hidden md:flex items-center gap-8">
+            <a href="#features" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Features</a>
+            <a href="#pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
+            <a href="#how" className="text-sm text-muted-foreground hover:text-foreground transition-colors">How It Works</a>
+            <a href="#testimonials" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Testimonials</a>
+            <a href="#faq" className="text-sm text-muted-foreground hover:text-foreground transition-colors">FAQ</a>
           </div>
-          <div className="flex items-center gap-2 pr-1">
-            <Link to="/onboarding" className="hidden sm:inline text-sm text-muted-foreground hover:text-foreground px-3">Login</Link>
+          <div className="flex items-center gap-2">
+            <Link to="/sign-in" className="hidden sm:inline text-sm text-muted-foreground hover:text-foreground px-3">Login</Link>
             <Button asChild className="rounded-full bg-teal hover:bg-teal-deep text-teal-foreground h-9 px-5 shadow-md shadow-teal/20">
               <Link to="/onboarding">Sign Up Free <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
             </Button>
           </div>
         </nav>
-      </div>
+      </header>
 
       {/* Hero */}
       <section className="relative pt-20 pb-32 px-4 overflow-hidden">
