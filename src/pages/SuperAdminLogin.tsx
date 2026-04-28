@@ -2,10 +2,14 @@ import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Shield, Mail, Lock, Eye, EyeOff, ArrowLeft, ArrowRight, Info, Copy, Check,
@@ -20,6 +24,22 @@ export default function SuperAdminLogin() {
   const [remember, setRemember] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [copied, setCopied] = useState<"email" | "password" | null>(null);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [sendingReset, setSendingReset] = useState(false);
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) return toast.error("Enter your email");
+    setSendingReset(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setSendingReset(false);
+    if (error) return toast.error(error.message);
+    toast.success("Password reset email sent. Check your inbox.");
+    setForgotOpen(false);
+  };
 
   if (!loading && !saLoading && user && isSuperAdmin) {
     return <Navigate to="/super-admin" replace />;
@@ -155,7 +175,7 @@ export default function SuperAdminLogin() {
                 Remember me
               </label>
               <Link to="/onboarding" className="text-sm font-semibold text-emerald-600 hover:text-emerald-700">
-                Forgot password?
+                {/* hidden, replaced below */}
               </Link>
             </div>
 
