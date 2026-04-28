@@ -41,6 +41,7 @@ const SuperAdminPackageEdit = lazy(() => import("./pages/super-admin/SuperAdminP
 const SuperAdminLanding = lazy(() => import("./pages/super-admin/SuperAdminLanding"));
 const SuperAdminTenantDetail = lazy(() => import("./pages/super-admin/SuperAdminTenantDetail"));
 const SuperAdminSubscriptions = lazy(() => import("./pages/super-admin/SuperAdminSubscriptions"));
+const SuperAdminPaymentsOverview = lazy(() => import("./pages/super-admin/SuperAdminPaymentsOverview"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -88,6 +89,7 @@ const SuperAdminRoutes = () => {
           <Route path="/packages/:id/edit" element={<SuperAdminPackageEdit />} />
           <Route path="/landing" element={<SuperAdminLanding />} />
           <Route path="/activity" element={<SuperAdminActivity />} />
+          <Route path="/payments" element={<SuperAdminPaymentsOverview />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
