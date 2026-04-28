@@ -28,6 +28,7 @@ const Banking = lazy(() => import("./pages/Banking"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Landing = lazy(() => import("./pages/Landing"));
 const SuperAdminLogin = lazy(() => import("./pages/SuperAdminLogin"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 
 const SuperAdminDashboard = lazy(() => import("./pages/super-admin/SuperAdminDashboard"));
 const SuperAdminBusinesses = lazy(() => import("./pages/super-admin/SuperAdminBusinesses"));
@@ -161,6 +162,7 @@ const App = () => (
                 <Route path="/onboarding" element={<Onboarding />} />
                 <Route path="/auth" element={<Navigate to="/onboarding" replace />} />
                 <Route path="/super-admin/login" element={<SuperAdminLogin />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/super-admin/*" element={<SuperAdminRoutes />} />
                 <Route path="/*" element={<ProtectedRoutes />} />
               </Routes>

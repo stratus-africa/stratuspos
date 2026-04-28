@@ -2,10 +2,14 @@ import { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
   Shield, Mail, Lock, Eye, EyeOff, ArrowLeft, ArrowRight, Info, Copy, Check,
@@ -20,6 +24,22 @@ export default function SuperAdminLogin() {
   const [remember, setRemember] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [copied, setCopied] = useState<"email" | "password" | null>(null);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [sendingReset, setSendingReset] = useState(false);
+
+  const handleForgotSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) return toast.error("Enter your email");
+    setSendingReset(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setSendingReset(false);
+    if (error) return toast.error(error.message);
+    toast.success("Password reset email sent. Check your inbox.");
+    setForgotOpen(false);
+  };
 
   if (!loading && !saLoading && user && isSuperAdmin) {
     return <Navigate to="/super-admin" replace />;
@@ -154,9 +174,13 @@ export default function SuperAdminLogin() {
                 <Checkbox checked={remember} onCheckedChange={(v) => setRemember(!!v)} />
                 Remember me
               </label>
-              <Link to="/onboarding" className="text-sm font-semibold text-emerald-600 hover:text-emerald-700">
+              <button
+                type="button"
+                onClick={() => { setForgotEmail(email); setForgotOpen(true); }}
+                className="text-sm font-semibold text-emerald-600 hover:text-emerald-700"
+              >
                 Forgot password?
-              </Link>
+              </button>
             </div>
 
             <Button
@@ -208,6 +232,46 @@ export default function SuperAdminLogin() {
           </p>
         </div>
       </main>
+
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset your password</DialogTitle>
+            <DialogDescription>
+              Enter your account email and we'll send you a link to set a new password.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleForgotSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="forgot-email">Email address</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  required
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="you@company.com"
+                  className="pl-10 h-11 rounded-lg"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setForgotOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={sendingReset}
+                className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white"
+              >
+                {sendingReset ? "Sending…" : "Send reset link"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
