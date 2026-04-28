@@ -19,10 +19,13 @@ interface TeamMember {
   user_id: string;
   role_id: string;
   role: AppRole;
+  till_id: string | null;
   full_name: string | null;
   email: string | null;
   phone: string | null;
 }
+
+interface TillOpt { id: string; name: string }
 
 const roleIcon = (role: string) => {
   switch (role) {
@@ -55,6 +58,8 @@ export function UserManagementTab() {
   const [editRole, setEditRole] = useState<AppRole>("cashier");
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editTillId, setEditTillId] = useState<string>("none");
+  const [tills, setTills] = useState<TillOpt[]>([]);
   const [saving, setSaving] = useState(false);
 
   const isAdmin = userRole === "admin";
@@ -63,12 +68,14 @@ export function UserManagementTab() {
     if (!business) return;
     setLoading(true);
 
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("id, user_id, role")
-      .eq("business_id", business.id);
+    const [rolesRes, tillsRes] = await Promise.all([
+      supabase.from("user_roles").select("id, user_id, role, till_id").eq("business_id", business.id),
+      supabase.from("tills" as any).select("id, name").eq("business_id", business.id).eq("is_active", true).order("name"),
+    ]);
+    const roles = (rolesRes.data || []) as any[];
+    setTills(((tillsRes.data || []) as any[]).map((t) => ({ id: t.id, name: t.name })));
 
-    if (!roles || roles.length === 0) {
+    if (roles.length === 0) {
       setMembers([]);
       setLoading(false);
       return;
@@ -86,6 +93,7 @@ export function UserManagementTab() {
         user_id: r.user_id,
         role_id: r.id,
         role: r.role as AppRole,
+        till_id: r.till_id || null,
         full_name: profileMap.get(r.user_id)?.full_name || null,
         email: profileMap.get(r.user_id)?.email || null,
         phone: profileMap.get(r.user_id)?.phone || null,
@@ -103,16 +111,17 @@ export function UserManagementTab() {
     setEditRole(member.role);
     setEditName(member.full_name || "");
     setEditPhone(member.phone || "");
+    setEditTillId(member.till_id || "none");
   };
 
   const handleSaveUser = async () => {
     if (!editMember) return;
     setSaving(true);
 
-    // Update role
+    // Update role + till
     const { error: roleError } = await supabase
       .from("user_roles")
-      .update({ role: editRole })
+      .update({ role: editRole, till_id: editTillId === "none" ? null : editTillId } as any)
       .eq("id", editMember.role_id);
 
     // Update profile
@@ -162,6 +171,7 @@ export function UserManagementTab() {
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Role</TableHead>
+              <TableHead>Till</TableHead>
               <TableHead>Status</TableHead>
               {isAdmin && <TableHead className="w-[60px]" />}
             </TableRow>
@@ -169,14 +179,16 @@ export function UserManagementTab() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={isAdmin ? 4 : 3} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
+                <TableCell colSpan={isAdmin ? 5 : 4} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
               </TableRow>
             ) : members.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={isAdmin ? 4 : 3} className="text-center py-8 text-muted-foreground">No team members found.</TableCell>
+                <TableCell colSpan={isAdmin ? 5 : 4} className="text-center py-8 text-muted-foreground">No team members found.</TableCell>
               </TableRow>
             ) : (
-              members.map((m) => (
+              members.map((m) => {
+                const till = tills.find((t) => t.id === m.till_id);
+                return (
                 <TableRow key={m.user_id}>
                   <TableCell className="font-medium">
                     {m.full_name || "Unnamed User"}
@@ -188,6 +200,13 @@ export function UserManagementTab() {
                     <Badge variant={roleBadgeVariant(m.role)} className="flex items-center gap-1 w-fit capitalize">
                       {roleIcon(m.role)} {m.role}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {till ? (
+                      <Badge variant="outline" className="text-xs">{till.name}</Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-emerald-600 border-emerald-200 bg-emerald-50">
