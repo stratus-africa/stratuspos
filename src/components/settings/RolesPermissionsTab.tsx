@@ -261,6 +261,7 @@ export function RolesPermissionsTab() {
     admin: members.filter((m) => m.role === "admin").length,
     manager: members.filter((m) => m.role === "manager").length,
     cashier: members.filter((m) => m.role === "cashier").length,
+    stores_manager: members.filter((m) => m.role === "stores_manager").length,
   };
 
   return (
@@ -288,18 +289,19 @@ export function RolesPermissionsTab() {
 
         {/* Team Members Tab */}
         <TabsContent value="members" className="mt-4">
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            {(["admin", "manager", "cashier"] as AppRole[]).map((role) => (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            {(["admin", "manager", "stores_manager", "cashier"] as AppRole[]).map((role) => (
               <Card key={role}>
                 <CardContent className="pt-4 pb-3">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-primary/10">
                       {role === "admin" ? <Crown className="h-4 w-4 text-primary" /> :
                        role === "manager" ? <Shield className="h-4 w-4 text-primary" /> :
+                       role === "stores_manager" ? <Warehouse className="h-4 w-4 text-primary" /> :
                        <User className="h-4 w-4 text-primary" />}
                     </div>
                     <div>
-                      <p className="text-xs text-muted-foreground capitalize">{role}s</p>
+                      <p className="text-xs text-muted-foreground">{roleDescriptions[role].label}s</p>
                       <p className="text-lg font-bold">{roleCounts[role]}</p>
                     </div>
                   </div>
