@@ -262,6 +262,7 @@ export type Database = {
           name: string
           owner_id: string | null
           phone: string | null
+          pos_require_manager_to_remove_item: boolean
           prevent_overselling: boolean
           status: string
           tax_rate: number | null
@@ -286,6 +287,7 @@ export type Database = {
           name: string
           owner_id?: string | null
           phone?: string | null
+          pos_require_manager_to_remove_item?: boolean
           prevent_overselling?: boolean
           status?: string
           tax_rate?: number | null
@@ -310,6 +312,7 @@ export type Database = {
           name?: string
           owner_id?: string | null
           phone?: string | null
+          pos_require_manager_to_remove_item?: boolean
           prevent_overselling?: boolean
           status?: string
           tax_rate?: number | null
