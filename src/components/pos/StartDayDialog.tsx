@@ -19,16 +19,22 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
   const [openingFloat, setOpeningFloat] = useState("0");
   const [locationId, setLocationId] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [tillError, setTillError] = useState<string | null>(null);
   const { data: bankAccounts = [] } = useBankAccounts();
 
   useEffect(() => {
     if (open) {
       setLocationId(currentLocation?.id || locations[0]?.id || "");
+      setTillError(null);
     }
   }, [open, currentLocation, locations]);
 
   const handleConfirm = async () => {
-    if (!locationId) return;
+    if (!locationId) {
+      setTillError("You must select a till before opening the register.");
+      return;
+    }
+    setTillError(null);
     setLoading(true);
     await onConfirm(parseFloat(openingFloat) || 0, locationId);
     setLoading(false);
