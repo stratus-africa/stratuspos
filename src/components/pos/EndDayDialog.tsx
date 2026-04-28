@@ -92,8 +92,11 @@ export default function EndDayDialog({ open, onOpenChange, session, onConfirm }:
       // Build reconciliation rows per account
       const accountExpected = new Map<string, number>();
 
-      // Cash account gets opening float + cash payments
-      const cashAccountId = methodToAccount.get("cash");
+      // Cash account: prefer the session's assigned cash account (set at Start of Day),
+      // fall back to the business-level payment_method_accounts mapping.
+      const cashAccountId =
+        (session as POSSession & { cash_account_id?: string | null }).cash_account_id ||
+        methodToAccount.get("cash");
 
       for (const [method, amount] of Object.entries(paymentsByMethod)) {
         if (amount === 0) continue;
