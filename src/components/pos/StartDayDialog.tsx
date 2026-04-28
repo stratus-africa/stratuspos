@@ -11,32 +11,61 @@ import { useBusiness } from "@/contexts/BusinessContext";
 interface StartDayDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (openingFloat: number, locationId: string) => Promise<void>;
+  onConfirm: (openingFloat: number, locationId: string, cashAccountId: string) => Promise<void>;
 }
 
 export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartDayDialogProps) {
-  const { locations, currentLocation } = useBusiness();
+  const { locations, currentLocation, business } = useBusiness();
   const [openingFloat, setOpeningFloat] = useState("0");
   const [locationId, setLocationId] = useState<string>("");
+  const [cashAccountId, setCashAccountId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [tillError, setTillError] = useState<string | null>(null);
+  const [cashAccountError, setCashAccountError] = useState<string | null>(null);
   const { data: bankAccounts = [] } = useBankAccounts();
 
+  // Only cash-type accounts can be assigned as the till's cash account
+  const cashAccounts = bankAccounts.filter((a) => a.account_type === "cash");
+
   useEffect(() => {
-    if (open) {
-      setLocationId(currentLocation?.id || locations[0]?.id || "");
-      setTillError(null);
-    }
-  }, [open, currentLocation, locations]);
+    if (!open || !business) return;
+    setLocationId(currentLocation?.id || locations[0]?.id || "");
+    setTillError(null);
+    setCashAccountError(null);
+
+    // Default to business-configured cash mapping, else first cash account
+    (async () => {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data } = await supabase
+        .from("payment_method_accounts")
+        .select("bank_account_id")
+        .eq("business_id", business.id)
+        .eq("payment_method", "cash")
+        .maybeSingle();
+      const mapped = (data as { bank_account_id?: string } | null)?.bank_account_id;
+      if (mapped && cashAccounts.some((a) => a.id === mapped)) {
+        setCashAccountId(mapped);
+      } else if (cashAccounts[0]) {
+        setCashAccountId(cashAccounts[0].id);
+      } else {
+        setCashAccountId("");
+      }
+    })();
+  }, [open, currentLocation, locations, business, bankAccounts.length]);
 
   const handleConfirm = async () => {
     if (!locationId) {
       setTillError("You must select a till before opening the register.");
       return;
     }
+    if (!cashAccountId) {
+      setCashAccountError("You must assign a cash account to this till.");
+      return;
+    }
     setTillError(null);
+    setCashAccountError(null);
     setLoading(true);
-    await onConfirm(parseFloat(openingFloat) || 0, locationId);
+    await onConfirm(parseFloat(openingFloat) || 0, locationId, cashAccountId);
     setLoading(false);
     setOpeningFloat("0");
   };
