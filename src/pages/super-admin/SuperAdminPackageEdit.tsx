@@ -405,16 +405,34 @@ export default function SuperAdminPackageEdit() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {ALL_FEATURES.map((f) => {
                 const enabled = featureToggles[f.key] ?? false;
+                const dependsOnAccounting = f.key === "banking" || f.key === "manual_journals";
+                const accountingForced =
+                  f.key === "accounting" &&
+                  (featureToggles.banking || featureToggles.manual_journals);
+
+                const handleToggle = () => {
+                  if (accountingForced) {
+                    toast.info("Accounting is required by Banking or Manual Journals — disable those first.");
+                    return;
+                  }
+                  const next: Record<string, boolean> = { ...featureToggles, [f.key]: !enabled };
+                  // Banking or Manual Journals → auto-enable Accounting
+                  if (dependsOnAccounting && !enabled) {
+                    next.accounting = true;
+                  }
+                  setFeatureToggles(next);
+                };
+
                 return (
                   <button
                     key={f.key}
                     type="button"
-                    onClick={() => setFeatureToggles({ ...featureToggles, [f.key]: !enabled })}
+                    onClick={handleToggle}
                     className={`text-left rounded-lg p-3 border transition-all flex items-start justify-between gap-3 ${
                       enabled
                         ? "border-emerald-500 bg-emerald-50/40"
                         : "border-border bg-white hover:border-muted-foreground/30"
-                    }`}
+                    } ${accountingForced ? "opacity-90" : ""}`}
                   >
                     <div className="flex items-start gap-2.5 min-w-0">
                       <div className={`h-9 w-9 rounded-md flex items-center justify-center shrink-0 ${enabled ? "bg-white" : "bg-muted"}`}>
@@ -423,6 +441,12 @@ export default function SuperAdminPackageEdit() {
                       <div className="min-w-0">
                         <p className="font-semibold text-sm leading-tight">{f.label}</p>
                         <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug">{f.description}</p>
+                        {dependsOnAccounting && enabled && (
+                          <p className="text-[10px] text-emerald-700 mt-1 font-medium">Requires Accounting</p>
+                        )}
+                        {accountingForced && (
+                          <p className="text-[10px] text-emerald-700 mt-1 font-medium">Locked on by Banking / Manual Journals</p>
+                        )}
                       </div>
                     </div>
                     <div
