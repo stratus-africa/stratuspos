@@ -70,6 +70,7 @@ const SettingsPage = () => {
           <TabsContent value="locations" className="mt-0"><LocationsTab /></TabsContent>
           {vatEnabled && <TabsContent value="tax" className="mt-0"><TaxSettingsTab /></TabsContent>}
           <TabsContent value="users" className="mt-0"><UserManagementTab /></TabsContent>
+          <TabsContent value="tills" className="mt-0"><TillsTab /></TabsContent>
           <TabsContent value="roles" className="mt-0"><RolesPermissionsTab /></TabsContent>
           <TabsContent value="payments" className="mt-0"><PaymentAccountsTab /></TabsContent>
           <TabsContent value="receipt" className="mt-0"><ReceiptSettingsTab /></TabsContent>
