@@ -148,7 +148,7 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleConfirm} disabled={loading || !locationId}>
+          <Button onClick={handleConfirm} disabled={loading || locations.length === 0}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Open Register
           </Button>
