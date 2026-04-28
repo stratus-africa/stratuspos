@@ -43,6 +43,14 @@ const SuperAdminTenantDetail = lazy(() => import("./pages/super-admin/SuperAdmin
 const SuperAdminSubscriptions = lazy(() => import("./pages/super-admin/SuperAdminSubscriptions"));
 const SuperAdminPaymentsOverview = lazy(() => import("./pages/super-admin/SuperAdminPaymentsOverview"));
 const SuperAdminBusinessEdit = lazy(() => import("./pages/super-admin/SuperAdminBusinessEdit"));
+const CmsHero = lazy(() => import("./pages/super-admin/cms/CmsHero"));
+const CmsFeatures = lazy(() => import("./pages/super-admin/cms/CmsFeatures"));
+const CmsStats = lazy(() => import("./pages/super-admin/cms/CmsStats"));
+const CmsHowItWorks = lazy(() => import("./pages/super-admin/cms/CmsHowItWorks"));
+const CmsTestimonials = lazy(() => import("./pages/super-admin/cms/CmsTestimonials"));
+const CmsFaq = lazy(() => import("./pages/super-admin/cms/CmsFaq"));
+const CmsPricing = lazy(() => import("./pages/super-admin/cms/CmsPricing"));
+const CmsCta = lazy(() => import("./pages/super-admin/cms/CmsCta"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -92,6 +100,14 @@ const SuperAdminRoutes = () => {
           <Route path="/landing" element={<SuperAdminLanding />} />
           <Route path="/activity" element={<SuperAdminActivity />} />
           <Route path="/payments" element={<SuperAdminPaymentsOverview />} />
+          <Route path="/cms/hero" element={<CmsHero />} />
+          <Route path="/cms/features" element={<CmsFeatures />} />
+          <Route path="/cms/stats" element={<CmsStats />} />
+          <Route path="/cms/how-it-works" element={<CmsHowItWorks />} />
+          <Route path="/cms/testimonials" element={<CmsTestimonials />} />
+          <Route path="/cms/faq" element={<CmsFaq />} />
+          <Route path="/cms/pricing" element={<CmsPricing />} />
+          <Route path="/cms/cta" element={<CmsCta />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
