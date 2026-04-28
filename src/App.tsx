@@ -51,6 +51,7 @@ const CmsTestimonials = lazy(() => import("./pages/super-admin/cms/CmsTestimonia
 const CmsFaq = lazy(() => import("./pages/super-admin/cms/CmsFaq"));
 const CmsPricing = lazy(() => import("./pages/super-admin/cms/CmsPricing"));
 const CmsCta = lazy(() => import("./pages/super-admin/cms/CmsCta"));
+const SuperAdminSettings = lazy(() => import("./pages/super-admin/SuperAdminSettings"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
