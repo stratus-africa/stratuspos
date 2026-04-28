@@ -101,9 +101,16 @@ export function TopBar() {
               </Button>
             </>
           )}
-          <Avatar className="h-7 w-7">
-            <AvatarFallback className="text-xs bg-primary text-primary-foreground">{initials}</AvatarFallback>
-          </Avatar>
+          <button
+            type="button"
+            onClick={() => navigate("/profile")}
+            className="rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            aria-label="Open profile"
+          >
+            <Avatar className="h-7 w-7">
+              <AvatarFallback className="text-xs bg-primary text-primary-foreground">{initials}</AvatarFallback>
+            </Avatar>
+          </button>
         </div>
       </header>
 
