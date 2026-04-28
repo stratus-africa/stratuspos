@@ -43,6 +43,10 @@ const SettingsPage = () => {
             <Users className="h-4 w-4" />
             Users
           </TabsTrigger>
+          <TabsTrigger value="tills" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
+            <Calculator className="h-4 w-4" />
+            Tills
+          </TabsTrigger>
           <TabsTrigger value="roles" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
             <ShieldCheck className="h-4 w-4" />
             Roles
