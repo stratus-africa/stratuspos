@@ -71,6 +71,7 @@ export default function CmsFaq() {
         onAdd={async (it) => { const next = [...items, it]; setItems(next); await persist({ items: next }); }}
         onUpdate={async (i, it) => { const next = items.map((x, idx) => idx === i ? it : x); setItems(next); await persist({ items: next }); }}
         onDelete={async (i) => { const next = items.filter((_, idx) => idx !== i); setItems(next); await persist({ items: next }); }}
+        onReorder={async (next) => { setItems(next); await persist({ items: next }); }}
         renderEditor={(item, set) => (
           <div className="space-y-3">
             <div className="space-y-1.5">
