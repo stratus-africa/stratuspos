@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Sale, SaleItem, Payment, useSales } from "@/hooks/useSales";
+import { useBusiness } from "@/contexts/BusinessContext";
 import { format } from "date-fns";
+import { Printer } from "lucide-react";
+import { toast } from "sonner";
 
 interface Props {
   open: boolean;
@@ -14,6 +18,7 @@ interface Props {
 
 export default function SaleDetailDialog({ open, onOpenChange, sale }: Props) {
   const { getSaleDetails } = useSales();
+  const { business } = useBusiness();
   const [items, setItems] = useState<SaleItem[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -30,6 +35,77 @@ export default function SaleDetailDialog({ open, onOpenChange, sale }: Props) {
   if (!sale) return null;
 
   const statusColor = sale.payment_status === "paid" ? "default" : sale.payment_status === "partial" ? "secondary" : "destructive";
+
+  const escapeHtml = (s: string) =>
+    s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));
+
+  const handleReprint = () => {
+    if (loading) {
+      toast.info("Loading receipt details…");
+      return;
+    }
+    const win = window.open("", "_blank", "width=320,height=600");
+    if (!win) {
+      toast.error("Popup blocked. Allow popups to print receipts.");
+      return;
+    }
+    const businessName = business?.name || "";
+    const locationName = sale.locations?.name || "";
+    const customerName = sale.customers?.name || "";
+    const fmt = (n: number | string) => Number(n || 0).toLocaleString();
+
+    const itemRows = items.map((it) => `
+      <tr>
+        <td>${escapeHtml(it.products?.name || "—")}</td>
+        <td class="right">${fmt(it.quantity)} x ${fmt(it.unit_price)}</td>
+        <td class="right">${fmt(it.total)}</td>
+      </tr>
+    `).join("");
+
+    const paymentRows = payments.map((p) => `
+      <div class="row"><span>${escapeHtml(p.method)}${p.reference ? ` (${escapeHtml(p.reference)})` : ""}</span><span>${fmt(p.amount)}</span></div>
+    `).join("");
+
+    win.document.write(`
+      <html><head><title>Receipt ${escapeHtml(sale.invoice_number || "")}</title>
+      <style>
+        body { font-family: monospace; font-size: 12px; width: 280px; margin: 0 auto; padding: 10px; color:#000; }
+        .center { text-align: center; }
+        .right { text-align: right; }
+        .bold { font-weight: bold; }
+        .line { border-top: 1px dashed #000; margin: 6px 0; }
+        .row { display: flex; justify-content: space-between; }
+        table { width: 100%; border-collapse: collapse; }
+        td { padding: 2px 0; vertical-align: top; }
+        .total { font-weight: bold; font-size: 13px; }
+        .reprint { text-align:center; font-size: 10px; margin-top: 4px; letter-spacing: 1px; }
+        @media print { body { margin: 0; } }
+      </style></head><body>
+        <div class="center">
+          <div class="bold" style="font-size:13px">${escapeHtml(businessName)}</div>
+          <div>${escapeHtml(locationName)}</div>
+          <div>${format(new Date(sale.created_at), "PPp")}</div>
+        </div>
+        <div class="line"></div>
+        <div>Invoice: ${escapeHtml(sale.invoice_number || "—")}</div>
+        ${customerName ? `<div>Customer: ${escapeHtml(customerName)}</div>` : ""}
+        <div class="line"></div>
+        <table><tbody>${itemRows}</tbody></table>
+        <div class="line"></div>
+        <div class="row"><span>Subtotal</span><span>${fmt(sale.subtotal)}</span></div>
+        ${Number(sale.tax) > 0 ? `<div class="row"><span>VAT</span><span>${fmt(sale.tax)}</span></div>` : ""}
+        ${Number(sale.discount) > 0 ? `<div class="row"><span>Discount</span><span>-${fmt(sale.discount)}</span></div>` : ""}
+        <div class="row total"><span>TOTAL</span><span>KES ${fmt(sale.total)}</span></div>
+        <div class="line"></div>
+        ${paymentRows || `<div class="row"><span>Unpaid</span><span>—</span></div>`}
+        <div class="line"></div>
+        <div class="center">Thank you for shopping with us!</div>
+        <div class="reprint">*** REPRINT ***</div>
+        <script>window.onload = function(){ window.print(); setTimeout(function(){ window.close(); }, 200); };</script>
+      </body></html>
+    `);
+    win.document.close();
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -118,6 +194,13 @@ export default function SaleDetailDialog({ open, onOpenChange, sale }: Props) {
             </div>
           </>
         )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+          <Button onClick={handleReprint} disabled={loading}>
+            <Printer className="h-4 w-4 mr-1" /> Reprint Receipt
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
