@@ -19,16 +19,22 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
   const [openingFloat, setOpeningFloat] = useState("0");
   const [locationId, setLocationId] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [tillError, setTillError] = useState<string | null>(null);
   const { data: bankAccounts = [] } = useBankAccounts();
 
   useEffect(() => {
     if (open) {
       setLocationId(currentLocation?.id || locations[0]?.id || "");
+      setTillError(null);
     }
   }, [open, currentLocation, locations]);
 
   const handleConfirm = async () => {
-    if (!locationId) return;
+    if (!locationId) {
+      setTillError("You must select a till before opening the register.");
+      return;
+    }
+    setTillError(null);
     setLoading(true);
     await onConfirm(parseFloat(openingFloat) || 0, locationId);
     setLoading(false);
@@ -62,8 +68,17 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
             {locations.length === 0 ? (
               <p className="text-sm text-destructive">No tills configured. Ask an admin to add a location.</p>
             ) : (
-              <Select value={locationId} onValueChange={setLocationId}>
-                <SelectTrigger id="till" className="h-10">
+              <Select
+                value={locationId}
+                onValueChange={(v) => {
+                  setLocationId(v);
+                  if (v) setTillError(null);
+                }}
+              >
+                <SelectTrigger
+                  id="till"
+                  className={`h-10 ${tillError ? "border-destructive ring-1 ring-destructive/30" : ""}`}
+                >
                   <SelectValue placeholder="Select your till" />
                 </SelectTrigger>
                 <SelectContent>
@@ -73,7 +88,10 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
                 </SelectContent>
               </Select>
             )}
-            {multipleTills && (
+            {tillError && (
+              <p className="text-xs text-destructive font-medium">{tillError}</p>
+            )}
+            {multipleTills && !tillError && (
               <p className="text-xs text-muted-foreground">
                 All tills settle into the same configured cash account at end of day.
               </p>
@@ -130,7 +148,7 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleConfirm} disabled={loading || !locationId}>
+          <Button onClick={handleConfirm} disabled={loading || locations.length === 0}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Open Register
           </Button>
