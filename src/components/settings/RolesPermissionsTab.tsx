@@ -372,7 +372,7 @@ export function RolesPermissionsTab() {
         {/* Roles & Permissions Tab */}
         <TabsContent value="roles" className="mt-4">
           <div className="grid gap-4">
-            {(["admin", "manager", "cashier"] as AppRole[]).map((role) => {
+            {(["admin", "manager", "stores_manager", "cashier"] as AppRole[]).map((role) => {
               const info = roleDescriptions[role];
               const perms = rolePermissions[role];
               return (
@@ -382,6 +382,7 @@ export function RolesPermissionsTab() {
                       <div className="p-2 rounded-lg bg-primary/10">
                         {role === "admin" ? <Crown className="h-5 w-5 text-primary" /> :
                          role === "manager" ? <Shield className="h-5 w-5 text-primary" /> :
+                         role === "stores_manager" ? <Warehouse className="h-5 w-5 text-primary" /> :
                          <User className="h-5 w-5 text-primary" />}
                       </div>
                       <div className="flex-1">
@@ -447,6 +448,7 @@ export function RolesPermissionsTab() {
                 <SelectContent>
                   <SelectItem value="admin">Admin — Full access to all features</SelectItem>
                   <SelectItem value="manager">Manager — Inventory, sales & purchases</SelectItem>
+                  <SelectItem value="stores_manager">Stores Manager — Stock & inventory operations</SelectItem>
                   <SelectItem value="cashier">Cashier — POS access only</SelectItem>
                 </SelectContent>
               </Select>
