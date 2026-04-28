@@ -58,14 +58,15 @@ export function usePOSSession() {
     fetchActiveSession();
   }, [fetchActiveSession]);
 
-  const startDay = async (openingFloat: number) => {
-    if (!business || !currentLocation || !user) return null;
+  const startDay = async (openingFloat: number, locationIdOverride?: string) => {
+    const targetLocationId = locationIdOverride || currentLocation?.id;
+    if (!business || !targetLocationId || !user) return null;
 
     const { data, error } = await supabase
       .from("pos_sessions")
       .insert({
         business_id: business.id,
-        location_id: currentLocation.id,
+        location_id: targetLocationId,
         opened_by: user.id,
         opening_float: openingFloat,
         status: "open",
