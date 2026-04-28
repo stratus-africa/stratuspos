@@ -265,6 +265,23 @@ export function UserManagementTab() {
                 </SelectContent>
               </Select>
             </div>
+            {editRole === "cashier" && (
+              <div className="space-y-2">
+                <Label>Assigned Till</Label>
+                <Select value={editTillId} onValueChange={setEditTillId}>
+                  <SelectTrigger><SelectValue placeholder="Select a till" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">— No till assigned —</SelectItem>
+                    {tills.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {tills.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No tills configured. Add tills in the Tills tab.</p>
+                )}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditMember(null)}>Cancel</Button>
