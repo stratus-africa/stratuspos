@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sunrise, Loader2, Landmark, Wallet, MapPin } from "lucide-react";
+import { Sunrise, Loader2, Landmark, Wallet } from "lucide-react";
 import { useBankAccounts, BankAccount } from "@/hooks/useBankAccounts";
 import { useBusiness } from "@/contexts/BusinessContext";
 
@@ -15,22 +15,18 @@ interface StartDayDialogProps {
 }
 
 export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartDayDialogProps) {
-  const { locations, currentLocation, business } = useBusiness();
+  const { currentLocation, locations, business } = useBusiness();
   const [openingFloat, setOpeningFloat] = useState("0");
-  const [locationId, setLocationId] = useState<string>("");
   const [cashAccountId, setCashAccountId] = useState<string>("");
   const [loading, setLoading] = useState(false);
-  const [tillError, setTillError] = useState<string | null>(null);
   const [cashAccountError, setCashAccountError] = useState<string | null>(null);
   const { data: bankAccounts = [] } = useBankAccounts();
 
-  // Only cash-type accounts can be assigned as the till's cash account
+  // Only cash-type accounts can be assigned as the cash account
   const cashAccounts = bankAccounts.filter((a) => a.account_type === "cash");
 
   useEffect(() => {
     if (!open || !business) return;
-    setLocationId(currentLocation?.id || locations[0]?.id || "");
-    setTillError(null);
     setCashAccountError(null);
 
     // Default to business-configured cash mapping, else first cash account
@@ -51,26 +47,20 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
         setCashAccountId("");
       }
     })();
-  }, [open, currentLocation, locations, business, bankAccounts.length]);
+  }, [open, business, bankAccounts.length]);
 
   const handleConfirm = async () => {
-    if (!locationId) {
-      setTillError("You must select a till before opening the register.");
-      return;
-    }
+    const targetLocationId = currentLocation?.id || locations[0]?.id || "";
     if (!cashAccountId) {
-      setCashAccountError("You must assign a cash account to this till.");
+      setCashAccountError("You must assign a cash account before opening the register.");
       return;
     }
-    setTillError(null);
     setCashAccountError(null);
     setLoading(true);
-    await onConfirm(parseFloat(openingFloat) || 0, locationId, cashAccountId);
+    await onConfirm(parseFloat(openingFloat) || 0, targetLocationId, cashAccountId);
     setLoading(false);
     setOpeningFloat("0");
   };
-
-  const multipleTills = locations.length > 1;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -81,53 +71,12 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
             Start of Day
           </DialogTitle>
           <DialogDescription>
-            {multipleTills
-              ? "Choose your till, review balances, then enter the starting cash float."
-              : "Open the register for today. Review balances and enter the starting cash float."}
+            Open the register for today. Pick the cash account and enter the starting cash float.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Till assignment */}
-          <div className="space-y-2">
-            <Label htmlFor="till" className="flex items-center gap-1.5">
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-              Assigned Till
-            </Label>
-            {locations.length === 0 ? (
-              <p className="text-sm text-destructive">No tills configured. Ask an admin to add a location.</p>
-            ) : (
-              <Select
-                value={locationId}
-                onValueChange={(v) => {
-                  setLocationId(v);
-                  if (v) setTillError(null);
-                }}
-              >
-                <SelectTrigger
-                  id="till"
-                  className={`h-10 ${tillError ? "border-destructive ring-1 ring-destructive/30" : ""}`}
-                >
-                  <SelectValue placeholder="Select your till" />
-                </SelectTrigger>
-                <SelectContent>
-                  {locations.map((loc) => (
-                    <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-            {tillError && (
-              <p className="text-xs text-destructive font-medium">{tillError}</p>
-            )}
-            {multipleTills && !tillError && (
-              <p className="text-xs text-muted-foreground">
-                All tills settle into the same configured cash account at end of day.
-              </p>
-            )}
-          </div>
-
-          {/* Cash Account assignment for this till */}
+          {/* Cash Account assignment */}
           <div className="space-y-2">
             <Label htmlFor="cash-account" className="flex items-center gap-1.5">
               <Wallet className="h-4 w-4 text-muted-foreground" />
@@ -164,7 +113,7 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
               <p className="text-xs text-destructive font-medium">{cashAccountError}</p>
             ) : (
               <p className="text-xs text-muted-foreground">
-                All cash collected at this till will settle into this account at end of day.
+                All cash collected will settle into this account at end of day.
               </p>
             )}
           </div>
@@ -219,7 +168,7 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleConfirm} disabled={loading || locations.length === 0 || cashAccounts.length === 0}>
+          <Button onClick={handleConfirm} disabled={loading || cashAccounts.length === 0}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Open Register
           </Button>
