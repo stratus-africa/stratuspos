@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Save, Loader2, Building2, Phone, Mail, MapPin, FileText, UserCheck, Palette, PackageOpen, Briefcase } from "lucide-react";
+import { Save, Loader2, Building2, Phone, Mail, MapPin, FileText, UserCheck, Palette, PackageOpen, Briefcase, ShoppingCart } from "lucide-react";
 import { THEMES, DEFAULT_THEME, applyTheme, type ThemeKey, BUSINESS_TYPE_OPTIONS, type BusinessType } from "@/lib/themes";
 
 export function BusinessProfileTab() {
@@ -30,6 +30,7 @@ export function BusinessProfileTab() {
   const [accountantPhone, setAccountantPhone] = useState((business as { accountant_phone?: string })?.accountant_phone || "");
   const [themeColor, setThemeColor] = useState<ThemeKey>(((business as { theme_color?: ThemeKey })?.theme_color || DEFAULT_THEME) as ThemeKey);
   const [preventOverselling, setPreventOverselling] = useState((business as { prevent_overselling?: boolean })?.prevent_overselling ?? false);
+  const [requireManagerToRemove, setRequireManagerToRemove] = useState((business as { pos_require_manager_to_remove_item?: boolean })?.pos_require_manager_to_remove_item ?? false);
   const [businessType, setBusinessType] = useState<BusinessType>(((business as { business_type?: BusinessType })?.business_type || "general") as BusinessType);
 
   const handleSave = async () => {
@@ -52,6 +53,7 @@ export function BusinessProfileTab() {
         accountant_phone: accountantPhone.trim() || null,
         theme_color: themeColor,
         prevent_overselling: preventOverselling,
+        pos_require_manager_to_remove_item: requireManagerToRemove,
         business_type: businessType,
       } as never)
       .eq("id", business.id);
@@ -271,6 +273,27 @@ export function BusinessProfileTab() {
               <p className="text-sm text-muted-foreground">Block sales and adjustments that would push stock below zero.</p>
             </div>
             <Switch checked={preventOverselling} onCheckedChange={setPreventOverselling} />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* POS rules */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ShoppingCart className="h-5 w-5" />
+            Point of Sale Rules
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label className="text-base">Require manager approval to remove a scanned item</Label>
+              <p className="text-sm text-muted-foreground">
+                Cashiers must enter manager credentials before removing an item already added to the cart.
+              </p>
+            </div>
+            <Switch checked={requireManagerToRemove} onCheckedChange={setRequireManagerToRemove} />
           </div>
         </CardContent>
       </Card>
