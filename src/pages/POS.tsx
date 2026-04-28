@@ -92,8 +92,12 @@ const POS = () => {
     }
   };
 
-  const handleStartDay = async (openingFloat: number) => {
-    await session.startDay(openingFloat);
+  const handleStartDay = async (openingFloat: number, locationId: string) => {
+    if (locationId && locationId !== currentLocation?.id) {
+      const picked = locations.find((l) => l.id === locationId);
+      if (picked) setCurrentLocation(picked);
+    }
+    await session.startDay(openingFloat, locationId);
     setStartDayOpen(false);
   };
 
