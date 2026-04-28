@@ -25,28 +25,8 @@ export function usePaystackCheckout() {
         },
       });
 
-      // supabase.functions.invoke returns FunctionsHttpError on non-2xx and the
-      // response body is on `error.context`. Pull the upstream message out so we
-      // can show the real reason (e.g. "Package not found", "no KES price").
-      if (error) {
-        let serverMsg = error.message;
-        const ctx: any = (error as any).context;
-        if (ctx && typeof ctx.json === "function") {
-          try {
-            const body = await ctx.json();
-            if (body?.error) serverMsg = body.error;
-          } catch {
-            try {
-              const txt = await ctx.text();
-              if (txt) serverMsg = txt;
-            } catch { /* ignore */ }
-          }
-        }
-        throw new Error(serverMsg || "Could not start checkout");
-      }
-
-      if (!data?.access_code) {
-        throw new Error(data?.error || "Could not start checkout");
+      if (error || !data?.access_code) {
+        throw new Error(error?.message || data?.error || "Could not start checkout");
       }
 
       // Try inline popup first

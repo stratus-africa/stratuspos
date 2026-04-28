@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, MapPin, Users, Receipt, CreditCard, ShieldCheck, Percent, Wallet, Calculator } from "lucide-react";
+import { Building2, MapPin, Users, Receipt, CreditCard, ShieldCheck, Percent, Wallet } from "lucide-react";
 import { BusinessProfileTab } from "@/components/settings/BusinessProfileTab";
 import { LocationsTab } from "@/components/settings/LocationsTab";
 import { UserManagementTab } from "@/components/settings/UserManagementTab";
@@ -8,7 +8,6 @@ import { SubscriptionTab } from "@/components/settings/SubscriptionTab";
 import { RolesPermissionsTab } from "@/components/settings/RolesPermissionsTab";
 import { TaxSettingsTab } from "@/components/settings/TaxSettingsTab";
 import { PaymentAccountsTab } from "@/components/settings/PaymentAccountsTab";
-import { TillsTab } from "@/components/settings/TillsTab";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { useSearchParams } from "react-router-dom";
 import { useBusiness } from "@/contexts/BusinessContext";
@@ -43,10 +42,6 @@ const SettingsPage = () => {
             <Users className="h-4 w-4" />
             Users
           </TabsTrigger>
-          <TabsTrigger value="tills" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
-            <Calculator className="h-4 w-4" />
-            Tills
-          </TabsTrigger>
           <TabsTrigger value="roles" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
             <ShieldCheck className="h-4 w-4" />
             Roles
@@ -70,7 +65,6 @@ const SettingsPage = () => {
           <TabsContent value="locations" className="mt-0"><LocationsTab /></TabsContent>
           {vatEnabled && <TabsContent value="tax" className="mt-0"><TaxSettingsTab /></TabsContent>}
           <TabsContent value="users" className="mt-0"><UserManagementTab /></TabsContent>
-          <TabsContent value="tills" className="mt-0"><TillsTab /></TabsContent>
           <TabsContent value="roles" className="mt-0"><RolesPermissionsTab /></TabsContent>
           <TabsContent value="payments" className="mt-0"><PaymentAccountsTab /></TabsContent>
           <TabsContent value="receipt" className="mt-0"><ReceiptSettingsTab /></TabsContent>

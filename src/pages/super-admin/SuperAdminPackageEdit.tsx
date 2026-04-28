@@ -15,37 +15,18 @@ import {
   ArrowLeft, Tag, Save, Loader2, AlertTriangle, Trash2, Check,
   Package, Users, Warehouse, Contact, Truck, Info, ShoppingCart, Briefcase,
   Calculator, Store, ArrowLeftRight, Wrench, Sparkles, ListChecks,
-  LayoutDashboard, Boxes, Receipt, ShoppingBag, Wallet, BookOpen, Landmark, BarChart3,
 } from "lucide-react";
 
 const ALL_FEATURES: { key: string; label: string; description: string; Icon: React.ElementType }[] = [
-  // Standard modules — enabled on every plan by default
-  { key: "dashboard",           label: "Dashboard",            description: "Business overview & KPI dashboard",      Icon: LayoutDashboard },
   { key: "pos",                 label: "Point of Sale",        description: "In-store POS terminal",                  Icon: Store },
-  { key: "products",            label: "Products",             description: "Product catalog management",             Icon: Package },
-  { key: "inventory",           label: "Inventory",            description: "Stock levels & adjustments",             Icon: Boxes },
-  { key: "sales",               label: "Sales",                description: "Sales orders & invoices",                Icon: Receipt },
-  { key: "purchases",           label: "Purchases",            description: "Purchase orders & supplier bills",       Icon: ShoppingBag },
-  { key: "expenses",            label: "Expenses",             description: "Track operating expenses",               Icon: Wallet },
-  { key: "banking",             label: "Banking",              description: "Bank accounts & reconciliation",         Icon: Landmark },
-  { key: "reports",             label: "Reports",              description: "Sales, P&L and inventory reports",       Icon: BarChart3 },
-  // Accounting suite (Accountant is the same module as Accounting)
-  { key: "accounting",          label: "Accounting",           description: "Chart of accounts & bookkeeping",        Icon: Calculator },
-  { key: "manual_journals",     label: "Manual Journals",      description: "Post manual journal entries",            Icon: BookOpen },
-  // Optional add-ons
   { key: "online_orders",       label: "Online Orders",        description: "E-commerce order management",            Icon: ShoppingCart },
   { key: "hr_management",       label: "HR Management",        description: "Employees, attendance, payroll",         Icon: Briefcase },
+  { key: "accounting",          label: "Accounting",           description: "Financial accounting & bookkeeping",     Icon: Calculator },
   { key: "woocommerce",         label: "WooCommerce",          description: "WooCommerce store integration",          Icon: ShoppingCart },
   { key: "transfers",           label: "Transfers",            description: "Stock transfers between warehouses",     Icon: ArrowLeftRight },
   { key: "service_maintenance", label: "Service & Maintenance", description: "Service & maintenance management",       Icon: Wrench },
   { key: "ai_reports",          label: "AI Reports",           description: "AI-powered analytics & reports",         Icon: Sparkles },
 ];
-
-// Default-on feature keys (standard modules every new plan should include).
-const DEFAULT_ON_FEATURES = new Set([
-  "dashboard", "pos", "products", "inventory", "sales", "purchases",
-  "expenses", "banking", "reports",
-]);
 
 interface Form {
   name: string;
@@ -89,7 +70,7 @@ export default function SuperAdminPackageEdit() {
 
   const [form, setForm] = useState<Form>(emptyForm);
   const [featureToggles, setFeatureToggles] = useState<Record<string, boolean>>(
-    Object.fromEntries(ALL_FEATURES.map((f) => [f.key, DEFAULT_ON_FEATURES.has(f.key)]))
+    Object.fromEntries(ALL_FEATURES.map((f) => [f.key, true]))
   );
   const [loading, setLoading] = useState(!isNew);
   const [saving, setSaving] = useState(false);

@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, memo } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,24 +7,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  ShoppingCart,
-  Search,
-  Plus,
-  Minus,
-  Trash2,
-  Pause,
-  Play,
-  X,
-  User,
-  List,
-  LayoutGrid,
-  Sunrise,
-  Banknote,
-  Smartphone,
-  CreditCard,
-  ScanLine,
-  ChevronUp,
-  ChevronDown,
+  ShoppingCart, Search, Plus, Minus, Trash2, Pause, Play, X,
+  User, List, LayoutGrid, Sunrise, Banknote, Smartphone, CreditCard, ScanLine,
+  ChevronUp, ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useProducts, useCategories } from "@/hooks/useProducts";
@@ -61,18 +46,17 @@ const POS = () => {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [mobileCartExpanded, setMobileCartExpanded] = useState(false);
 
-  const handleScanned = useCallback(
-    (code: string) => {
-      const match = (productsQuery.data ?? []).find((p) => p.is_active && (p.barcode === code || p.sku === code));
-      if (match) {
-        pos.addToCart(match);
-      } else {
-        setSearch(code);
-        toast.warning(`No product matches "${code}"`);
-      }
-    },
-    [productsQuery.data, pos],
-  );
+  const handleScanned = (code: string) => {
+    const match = (productsQuery.data ?? []).find(
+      (p) => p.is_active && (p.barcode === code || p.sku === code)
+    );
+    if (match) {
+      pos.addToCart(match);
+    } else {
+      setSearch(code);
+      toast.warning(`No product matches "${code}"`);
+    }
+  };
 
   const products = productsQuery.data ?? [];
   const categories = categoriesQuery.data ?? [];
@@ -96,28 +80,23 @@ const POS = () => {
         const matchCat = categoryFilter === "all" || p.category_id === categoryFilter;
         return matchSearch && matchCat;
       }),
-    [products, search, categoryFilter],
+    [products, search, categoryFilter]
   );
 
-  const handlePaymentConfirm = useCallback(
-    async (payments: PaymentEntry[], bankAccountId: string | null) => {
-      const result = await pos.completeSale(payments, bankAccountId);
-      if (result) {
-        setPaymentOpen(false);
-        setReceiptData(result);
-        setReceiptOpen(true);
-      }
-    },
-    [pos],
-  );
+  const handlePaymentConfirm = async (payments: PaymentEntry[], bankAccountId: string | null) => {
+    const result = await pos.completeSale(payments, bankAccountId);
+    if (result) {
+      setPaymentOpen(false);
+      setReceiptData(result);
+      setReceiptOpen(true);
+    }
+  };
 
-  const handleStartDay = useCallback(
-    async (openingFloat: number) => {
-      await session.startDay(openingFloat);
-      setStartDayOpen(false);
-    },
-    [session],
-  );
+  const handleStartDay = async (openingFloat: number) => {
+    await session.startDay(openingFloat);
+    setStartDayOpen(false);
+  };
+
 
   // Show loading while checking session
   if (session.loading) {
@@ -157,6 +136,7 @@ const POS = () => {
 
   return (
     <div className="flex flex-col lg:flex-row gap-4 h-[calc(100dvh-6rem)] lg:h-[calc(100vh-6rem)] pb-[env(safe-area-inset-bottom)]">
+
       {/* Left: Product selection */}
       <div className="flex-1 flex flex-col min-h-0">
         {/* Search & filters - single row on mobile */}
@@ -178,34 +158,18 @@ const POS = () => {
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
               {categories.map((c) => (
-                <SelectItem key={c.id} value={c.id}>
-                  {c.name}
-                </SelectItem>
+                <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <Button
-            size="icon"
-            variant="outline"
-            className="shrink-0"
-            onClick={() => setScannerOpen(true)}
-            title="Scan barcode"
-          >
+          <Button size="icon" variant="outline" className="shrink-0" onClick={() => setScannerOpen(true)} title="Scan barcode">
             <ScanLine className="h-4 w-4" />
           </Button>
           <div className="flex gap-1 shrink-0">
-            <Button
-              size="icon"
-              variant={viewMode === "grid" ? "default" : "outline"}
-              onClick={() => setViewMode("grid")}
-            >
+            <Button size="icon" variant={viewMode === "grid" ? "default" : "outline"} onClick={() => setViewMode("grid")}>
               <LayoutGrid className="h-4 w-4" />
             </Button>
-            <Button
-              size="icon"
-              variant={viewMode === "list" ? "default" : "outline"}
-              onClick={() => setViewMode("list")}
-            >
+            <Button size="icon" variant={viewMode === "list" ? "default" : "outline"} onClick={() => setViewMode("list")}>
               <List className="h-4 w-4" />
             </Button>
           </div>
@@ -223,9 +187,7 @@ const POS = () => {
                 >
                   <span className="font-medium text-sm line-clamp-2">{p.name}</span>
                   {p.sku && <span className="text-xs text-muted-foreground">{p.sku}</span>}
-                  <span className="mt-auto pt-1 font-semibold text-primary">
-                    KES {Number(p.selling_price).toLocaleString()}
-                  </span>
+                  <span className="mt-auto pt-1 font-semibold text-primary">KES {Number(p.selling_price).toLocaleString()}</span>
                 </button>
               ))}
               {activeProducts.length === 0 && (
@@ -272,11 +234,7 @@ const POS = () => {
           <div className="flex items-center gap-2 mt-2 pt-2 border-t overflow-x-auto">
             <span className="text-xs text-muted-foreground whitespace-nowrap">Held:</span>
             {pos.heldSales.map((h) => (
-              <Badge
-                key={h.id}
-                variant="secondary"
-                className="cursor-pointer flex items-center gap-1 whitespace-nowrap"
-              >
+              <Badge key={h.id} variant="secondary" className="cursor-pointer flex items-center gap-1 whitespace-nowrap">
                 <button onClick={() => pos.resumeSale(h.id)} className="flex items-center gap-1">
                   <Play className="h-3 w-3" /> {h.label}
                 </button>
@@ -325,9 +283,7 @@ const POS = () => {
               <SelectContent>
                 <SelectItem value="walkin">Walk-in Customer</SelectItem>
                 {customers.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.name} {c.phone ? `(${c.phone})` : ""}
-                  </SelectItem>
+                  <SelectItem key={c.id} value={c.id}>{c.name} {c.phone ? `(${c.phone})` : ""}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -342,19 +298,14 @@ const POS = () => {
               ) : (
                 <div className="space-y-2">
                   {pos.cart.map((item) => (
-                    <CartItemRow
-                      key={item.product.id}
-                      item={item}
-                      onUpdate={pos.updateCartItem}
-                      onRemove={pos.removeFromCart}
-                    />
+                    <CartItemRow key={item.product.id} item={item} onUpdate={pos.updateCartItem} onRemove={pos.removeFromCart} />
                   ))}
                 </div>
               )}
             </ScrollArea>
           )}
 
-          <div className={`${!isMobile || mobileCartExpanded ? "pt-3 border-t mt-2" : ""} space-y-2`}>
+          <div className={`${(!isMobile || mobileCartExpanded) ? "pt-3 border-t mt-2" : ""} space-y-2`}>
             {isMobile && !mobileCartExpanded && pos.cart.length > 0 && (
               <button
                 type="button"
@@ -371,21 +322,12 @@ const POS = () => {
             )}
             {(!isMobile || mobileCartExpanded) && pos.cart.length > 0 && (
               <div className="space-y-1">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Subtotal</span>
-                  <span>KES {pos.cartSubtotal.toLocaleString()}</span>
-                </div>
+                <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>KES {pos.cartSubtotal.toLocaleString()}</span></div>
                 {pos.cartTax > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">VAT (incl.)</span>
-                    <span>KES {Math.round(pos.cartTax).toLocaleString()}</span>
-                  </div>
+                  <div className="flex justify-between text-sm"><span className="text-muted-foreground">VAT (incl.)</span><span>KES {Math.round(pos.cartTax).toLocaleString()}</span></div>
                 )}
                 <Separator />
-                <div className="flex justify-between font-bold text-lg">
-                  <span>Total</span>
-                  <span>KES {pos.cartTotal.toLocaleString()}</span>
-                </div>
+                <div className="flex justify-between font-bold text-lg"><span>Total</span><span>KES {pos.cartTotal.toLocaleString()}</span></div>
               </div>
             )}
             <div className="grid grid-cols-2 gap-1.5">
@@ -393,10 +335,7 @@ const POS = () => {
                 variant="default"
                 className="flex flex-col items-center gap-0.5 h-auto py-3"
                 disabled={pos.cart.length === 0}
-                onClick={() => {
-                  setInitialPaymentMethod("cash");
-                  setPaymentOpen(true);
-                }}
+                onClick={() => { setInitialPaymentMethod("cash"); setPaymentOpen(true); }}
               >
                 <Banknote className="h-5 w-5" />
                 <span className="text-xs font-medium">Cash</span>
@@ -405,10 +344,7 @@ const POS = () => {
                 variant="outline"
                 className="flex flex-col items-center gap-0.5 h-auto py-3 bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700"
                 disabled={pos.cart.length === 0}
-                onClick={() => {
-                  setInitialPaymentMethod("mpesa");
-                  setPaymentOpen(true);
-                }}
+                onClick={() => { setInitialPaymentMethod("mpesa"); setPaymentOpen(true); }}
               >
                 <Smartphone className="h-5 w-5" />
                 <span className="text-xs font-medium">M-Pesa</span>
@@ -463,49 +399,24 @@ const POS = () => {
         initialMethod={initialPaymentMethod}
       />
 
-      <ReceiptDialog open={receiptOpen} onOpenChange={setReceiptOpen} data={receiptData} />
+      <ReceiptDialog
+        open={receiptOpen}
+        onOpenChange={setReceiptOpen}
+        data={receiptData}
+      />
 
       <BarcodeScanner open={scannerOpen} onOpenChange={setScannerOpen} onDetected={handleScanned} />
+
     </div>
   );
 };
 
-const CartItemRow = memo(function CartItemRow({
-  item,
-  onUpdate,
-  onRemove,
-}: {
-  item: CartItem;
-  onUpdate: (id: string, u: Partial<CartItem>) => void;
-  onRemove: (id: string) => void;
-}) {
+function CartItemRow({ item, onUpdate, onRemove }: { item: CartItem; onUpdate: (id: string, u: Partial<CartItem>) => void; onRemove: (id: string) => void }) {
   const lineTotal = item.unit_price * item.quantity - item.discount;
   const allowDecimal = item.product.allow_decimal_quantity ?? false;
   const step = allowDecimal ? 0.01 : 1;
   const minQty = allowDecimal ? 0.01 : 1;
   const decrementBy = allowDecimal ? 0.5 : 1;
-
-  const handleDecrement = useCallback(() => {
-    onUpdate(item.product.id, { quantity: Math.max(minQty, +(item.quantity - decrementBy).toFixed(3)) });
-  }, [item.product.id, item.quantity, minQty, decrementBy, onUpdate]);
-
-  const handleIncrement = useCallback(() => {
-    onUpdate(item.product.id, { quantity: +(item.quantity + (allowDecimal ? 0.5 : 1)).toFixed(3) });
-  }, [item.product.id, item.quantity, allowDecimal, onUpdate]);
-
-  const handleQuantityChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const v = parseFloat(e.target.value);
-      if (Number.isNaN(v)) return;
-      onUpdate(item.product.id, { quantity: Math.max(minQty, v) });
-    },
-    [item.product.id, minQty, onUpdate],
-  );
-
-  const handleRemove = useCallback(() => {
-    onRemove(item.product.id);
-  }, [item.product.id, onRemove]);
-
   return (
     <div className="flex items-start gap-2 p-2 rounded border bg-background">
       <div className="flex-1 min-w-0">
@@ -513,7 +424,7 @@ const CartItemRow = memo(function CartItemRow({
         <p className="text-xs text-muted-foreground">@ KES {Number(item.unit_price).toLocaleString()}</p>
       </div>
       <div className="flex items-center gap-1">
-        <Button size="icon" variant="outline" className="h-7 w-7" onClick={handleDecrement}>
+        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => onUpdate(item.product.id, { quantity: Math.max(minQty, +(item.quantity - decrementBy).toFixed(3)) })}>
           <Minus className="h-3 w-3" />
         </Button>
         <Input
@@ -522,20 +433,24 @@ const CartItemRow = memo(function CartItemRow({
           min={minQty}
           step={step}
           value={item.quantity}
-          onChange={handleQuantityChange}
+          onChange={(e) => {
+            const v = parseFloat(e.target.value);
+            if (Number.isNaN(v)) return;
+            onUpdate(item.product.id, { quantity: Math.max(minQty, v) });
+          }}
         />
-        <Button size="icon" variant="outline" className="h-7 w-7" onClick={handleIncrement}>
+        <Button size="icon" variant="outline" className="h-7 w-7" onClick={() => onUpdate(item.product.id, { quantity: +(item.quantity + (allowDecimal ? 0.5 : 1)).toFixed(3) })}>
           <Plus className="h-3 w-3" />
         </Button>
       </div>
       <div className="text-right min-w-[70px]">
         <p className="font-semibold text-sm">KES {lineTotal.toLocaleString()}</p>
       </div>
-      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleRemove}>
+      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onRemove(item.product.id)}>
         <Trash2 className="h-3 w-3 text-destructive" />
       </Button>
     </div>
   );
-});
+}
 
 export default POS;
