@@ -8,6 +8,7 @@ export interface POSSession {
   id: string;
   business_id: string;
   location_id: string;
+  cash_account_id?: string | null;
   opened_by: string;
   closed_by: string | null;
   opening_float: number;
@@ -58,7 +59,11 @@ export function usePOSSession() {
     fetchActiveSession();
   }, [fetchActiveSession]);
 
-  const startDay = async (openingFloat: number, locationIdOverride?: string) => {
+  const startDay = async (
+    openingFloat: number,
+    locationIdOverride?: string,
+    cashAccountId?: string
+  ) => {
     const targetLocationId = locationIdOverride || currentLocation?.id;
     if (!business || !targetLocationId || !user) return null;
 
@@ -70,7 +75,8 @@ export function usePOSSession() {
         opened_by: user.id,
         opening_float: openingFloat,
         status: "open",
-      })
+        ...(cashAccountId ? { cash_account_id: cashAccountId } : {}),
+      } as never)
       .select()
       .single();
 

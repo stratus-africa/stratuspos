@@ -11,32 +11,61 @@ import { useBusiness } from "@/contexts/BusinessContext";
 interface StartDayDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (openingFloat: number, locationId: string) => Promise<void>;
+  onConfirm: (openingFloat: number, locationId: string, cashAccountId: string) => Promise<void>;
 }
 
 export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartDayDialogProps) {
-  const { locations, currentLocation } = useBusiness();
+  const { locations, currentLocation, business } = useBusiness();
   const [openingFloat, setOpeningFloat] = useState("0");
   const [locationId, setLocationId] = useState<string>("");
+  const [cashAccountId, setCashAccountId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [tillError, setTillError] = useState<string | null>(null);
+  const [cashAccountError, setCashAccountError] = useState<string | null>(null);
   const { data: bankAccounts = [] } = useBankAccounts();
 
+  // Only cash-type accounts can be assigned as the till's cash account
+  const cashAccounts = bankAccounts.filter((a) => a.account_type === "cash");
+
   useEffect(() => {
-    if (open) {
-      setLocationId(currentLocation?.id || locations[0]?.id || "");
-      setTillError(null);
-    }
-  }, [open, currentLocation, locations]);
+    if (!open || !business) return;
+    setLocationId(currentLocation?.id || locations[0]?.id || "");
+    setTillError(null);
+    setCashAccountError(null);
+
+    // Default to business-configured cash mapping, else first cash account
+    (async () => {
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data } = await supabase
+        .from("payment_method_accounts")
+        .select("bank_account_id")
+        .eq("business_id", business.id)
+        .eq("payment_method", "cash")
+        .maybeSingle();
+      const mapped = (data as { bank_account_id?: string } | null)?.bank_account_id;
+      if (mapped && cashAccounts.some((a) => a.id === mapped)) {
+        setCashAccountId(mapped);
+      } else if (cashAccounts[0]) {
+        setCashAccountId(cashAccounts[0].id);
+      } else {
+        setCashAccountId("");
+      }
+    })();
+  }, [open, currentLocation, locations, business, bankAccounts.length]);
 
   const handleConfirm = async () => {
     if (!locationId) {
       setTillError("You must select a till before opening the register.");
       return;
     }
+    if (!cashAccountId) {
+      setCashAccountError("You must assign a cash account to this till.");
+      return;
+    }
     setTillError(null);
+    setCashAccountError(null);
     setLoading(true);
-    await onConfirm(parseFloat(openingFloat) || 0, locationId);
+    await onConfirm(parseFloat(openingFloat) || 0, locationId, cashAccountId);
     setLoading(false);
     setOpeningFloat("0");
   };
@@ -98,6 +127,48 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
             )}
           </div>
 
+          {/* Cash Account assignment for this till */}
+          <div className="space-y-2">
+            <Label htmlFor="cash-account" className="flex items-center gap-1.5">
+              <Wallet className="h-4 w-4 text-muted-foreground" />
+              Assigned Cash Account
+            </Label>
+            {cashAccounts.length === 0 ? (
+              <p className="text-sm text-destructive">
+                No cash account configured. Ask an admin to add a cash-type bank account.
+              </p>
+            ) : (
+              <Select
+                value={cashAccountId}
+                onValueChange={(v) => {
+                  setCashAccountId(v);
+                  if (v) setCashAccountError(null);
+                }}
+              >
+                <SelectTrigger
+                  id="cash-account"
+                  className={`h-10 ${cashAccountError ? "border-destructive ring-1 ring-destructive/30" : ""}`}
+                >
+                  <SelectValue placeholder="Select cash account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cashAccounts.map((acc) => (
+                    <SelectItem key={acc.id} value={acc.id}>
+                      {acc.name} — KES {Number(acc.balance).toLocaleString()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {cashAccountError ? (
+              <p className="text-xs text-destructive font-medium">{cashAccountError}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                All cash collected at this till will settle into this account at end of day.
+              </p>
+            )}
+          </div>
+
           {/* Bank & Cash Account Balances */}
           {bankAccounts.length > 0 && (
             <div className="space-y-2">
@@ -148,7 +219,7 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleConfirm} disabled={loading || locations.length === 0}>
+          <Button onClick={handleConfirm} disabled={loading || locations.length === 0 || cashAccounts.length === 0}>
             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Open Register
           </Button>

@@ -92,12 +92,12 @@ const POS = () => {
     }
   };
 
-  const handleStartDay = async (openingFloat: number, locationId: string) => {
+  const handleStartDay = async (openingFloat: number, locationId: string, cashAccountId: string) => {
     if (locationId && locationId !== currentLocation?.id) {
       const picked = locations.find((l) => l.id === locationId);
       if (picked) setCurrentLocation(picked);
     }
-    await session.startDay(openingFloat, locationId);
+    await session.startDay(openingFloat, locationId, cashAccountId);
     setStartDayOpen(false);
   };
 

@@ -886,6 +886,7 @@ export type Database = {
       pos_sessions: {
         Row: {
           business_id: string
+          cash_account_id: string | null
           cash_difference: number | null
           closed_at: string | null
           closed_by: string | null
@@ -910,6 +911,7 @@ export type Database = {
         }
         Insert: {
           business_id: string
+          cash_account_id?: string | null
           cash_difference?: number | null
           closed_at?: string | null
           closed_by?: string | null
@@ -934,6 +936,7 @@ export type Database = {
         }
         Update: {
           business_id?: string
+          cash_account_id?: string | null
           cash_difference?: number | null
           closed_at?: string | null
           closed_by?: string | null
@@ -962,6 +965,13 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pos_sessions_cash_account_id_fkey"
+            columns: ["cash_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
             referencedColumns: ["id"]
           },
           {
