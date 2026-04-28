@@ -13,9 +13,9 @@ import { useBusiness } from "@/contexts/BusinessContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { UserPlus, Shield, User, Crown, Pencil, Loader2, Users, ShieldCheck, Info } from "lucide-react";
+import { UserPlus, Shield, User, Crown, Pencil, Loader2, Users, ShieldCheck, Info, Warehouse } from "lucide-react";
 
-type AppRole = "admin" | "manager" | "cashier";
+type AppRole = "admin" | "manager" | "cashier" | "stores_manager";
 
 interface TeamMember {
   user_id: string;
@@ -30,6 +30,7 @@ const roleIcon = (role: string) => {
   switch (role) {
     case "admin": return <Crown className="h-3.5 w-3.5" />;
     case "manager": return <Shield className="h-3.5 w-3.5" />;
+    case "stores_manager": return <Warehouse className="h-3.5 w-3.5" />;
     default: return <User className="h-3.5 w-3.5" />;
   }
 };
@@ -38,6 +39,7 @@ const roleBadgeVariant = (role: string) => {
   switch (role) {
     case "admin": return "default" as const;
     case "manager": return "secondary" as const;
+    case "stores_manager": return "secondary" as const;
     default: return "outline" as const;
   }
 };
@@ -66,12 +68,18 @@ const defaultRolePermissions: Record<AppRole, string[]> = {
   cashier: [
     "Point of Sale (POS)",
   ],
+  stores_manager: [
+    "Products & Inventory",
+    "Sales & Purchases",
+    "Reports",
+  ],
 };
 
 const roleDescriptions: Record<AppRole, { label: string; description: string }> = {
   admin: { label: "Admin", description: "Full access to all features and settings." },
   manager: { label: "Manager", description: "Day-to-day operations management." },
   cashier: { label: "Cashier", description: "POS-only access for processing sales." },
+  stores_manager: { label: "Stores Manager", description: "Manages stock, purchases and inventory operations." },
 };
 
 export function RolesPermissionsTab() {
