@@ -109,6 +109,7 @@ const SuperAdminRoutes = () => {
           <Route path="/cms/faq" element={<CmsFaq />} />
           <Route path="/cms/pricing" element={<CmsPricing />} />
           <Route path="/cms/cta" element={<CmsCta />} />
+          <Route path="/settings" element={<SuperAdminSettings />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
