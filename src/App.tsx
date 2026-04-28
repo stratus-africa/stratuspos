@@ -28,6 +28,7 @@ const Banking = lazy(() => import("./pages/Banking"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Landing = lazy(() => import("./pages/Landing"));
 const SuperAdminLogin = lazy(() => import("./pages/SuperAdminLogin"));
+const Profile = lazy(() => import("./pages/Profile"));
 
 const SuperAdminDashboard = lazy(() => import("./pages/super-admin/SuperAdminDashboard"));
 const SuperAdminBusinesses = lazy(() => import("./pages/super-admin/SuperAdminBusinesses"));
@@ -39,6 +40,8 @@ const SuperAdminLanding = lazy(() => import("./pages/super-admin/SuperAdminLandi
 const SuperAdminTenantDetail = lazy(() => import("./pages/super-admin/SuperAdminTenantDetail"));
 const SuperAdminTenantEdit = lazy(() => import("./pages/super-admin/SuperAdminTenantEdit"));
 const SuperAdminSubscriptions = lazy(() => import("./pages/super-admin/SuperAdminSubscriptions"));
+const SuperAdminPayments = lazy(() => import("./pages/super-admin/SuperAdminPayments"));
+const SuperAdminUserDetail = lazy(() => import("./pages/super-admin/SuperAdminUserDetail"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -81,7 +84,9 @@ const SuperAdminRoutes = () => {
           <Route path="/businesses/:id" element={<SuperAdminTenantDetail />} />
           <Route path="/businesses/:id/edit" element={<SuperAdminTenantEdit />} />
           <Route path="/subscriptions" element={<SuperAdminSubscriptions />} />
+          <Route path="/payments" element={<SuperAdminPayments />} />
           <Route path="/users" element={<SuperAdminUsers />} />
+          <Route path="/users/:id" element={<SuperAdminUserDetail />} />
           <Route path="/packages" element={<SuperAdminPackages />} />
           <Route path="/packages/new" element={<SuperAdminPackageEdit />} />
           <Route path="/packages/:id/edit" element={<SuperAdminPackageEdit />} />
@@ -141,6 +146,7 @@ const ProtectedRoutes = () => {
           <Route path="/banking" element={guard(["admin"], <FeatureGate featureKey="banking"><Banking /></FeatureGate>)} />
           <Route path="/reports" element={guard(["admin"], <FeatureGate featureKey="reports"><Reports /></FeatureGate>)} />
           <Route path="/settings" element={guard(["admin"], <SettingsPage />)} />
+          <Route path="/profile" element={<Profile />}/>
           <Route path="/roles" element={<Navigate to="/settings?tab=roles" replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
