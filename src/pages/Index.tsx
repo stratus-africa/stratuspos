@@ -43,12 +43,12 @@ const Dashboard = () => {
   return (
     <div className="space-y-6">
       {/* Welcome Header */}
-      <div className="bg-sidebar rounded-xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="bg-primary rounded-xl p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-sidebar-foreground">
+          <h1 className="text-2xl font-bold text-white">
             Welcome {userName}, 👋
           </h1>
-          <p className="text-sm text-sidebar-foreground/70">
+          <p className="text-sm text-white/70">
             {business?.name} — {currentLocation?.name}
           </p>
         </div>
@@ -61,7 +61,7 @@ const Dashboard = () => {
                 if (loc) setCurrentLocation(loc);
               }}
             >
-              <SelectTrigger className="w-[180px] bg-sidebar-accent border-sidebar-border text-sidebar-foreground">
+              <SelectTrigger className="w-[180px] bg-white/10 border-white/20 text-white">
                 <SelectValue placeholder="Select location" />
               </SelectTrigger>
               <SelectContent>
@@ -73,7 +73,7 @@ const Dashboard = () => {
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="bg-sidebar-accent border-sidebar-border text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-sidebar-foreground">
+              <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white">
                 <CalendarDays className="h-4 w-4 mr-2" />
                 {filterLabels[dateFilter]}
               </Button>
