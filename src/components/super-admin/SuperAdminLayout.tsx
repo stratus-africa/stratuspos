@@ -74,6 +74,12 @@ const navGroups: NavGroup[] = [
       { title: "Call To Action", url: "/super-admin/cms/cta", icon: Zap },
     ],
   },
+  {
+    label: "System",
+    items: [
+      { title: "General Settings", url: "/super-admin/settings", icon: Settings2 },
+    ],
+  },
 ];
 
 export function SuperAdminLayout({ children }: { children: React.ReactNode }) {
