@@ -117,10 +117,23 @@ export function CmsItemsList<T>({
                   </TableCell>
                 </TableRow>
               ) : items.map((item, i) => (
-                <TableRow key={i}>
+                <TableRow
+                  key={i}
+                  draggable={!!onReorder}
+                  onDragStart={onReorder ? (e) => { setDragIdx(i); e.dataTransfer.effectAllowed = "move"; } : undefined}
+                  onDragOver={onReorder ? (e) => { e.preventDefault(); if (overIdx !== i) setOverIdx(i); } : undefined}
+                  onDragLeave={onReorder ? () => { if (overIdx === i) setOverIdx(null); } : undefined}
+                  onDrop={onReorder ? (e) => { e.preventDefault(); handleDrop(i); } : undefined}
+                  onDragEnd={onReorder ? () => { setDragIdx(null); setOverIdx(null); } : undefined}
+                  className={
+                    (onReorder ? "cursor-move " : "") +
+                    (dragIdx === i ? "opacity-50 " : "") +
+                    (overIdx === i && dragIdx !== null && dragIdx !== i ? "bg-primary/5 outline outline-1 outline-primary/30 " : "")
+                  }
+                >
                   <TableCell className="text-muted-foreground">
                     <div className="flex items-center gap-1">
-                      <GripVertical className="h-3.5 w-3.5 text-muted-foreground/50" />
+                      <GripVertical className={`h-3.5 w-3.5 ${onReorder ? "text-muted-foreground" : "text-muted-foreground/50"}`} />
                       {i + 1}
                     </div>
                   </TableCell>
