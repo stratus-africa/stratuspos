@@ -368,7 +368,7 @@ const CreateWorkspaceForm = ({ hasUser }: { hasUser: boolean }) => {
         {!hasUser && (
           <p className="text-xs text-center text-muted-foreground">
             Already have an account?{" "}
-            <Link to="/auth" className="text-emerald-600 font-medium hover:underline">Sign in</Link>
+            <Link to="/sign-in" className="text-emerald-600 font-medium hover:underline">Sign in</Link>
           </p>
         )}
       </form>
