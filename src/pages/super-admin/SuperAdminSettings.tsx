@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -8,14 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Settings2, Palette, Brush, Building2, Globe, CreditCard, Database,
-  Server, RefreshCw, Loader2, Check,
+  Settings2, Palette, Brush, Building2, CreditCard, Loader2, Check, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type TabKey =
-  | "general" | "branding" | "appearance" | "company"
-  | "landing" | "payments" | "backup" | "system" | "update";
+type TabKey = "general" | "branding" | "appearance" | "company" | "payments";
 
 interface AppSettings {
   app_name?: string;
@@ -32,25 +30,22 @@ interface AppSettings {
   company_email?: string;
   company_phone?: string;
   company_address?: string;
-  // Landing
-  landing_meta_title?: string;
-  landing_meta_description?: string;
-  // Payments
-  payments_provider?: string;
-  // System
-  maintenance_mode?: boolean;
+  // Payments (per-provider config nested under .payments)
+  payments?: Record<string, any>;
 }
 
 const TABS: { key: TabKey; label: string; icon: any }[] = [
-  { key: "general",    label: "General",      icon: Settings2 },
-  { key: "branding",   label: "Branding",     icon: Palette },
-  { key: "appearance", label: "Appearance",   icon: Brush },
-  { key: "company",    label: "Company",      icon: Building2 },
-  { key: "landing",    label: "Landing Page", icon: Globe },
-  { key: "payments",   label: "Payments",     icon: CreditCard },
-  { key: "backup",     label: "Backup",       icon: Database },
-  { key: "system",     label: "System",       icon: Server },
-  { key: "update",     label: "Update App",   icon: RefreshCw },
+  { key: "general",    label: "General",    icon: Settings2 },
+  { key: "branding",   label: "Branding",   icon: Palette },
+  { key: "appearance", label: "Appearance", icon: Brush },
+  { key: "company",    label: "Company",    icon: Building2 },
+  { key: "payments",   label: "Payments",   icon: CreditCard },
+];
+
+const PROVIDERS = [
+  { id: "paystack", label: "Paystack",   description: "Card & mobile money for Africa.",      route: "/super-admin/settings/payments/paystack" },
+  { id: "paddle",   label: "Paddle",     description: "Global merchant of record for SaaS.",  route: "/super-admin/settings/payments/paddle" },
+  { id: "mpesa",    label: "M-Pesa",     description: "Daraja STK Push & Till payments.",     route: "/super-admin/settings/payments/mpesa" },
 ];
 
 const DEFAULTS: AppSettings = {
@@ -61,6 +56,7 @@ const DEFAULTS: AppSettings = {
 };
 
 export default function SuperAdminSettings() {
+  const navigate = useNavigate();
   const [tab, setTab] = useState<TabKey>("general");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -81,9 +77,15 @@ export default function SuperAdminSettings() {
   const save = async () => {
     setSaving(true);
     try {
+      // Preserve any keys we don't manage on this screen (e.g. payments.*)
+      const { data: cur } = await (supabase as any)
+        .from("app_settings").select("value").eq("key", "global").maybeSingle();
+      const existing = (cur?.value as AppSettings) || {};
+      const merged: AppSettings = { ...existing, ...s, payments: existing.payments ?? s.payments };
+
       const { error } = await (supabase as any)
         .from("app_settings")
-        .upsert({ key: "global", value: s, updated_at: new Date().toISOString() }, { onConflict: "key" });
+        .upsert({ key: "global", value: merged, updated_at: new Date().toISOString() }, { onConflict: "key" });
       if (error) throw error;
       toast.success("Settings saved");
     } catch (e: any) {
@@ -94,6 +96,8 @@ export default function SuperAdminSettings() {
   if (loading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
   }
+
+  const showSaveButton = tab !== "payments";
 
   return (
     <div className="space-y-6">
@@ -133,10 +137,12 @@ export default function SuperAdminSettings() {
               <h2 className="text-lg font-semibold">{TABS.find(t => t.key === tab)?.label}</h2>
               <p className="text-sm text-muted-foreground mt-0.5">{describe(tab)}</p>
             </div>
-            <Button onClick={save} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0">
-              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
-              Save Settings
-            </Button>
+            {showSaveButton && (
+              <Button onClick={save} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700 text-white shrink-0">
+                {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
+                Save Settings
+              </Button>
+            )}
           </div>
 
           <div className="pt-6">
@@ -180,7 +186,7 @@ export default function SuperAdminSettings() {
             )}
 
             {tab === "appearance" && (
-              <Field label="Primary Theme Color" help="Used for buttons, highlights, and accents.">
+              <Field label="Primary Theme Color" help="Used for buttons, highlights, and accents (hex value).">
                 <Input type="text" value={s.theme_color ?? ""} placeholder="#2563eb" onChange={(e) => set("theme_color", e.target.value)} />
               </Field>
             )}
@@ -196,52 +202,40 @@ export default function SuperAdminSettings() {
               </div>
             )}
 
-            {tab === "landing" && (
-              <div className="space-y-5">
-                <Field label="Meta Title" help="Shown in search results and the browser tab.">
-                  <Input value={s.landing_meta_title ?? ""} onChange={(e) => set("landing_meta_title", e.target.value)} />
-                </Field>
-                <Field label="Meta Description" help="Shown in search engine snippets (max ~160 chars).">
-                  <Textarea rows={3} value={s.landing_meta_description ?? ""} onChange={(e) => set("landing_meta_description", e.target.value)} />
-                </Field>
-              </div>
-            )}
-
             {tab === "payments" && (
-              <Field label="Default Payments Provider" help="Used for new tenant subscriptions.">
-                <Select value={s.payments_provider ?? "paystack"} onValueChange={(v) => set("payments_provider", v)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="paystack">Paystack</SelectItem>
-                    <SelectItem value="paddle">Paddle</SelectItem>
-                    <SelectItem value="mpesa">M-Pesa</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-            )}
-
-            {tab === "backup" && (
-              <p className="text-sm text-muted-foreground">
-                Database backups run automatically every day. Manual export coming soon.
-              </p>
-            )}
-
-            {tab === "system" && (
-              <Field label="Maintenance mode" help="When enabled, customer-facing pages show a maintenance notice.">
-                <Select value={s.maintenance_mode ? "on" : "off"} onValueChange={(v) => set("maintenance_mode", v === "on")}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="off">Off</SelectItem>
-                    <SelectItem value="on">On</SelectItem>
-                  </SelectContent>
-                </Select>
-              </Field>
-            )}
-
-            {tab === "update" && (
-              <p className="text-sm text-muted-foreground">
-                Your app updates automatically. No action required.
-              </p>
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Select a provider to configure its keys, environment, and webhooks.
+                </p>
+                <div className="grid gap-2">
+                  {PROVIDERS.map((p) => {
+                    const enabled = !!s.payments?.[p.id]?.enabled;
+                    return (
+                      <button
+                        key={p.id}
+                        onClick={() => navigate(p.route)}
+                        className="flex items-center justify-between gap-4 rounded-md border bg-card hover:bg-muted/50 transition-colors p-4 text-left"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium">{p.label}</span>
+                            <span className={cn(
+                              "text-[10px] px-1.5 py-0.5 rounded-full border",
+                              enabled
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : "bg-muted text-muted-foreground"
+                            )}>
+                              {enabled ? "Enabled" : "Disabled"}
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">{p.description}</p>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             )}
           </div>
         </Card>
@@ -256,11 +250,7 @@ function describe(tab: TabKey) {
     case "branding":   return "Upload your logo and favicon.";
     case "appearance": return "Customize the look and feel.";
     case "company":    return "Your company contact information for invoices and emails.";
-    case "landing":    return "SEO and metadata for the public landing page.";
-    case "payments":   return "Default payment provider configuration.";
-    case "backup":     return "Database backup and restore.";
-    case "system":     return "Application status and maintenance.";
-    case "update":     return "App update settings.";
+    case "payments":   return "Choose and configure your payment providers.";
   }
 }
 
