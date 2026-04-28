@@ -406,7 +406,7 @@ export default function SuperAdminBusinesses() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex gap-1 justify-end">
-                        <Button variant="outline" size="sm" onClick={() => openEdit(biz)} title="Edit business">
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/super-admin/businesses/${biz.id}/edit`)} title="Edit business">
                           <Pencil className="h-3 w-3" />
                         </Button>
                         <Button
