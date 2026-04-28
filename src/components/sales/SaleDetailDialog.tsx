@@ -194,6 +194,13 @@ export default function SaleDetailDialog({ open, onOpenChange, sale }: Props) {
             </div>
           </>
         )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+          <Button onClick={handleReprint} disabled={loading}>
+            <Printer className="h-4 w-4 mr-1" /> Reprint Receipt
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
