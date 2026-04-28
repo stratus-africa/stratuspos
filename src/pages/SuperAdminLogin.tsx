@@ -174,9 +174,13 @@ export default function SuperAdminLogin() {
                 <Checkbox checked={remember} onCheckedChange={(v) => setRemember(!!v)} />
                 Remember me
               </label>
-              <Link to="/onboarding" className="text-sm font-semibold text-emerald-600 hover:text-emerald-700">
-                {/* hidden, replaced below */}
-              </Link>
+              <button
+                type="button"
+                onClick={() => { setForgotEmail(email); setForgotOpen(true); }}
+                className="text-sm font-semibold text-emerald-600 hover:text-emerald-700"
+              >
+                Forgot password?
+              </button>
             </div>
 
             <Button
@@ -228,6 +232,46 @@ export default function SuperAdminLogin() {
           </p>
         </div>
       </main>
+
+      <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset your password</DialogTitle>
+            <DialogDescription>
+              Enter your account email and we'll send you a link to set a new password.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleForgotSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="forgot-email">Email address</Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="forgot-email"
+                  type="email"
+                  required
+                  value={forgotEmail}
+                  onChange={(e) => setForgotEmail(e.target.value)}
+                  placeholder="you@company.com"
+                  className="pl-10 h-11 rounded-lg"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setForgotOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={sendingReset}
+                className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white"
+              >
+                {sendingReset ? "Sending…" : "Send reset link"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
