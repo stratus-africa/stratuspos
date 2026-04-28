@@ -58,7 +58,11 @@ export function usePOSSession() {
     fetchActiveSession();
   }, [fetchActiveSession]);
 
-  const startDay = async (openingFloat: number, locationIdOverride?: string) => {
+  const startDay = async (
+    openingFloat: number,
+    locationIdOverride?: string,
+    cashAccountId?: string
+  ) => {
     const targetLocationId = locationIdOverride || currentLocation?.id;
     if (!business || !targetLocationId || !user) return null;
 
@@ -70,7 +74,8 @@ export function usePOSSession() {
         opened_by: user.id,
         opening_float: openingFloat,
         status: "open",
-      })
+        ...(cashAccountId ? { cash_account_id: cashAccountId } : {}),
+      } as never)
       .select()
       .single();
 
