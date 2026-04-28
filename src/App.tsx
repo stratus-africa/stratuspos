@@ -13,6 +13,7 @@ import { FeatureGate } from "@/components/FeatureGate";
 
 // Lazy-loaded pages
 const Onboarding = lazy(() => import("./pages/Onboarding"));
+const SignIn = lazy(() => import("./pages/SignIn"));
 const Index = lazy(() => import("./pages/Index"));
 const POS = lazy(() => import("./pages/POS"));
 const Products = lazy(() => import("./pages/Products"));
@@ -160,7 +161,8 @@ const App = () => (
               <Routes>
                 <Route path="/landing" element={<Landing />} />
                 <Route path="/onboarding" element={<Onboarding />} />
-                <Route path="/auth" element={<Navigate to="/onboarding" replace />} />
+                <Route path="/sign-in" element={<SignIn />} />
+                <Route path="/auth" element={<Navigate to="/sign-in" replace />} />
                 <Route path="/super-admin/login" element={<SuperAdminLogin />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/super-admin/*" element={<SuperAdminRoutes />} />
