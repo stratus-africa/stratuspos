@@ -245,6 +245,36 @@ export type Database = {
           },
         ]
       }
+      business_payment_credentials: {
+        Row: {
+          business_id: string
+          created_at: string
+          has_credentials: boolean
+          id: string
+          provider: string
+          updated_at: string
+          vault_secret_names: Json
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          has_credentials?: boolean
+          id?: string
+          provider: string
+          updated_at?: string
+          vault_secret_names?: Json
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          has_credentials?: boolean
+          id?: string
+          provider?: string
+          updated_at?: string
+          vault_secret_names?: Json
+        }
+        Relationships: []
+      }
       businesses: {
         Row: {
           accountant_email: string | null
@@ -259,6 +289,12 @@ export type Database = {
           is_active: boolean
           kra_pin: string | null
           logo_url: string | null
+          mpesa_account_reference: string | null
+          mpesa_callback_url: string | null
+          mpesa_enabled: boolean
+          mpesa_environment: string
+          mpesa_paybill_or_till: string
+          mpesa_shortcode: string | null
           name: string
           owner_id: string | null
           phone: string | null
@@ -284,6 +320,12 @@ export type Database = {
           is_active?: boolean
           kra_pin?: string | null
           logo_url?: string | null
+          mpesa_account_reference?: string | null
+          mpesa_callback_url?: string | null
+          mpesa_enabled?: boolean
+          mpesa_environment?: string
+          mpesa_paybill_or_till?: string
+          mpesa_shortcode?: string | null
           name: string
           owner_id?: string | null
           phone?: string | null
@@ -309,6 +351,12 @@ export type Database = {
           is_active?: boolean
           kra_pin?: string | null
           logo_url?: string | null
+          mpesa_account_reference?: string | null
+          mpesa_callback_url?: string | null
+          mpesa_enabled?: boolean
+          mpesa_environment?: string
+          mpesa_paybill_or_till?: string
+          mpesa_shortcode?: string | null
           name?: string
           owner_id?: string | null
           phone?: string | null
@@ -738,6 +786,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          pos_require_manager_to_remove_item: boolean | null
           type: string
           updated_at: string
         }
@@ -748,6 +797,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          pos_require_manager_to_remove_item?: boolean | null
           type?: string
           updated_at?: string
         }
@@ -758,6 +808,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          pos_require_manager_to_remove_item?: boolean | null
           type?: string
           updated_at?: string
         }
@@ -1519,6 +1570,7 @@ export type Database = {
           location_id: string
           notes: string | null
           product_id: string
+          purchase_id: string | null
           quantity_change: number
           reason: string
         }
@@ -1529,6 +1581,7 @@ export type Database = {
           location_id: string
           notes?: string | null
           product_id: string
+          purchase_id?: string | null
           quantity_change: number
           reason: string
         }
@@ -1539,6 +1592,7 @@ export type Database = {
           location_id?: string
           notes?: string | null
           product_id?: string
+          purchase_id?: string | null
           quantity_change?: number
           reason?: string
         }
