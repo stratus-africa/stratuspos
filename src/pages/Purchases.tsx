@@ -1,26 +1,21 @@
 import { useState } from "react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TruckIcon, Plus, Search, Users, Pencil, Trash2 } from "lucide-react";
-import { useSuppliers, usePurchases, type Supplier, type Purchase, type PurchaseItem } from "@/hooks/usePurchases";
-import { SupplierFormDialog } from "@/components/purchases/SupplierFormDialog";
+import { Plus, Search, Pencil, Trash2 } from "lucide-react";
+import { usePurchases, type Purchase, type PurchaseItem } from "@/hooks/usePurchases";
 import { PurchaseFormDialog } from "@/components/purchases/PurchaseFormDialog";
 import { toast } from "sonner";
 
 const Purchases = () => {
-  const { query: suppliersQuery, create: createSupplier, update: updateSupplier, remove: removeSupplier } = useSuppliers();
   const { query: purchasesQuery, createPurchase, updatePurchase, deletePurchase, getPurchaseItems } = usePurchases();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
   const [purchaseDialogOpen, setPurchaseDialogOpen] = useState(false);
   const [editingPurchase, setEditingPurchase] = useState<Purchase | null>(null);
   const [editingItems, setEditingItems] = useState<PurchaseItem[]>([]);
@@ -49,15 +44,6 @@ const Purchases = () => {
       case "cancelled": return <Badge variant="destructive">Cancelled</Badge>;
       default: return <Badge variant="secondary">Draft</Badge>;
     }
-  };
-
-  const handleSupplierSubmit = (data: Omit<Supplier, "id" | "business_id" | "balance">) => {
-    if (editingSupplier) {
-      updateSupplier.mutate({ id: editingSupplier.id, ...data });
-    } else {
-      createSupplier.mutate(data);
-    }
-    setEditingSupplier(null);
   };
 
   const handleEditPurchase = async (purchase: Purchase) => {
