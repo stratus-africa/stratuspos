@@ -1,5 +1,5 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, MapPin, Users, Receipt, CreditCard, ShieldCheck, Percent, Wallet } from "lucide-react";
+import { Building2, MapPin, Users, Receipt, CreditCard, ShieldCheck, Percent, Wallet, Smartphone } from "lucide-react";
 import { BusinessProfileTab } from "@/components/settings/BusinessProfileTab";
 import { LocationsTab } from "@/components/settings/LocationsTab";
 import { UserManagementTab } from "@/components/settings/UserManagementTab";
@@ -8,6 +8,7 @@ import { SubscriptionTab } from "@/components/settings/SubscriptionTab";
 import { RolesPermissionsTab } from "@/components/settings/RolesPermissionsTab";
 import { TaxSettingsTab } from "@/components/settings/TaxSettingsTab";
 import { PaymentAccountsTab } from "@/components/settings/PaymentAccountsTab";
+import { PaymentGatewaysTab } from "@/components/settings/PaymentGatewaysTab";
 import { PaymentTestModeBanner } from "@/components/PaymentTestModeBanner";
 import { useSearchParams } from "react-router-dom";
 import { useBusiness } from "@/contexts/BusinessContext";
@@ -48,7 +49,11 @@ const SettingsPage = () => {
           </TabsTrigger>
           <TabsTrigger value="payments" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
             <Wallet className="h-4 w-4" />
-            Payments
+            Payment Accounts
+          </TabsTrigger>
+          <TabsTrigger value="gateways" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
+            <Smartphone className="h-4 w-4" />
+            Payment Gateways
           </TabsTrigger>
           <TabsTrigger value="receipt" className="md:w-full md:justify-start gap-2 text-sm px-3 py-2.5 shrink-0">
             <Receipt className="h-4 w-4" />
@@ -67,6 +72,7 @@ const SettingsPage = () => {
           <TabsContent value="users" className="mt-0"><UserManagementTab /></TabsContent>
           <TabsContent value="roles" className="mt-0"><RolesPermissionsTab /></TabsContent>
           <TabsContent value="payments" className="mt-0"><PaymentAccountsTab /></TabsContent>
+          <TabsContent value="gateways" className="mt-0"><PaymentGatewaysTab /></TabsContent>
           <TabsContent value="receipt" className="mt-0"><ReceiptSettingsTab /></TabsContent>
           <TabsContent value="subscription" className="mt-0"><SubscriptionTab /></TabsContent>
         </div>
