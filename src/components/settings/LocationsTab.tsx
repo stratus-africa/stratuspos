@@ -18,9 +18,17 @@ interface LocationForm {
   type: string;
   address: string;
   is_active: boolean;
+  /** null = inherit business default, true/false = override */
+  pos_require_manager_to_remove_item: boolean | null;
 }
 
-const emptyForm: LocationForm = { name: "", type: "store", address: "", is_active: true };
+const emptyForm: LocationForm = {
+  name: "",
+  type: "store",
+  address: "",
+  is_active: true,
+  pos_require_manager_to_remove_item: null,
+};
 
 export function LocationsTab() {
   const { business, locations, refreshBusiness } = useBusiness();
@@ -37,7 +45,13 @@ export function LocationsTab() {
 
   const openEdit = (loc: any) => {
     setEditId(loc.id);
-    setForm({ name: loc.name, type: loc.type, address: loc.address || "", is_active: loc.is_active });
+    setForm({
+      name: loc.name,
+      type: loc.type,
+      address: loc.address || "",
+      is_active: loc.is_active,
+      pos_require_manager_to_remove_item: loc.pos_require_manager_to_remove_item ?? null,
+    });
     setOpen(true);
   };
 
@@ -48,14 +62,26 @@ export function LocationsTab() {
     if (editId) {
       const { error } = await supabase
         .from("locations")
-        .update({ name: form.name.trim(), type: form.type, address: form.address || null, is_active: form.is_active })
+        .update({
+          name: form.name.trim(),
+          type: form.type,
+          address: form.address || null,
+          is_active: form.is_active,
+          pos_require_manager_to_remove_item: form.pos_require_manager_to_remove_item,
+        } as never)
         .eq("id", editId);
       if (error) toast.error(error.message);
       else toast.success("Location updated");
     } else {
       const { error } = await supabase
         .from("locations")
-        .insert({ business_id: business.id, name: form.name.trim(), type: form.type, address: form.address || null });
+        .insert({
+          business_id: business.id,
+          name: form.name.trim(),
+          type: form.type,
+          address: form.address || null,
+          pos_require_manager_to_remove_item: form.pos_require_manager_to_remove_item,
+        } as never);
       if (error) toast.error(error.message);
       else toast.success("Location added");
     }
@@ -150,6 +176,27 @@ export function LocationsTab() {
                 <Label>Active</Label>
               </div>
             )}
+
+            <div className="space-y-2 pt-2 border-t">
+              <Label>Manager approval to remove POS items</Label>
+              <Select
+                value={form.pos_require_manager_to_remove_item === null ? "inherit" : form.pos_require_manager_to_remove_item ? "required" : "not_required"}
+                onValueChange={(v) =>
+                  setForm({
+                    ...form,
+                    pos_require_manager_to_remove_item: v === "inherit" ? null : v === "required",
+                  })
+                }
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="inherit">Inherit from business default</SelectItem>
+                  <SelectItem value="required">Required at this location</SelectItem>
+                  <SelectItem value="not_required">Not required at this location</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Overrides the business-wide setting only for this location.</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
