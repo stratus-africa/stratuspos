@@ -19,7 +19,9 @@ const POS = lazy(() => import("./pages/POS"));
 const Products = lazy(() => import("./pages/Products"));
 const Inventory = lazy(() => import("./pages/Inventory"));
 const Sales = lazy(() => import("./pages/Sales"));
+const Customers = lazy(() => import("./pages/Customers"));
 const Purchases = lazy(() => import("./pages/Purchases"));
+const Suppliers = lazy(() => import("./pages/Suppliers"));
 const Expenses = lazy(() => import("./pages/Expenses"));
 const Reports = lazy(() => import("./pages/Reports"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
@@ -163,7 +165,9 @@ const ProtectedRoutes = () => {
           <Route path="/products" element={guard(["admin", "manager"], <Products />)} />
           <Route path="/inventory" element={guard(["admin", "manager"], <Inventory />)} />
           <Route path="/sales" element={guard(["admin", "manager"], <Sales />)} />
+          <Route path="/customers" element={guard(["admin", "manager"], <Customers />)} />
           <Route path="/purchases" element={guard(["admin", "manager"], <Purchases />)} />
+          <Route path="/suppliers" element={guard(["admin", "manager"], <Suppliers />)} />
           <Route path="/expenses" element={guard(["admin"], <Expenses />)} />
           <Route path="/chart-of-accounts" element={guard(["admin"], <FeatureGate featureKey="chart_of_accounts"><ChartOfAccounts /></FeatureGate>)} />
           <Route path="/journal-entries" element={guard(["admin"], <FeatureGate featureKey="chart_of_accounts"><JournalEntries /></FeatureGate>)} />
