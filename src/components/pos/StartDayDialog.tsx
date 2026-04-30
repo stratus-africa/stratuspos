@@ -53,7 +53,7 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
   }, [open, business, bankAccounts.length]);
 
   const handleConfirm = async () => {
-    const targetLocationId = currentLocation?.id || locations[0]?.id || "";
+    const targetLocationId = selectedLocationId || currentLocation?.id || locations[0]?.id || "";
     if (!cashAccountId) {
       setCashAccountError("You must assign a cash account before opening the register.");
       return;
