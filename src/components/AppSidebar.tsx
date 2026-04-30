@@ -5,6 +5,8 @@ import {
   Warehouse,
   TruckIcon,
   Receipt,
+  Users,
+  Truck,
   CreditCard,
   BarChart3,
   Settings,
@@ -62,7 +64,9 @@ const inventoryNav: NavItem[] = [
 
 const transactionNav: NavItem[] = [
   { title: "Sales", url: "/sales", icon: Receipt, roles: ["admin", "manager"], featureKey: "sales" },
+  { title: "Customers", url: "/customers", icon: Users, roles: ["admin", "manager"], featureKey: "sales" },
   { title: "Purchases", url: "/purchases", icon: TruckIcon, roles: ["admin", "manager"], featureKey: "purchases" },
+  { title: "Suppliers", url: "/suppliers", icon: Truck, roles: ["admin", "manager"], featureKey: "purchases" },
   { title: "Expenses", url: "/expenses", icon: CreditCard, roles: ["admin"], featureKey: "expenses" },
 ];
 

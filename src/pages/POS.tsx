@@ -53,7 +53,11 @@ const POS = () => {
   const pendingRemoveResolver = useRef<((approved: boolean) => void) | null>(null);
   const pendingRemoveItem = useRef<CartItem | null>(null);
 
-  const requireManagerToRemove = (business as any)?.pos_require_manager_to_remove_item ?? false;
+  // Per-location override (true/false) takes precedence over business default.
+  const businessRequires = (business as any)?.pos_require_manager_to_remove_item ?? false;
+  const locationOverride = (currentLocation as any)?.pos_require_manager_to_remove_item;
+  const requireManagerToRemove =
+    locationOverride === null || locationOverride === undefined ? businessRequires : !!locationOverride;
   // Admins/managers/stores managers don't need extra approval — they ARE the approvers.
   const cashierNeedsApproval = requireManagerToRemove && userRole === "cashier";
 

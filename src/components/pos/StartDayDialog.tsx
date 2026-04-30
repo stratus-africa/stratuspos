@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Sunrise, Loader2, Landmark, Wallet } from "lucide-react";
+import { Sunrise, Loader2, Landmark, Wallet, Store } from "lucide-react";
 import { useBankAccounts, BankAccount } from "@/hooks/useBankAccounts";
 import { useBusiness } from "@/contexts/BusinessContext";
 
@@ -18,6 +18,7 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
   const { currentLocation, locations, business } = useBusiness();
   const [openingFloat, setOpeningFloat] = useState("0");
   const [cashAccountId, setCashAccountId] = useState<string>("");
+  const [selectedLocationId, setSelectedLocationId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [cashAccountError, setCashAccountError] = useState<string | null>(null);
   const { data: bankAccounts = [] } = useBankAccounts();
@@ -28,6 +29,8 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
   useEffect(() => {
     if (!open || !business) return;
     setCashAccountError(null);
+    // Default till to current location (or first available)
+    setSelectedLocationId(currentLocation?.id || locations[0]?.id || "");
 
     // Default to business-configured cash mapping, else first cash account
     (async () => {
@@ -50,7 +53,7 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
   }, [open, business, bankAccounts.length]);
 
   const handleConfirm = async () => {
-    const targetLocationId = currentLocation?.id || locations[0]?.id || "";
+    const targetLocationId = selectedLocationId || currentLocation?.id || locations[0]?.id || "";
     if (!cashAccountId) {
       setCashAccountError("You must assign a cash account before opening the register.");
       return;
@@ -76,6 +79,31 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Till / Location picker — cashiers can switch tills here */}
+          {locations.length > 1 && (
+            <div className="space-y-2">
+              <Label htmlFor="till-location" className="flex items-center gap-1.5">
+                <Store className="h-4 w-4 text-muted-foreground" />
+                Till / Location
+              </Label>
+              <Select value={selectedLocationId} onValueChange={setSelectedLocationId}>
+                <SelectTrigger id="till-location" className="h-10">
+                  <SelectValue placeholder="Select till" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map((loc) => (
+                    <SelectItem key={loc.id} value={loc.id}>
+                      {loc.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Choose which till you're opening today.
+              </p>
+            </div>
+          )}
+
           {/* Cash Account assignment */}
           <div className="space-y-2">
             <Label htmlFor="cash-account" className="flex items-center gap-1.5">
