@@ -298,6 +298,7 @@ export type Database = {
           name: string
           owner_id: string | null
           phone: string | null
+          pos_manager_approver_id: string | null
           pos_require_manager_to_remove_item: boolean
           prevent_overselling: boolean
           status: string
@@ -329,6 +330,7 @@ export type Database = {
           name: string
           owner_id?: string | null
           phone?: string | null
+          pos_manager_approver_id?: string | null
           pos_require_manager_to_remove_item?: boolean
           prevent_overselling?: boolean
           status?: string
@@ -360,6 +362,7 @@ export type Database = {
           name?: string
           owner_id?: string | null
           phone?: string | null
+          pos_manager_approver_id?: string | null
           pos_require_manager_to_remove_item?: boolean
           prevent_overselling?: boolean
           status?: string
@@ -1248,32 +1251,38 @@ export type Database = {
       }
       profiles: {
         Row: {
+          assigned_location_id: string | null
           avatar_url: string | null
           business_id: string | null
           created_at: string
           email: string | null
           full_name: string | null
           id: string
+          is_active: boolean
           phone: string | null
           updated_at: string
         }
         Insert: {
+          assigned_location_id?: string | null
           avatar_url?: string | null
           business_id?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id: string
+          is_active?: boolean
           phone?: string | null
           updated_at?: string
         }
         Update: {
+          assigned_location_id?: string | null
           avatar_url?: string | null
           business_id?: string | null
           created_at?: string
           email?: string | null
           full_name?: string | null
           id?: string
+          is_active?: boolean
           phone?: string | null
           updated_at?: string
         }

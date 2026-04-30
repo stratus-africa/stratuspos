@@ -1,11 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -13,7 +14,7 @@ import { useBusiness } from "@/contexts/BusinessContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { UserPlus, Shield, User, Crown, Pencil, Loader2, Users, ShieldCheck, Info, Warehouse } from "lucide-react";
+import { UserPlus, Shield, User, Crown, Pencil, Loader2, Users, ShieldCheck, Warehouse, Save } from "lucide-react";
 
 type AppRole = "admin" | "manager" | "cashier" | "stores_manager";
 
@@ -44,34 +45,63 @@ const roleBadgeVariant = (role: string) => {
   }
 };
 
-const allPermissions = [
-  "Dashboard & Analytics",
-  "Point of Sale (POS)",
-  "Products & Inventory",
-  "Sales & Purchases",
-  "Expenses",
-  "Banking & Reconciliation",
-  "Chart of Accounts",
-  "Reports",
-  "Settings & User Management",
-  "Roles Management",
+// Granular permission catalog: modules with CRUD actions, plus per-report view permissions
+type ModuleDef = { key: string; label: string; actions: ("view" | "create" | "edit" | "delete")[] };
+
+const moduleCatalog: ModuleDef[] = [
+  { key: "dashboard", label: "Dashboard & Analytics", actions: ["view"] },
+  { key: "pos", label: "Point of Sale (POS)", actions: ["view", "create"] },
+  { key: "products", label: "Products", actions: ["view", "create", "edit", "delete"] },
+  { key: "inventory", label: "Inventory", actions: ["view", "create", "edit", "delete"] },
+  { key: "sales", label: "Sales", actions: ["view", "create", "edit", "delete"] },
+  { key: "customers", label: "Customers", actions: ["view", "create", "edit", "delete"] },
+  { key: "purchases", label: "Purchases", actions: ["view", "create", "edit", "delete"] },
+  { key: "suppliers", label: "Suppliers", actions: ["view", "create", "edit", "delete"] },
+  { key: "expenses", label: "Expenses", actions: ["view", "create", "edit", "delete"] },
+  { key: "banking", label: "Banking & Reconciliation", actions: ["view", "create", "edit", "delete"] },
+  { key: "chart_of_accounts", label: "Chart of Accounts", actions: ["view", "create", "edit", "delete"] },
+  { key: "settings", label: "Settings & Business Profile", actions: ["view", "edit"] },
+  { key: "users", label: "User Management", actions: ["view", "create", "edit", "delete"] },
+  { key: "roles", label: "Roles Management", actions: ["view", "edit"] },
 ];
 
+const reportsCatalog = [
+  { key: "report.sales", label: "Sales Report" },
+  { key: "report.purchases", label: "Purchases Report" },
+  { key: "report.expenses", label: "Expenses Report" },
+  { key: "report.inventory", label: "Inventory Report" },
+  { key: "report.pnl", label: "Profit & Loss Report" },
+  { key: "report.audit", label: "Audit Trail Report" },
+];
+
+const permKey = (moduleKey: string, action: string) => `${moduleKey}.${action}`;
+const allModulePerms = moduleCatalog.flatMap((m) => m.actions.map((a) => permKey(m.key, a)));
+const allReportPerms = reportsCatalog.map((r) => r.key);
+const allPermissionKeys = [...allModulePerms, ...allReportPerms];
+
 const defaultRolePermissions: Record<AppRole, string[]> = {
-  admin: [...allPermissions],
+  admin: [...allPermissionKeys],
   manager: [
-    "Dashboard & Analytics",
-    "Point of Sale (POS)",
-    "Products & Inventory",
-    "Sales & Purchases",
+    "dashboard.view",
+    "pos.view", "pos.create",
+    "products.view", "products.edit",
+    "inventory.view", "inventory.edit",
+    "sales.view", "sales.create", "sales.edit",
+    "customers.view", "customers.create", "customers.edit",
+    "purchases.view", "purchases.create", "purchases.edit",
+    "suppliers.view", "suppliers.create", "suppliers.edit",
+    "report.sales", "report.purchases", "report.inventory",
   ],
   cashier: [
-    "Point of Sale (POS)",
+    "pos.view", "pos.create",
+    "customers.view", "customers.create",
   ],
   stores_manager: [
-    "Products & Inventory",
-    "Sales & Purchases",
-    "Reports",
+    "products.view", "products.create", "products.edit",
+    "inventory.view", "inventory.create", "inventory.edit",
+    "purchases.view", "purchases.create", "purchases.edit",
+    "suppliers.view", "suppliers.create", "suppliers.edit",
+    "report.inventory", "report.purchases",
   ],
 };
 
@@ -92,20 +122,18 @@ export function RolesPermissionsTab() {
   const [inviteRole, setInviteRole] = useState<string>("cashier");
   const [inviting, setInviting] = useState(false);
 
-  // Edit member state
   const [editMember, setEditMember] = useState<TeamMember | null>(null);
   const [editRole, setEditRole] = useState<AppRole>("cashier");
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [saving, setSaving] = useState(false);
 
-  // Edit role permissions state
+  // Roles editor (full-screen Sheet)
   const [editingRole, setEditingRole] = useState<AppRole | null>(null);
   const [editPerms, setEditPerms] = useState<string[]>([]);
-
-  // Persisted permissions per role (loaded from role_permissions table)
-  const [rolePermissions, setRolePermissions] = useState<Record<AppRole, string[]>>(defaultRolePermissions);
   const [savingPerms, setSavingPerms] = useState(false);
+
+  const [rolePermissions, setRolePermissions] = useState<Record<AppRole, string[]>>(defaultRolePermissions);
 
   const isAdmin = userRole === "admin";
 
@@ -117,7 +145,6 @@ export function RolesPermissionsTab() {
       .eq("business_id", business.id);
     const next: Record<AppRole, string[]> = { ...defaultRolePermissions };
     if (data && data.length > 0) {
-      // Reset only roles that actually have stored rows so unset roles keep defaults
       const seenRoles = new Set<AppRole>();
       data.forEach((row: { role: AppRole; permission: string }) => {
         if (!seenRoles.has(row.role)) {
@@ -133,16 +160,13 @@ export function RolesPermissionsTab() {
   const fetchMembers = async () => {
     if (!business) return;
     setLoading(true);
-
     const { data: roles } = await supabase
       .from("user_roles")
       .select("id, user_id, role")
       .eq("business_id", business.id);
 
     if (!roles || roles.length === 0) {
-      setMembers([]);
-      setLoading(false);
-      return;
+      setMembers([]); setLoading(false); return;
     }
 
     const userIds = roles.map((r) => r.user_id);
@@ -171,57 +195,42 @@ export function RolesPermissionsTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [business?.id]);
 
-  const openEditMember = (member: TeamMember) => {
-    setEditMember(member);
-    setEditRole(member.role);
-    setEditName(member.full_name || "");
-    setEditPhone(member.phone || "");
+  const openEditMember = (m: TeamMember) => {
+    setEditMember(m); setEditRole(m.role);
+    setEditName(m.full_name || ""); setEditPhone(m.phone || "");
   };
 
   const handleSaveUser = async () => {
     if (!editMember) return;
     setSaving(true);
-
-    const { error: roleError } = await supabase
-      .from("user_roles")
-      .update({ role: editRole })
-      .eq("id", editMember.role_id);
-
-    const { error: profileError } = await supabase
-      .from("profiles")
-      .update({ full_name: editName.trim(), phone: editPhone.trim() || null })
-      .eq("id", editMember.user_id);
-
-    if (roleError || profileError) {
-      toast.error("Failed to update: " + (roleError?.message || profileError?.message));
-    } else {
-      toast.success("User updated successfully");
-      await fetchMembers();
-    }
-    setSaving(false);
-    setEditMember(null);
+    const { error: roleError } = await supabase.from("user_roles").update({ role: editRole }).eq("id", editMember.role_id);
+    const { error: profileError } = await supabase.from("profiles").update({ full_name: editName.trim(), phone: editPhone.trim() || null }).eq("id", editMember.user_id);
+    if (roleError || profileError) toast.error("Failed to update: " + (roleError?.message || profileError?.message));
+    else { toast.success("User updated"); await fetchMembers(); }
+    setSaving(false); setEditMember(null);
   };
 
   const handleInvite = async () => {
     if (!inviteEmail.trim()) return;
     setInviting(true);
-    toast.info(
-      `To add ${inviteEmail} as a ${inviteRole}: Have them sign up, then you can assign their role here.`,
-      { duration: 6000 }
-    );
-    setInviting(false);
-    setInviteOpen(false);
-    setInviteEmail("");
+    toast.info(`To add ${inviteEmail} as a ${inviteRole}: Have them sign up, then assign their role here.`, { duration: 6000 });
+    setInviting(false); setInviteOpen(false); setInviteEmail("");
   };
 
   const openEditRole = (role: AppRole) => {
     setEditingRole(role);
-    setEditPerms([...rolePermissions[role]]);
+    setEditPerms([...(rolePermissions[role] || [])]);
   };
 
   const togglePerm = (perm: string) => {
-    setEditPerms((prev) =>
-      prev.includes(perm) ? prev.filter((p) => p !== perm) : [...prev, perm]
+    setEditPerms((prev) => prev.includes(perm) ? prev.filter((p) => p !== perm) : [...prev, perm]);
+  };
+
+  const toggleModule = (mod: ModuleDef, on: boolean) => {
+    const keys = mod.actions.map((a) => permKey(mod.key, a));
+    setEditPerms((prev) => on
+      ? Array.from(new Set([...prev, ...keys]))
+      : prev.filter((p) => !keys.includes(p))
     );
   };
 
@@ -229,47 +238,32 @@ export function RolesPermissionsTab() {
     if (!editingRole || !business) return;
     setSavingPerms(true);
     try {
-      // Replace stored permissions for this role
-      const { error: delErr } = await (supabase as any)
-        .from("role_permissions")
-        .delete()
-        .eq("business_id", business.id)
-        .eq("role", editingRole);
+      const { error: delErr } = await (supabase as any).from("role_permissions").delete().eq("business_id", business.id).eq("role", editingRole);
       if (delErr) throw delErr;
-
       if (editPerms.length > 0) {
-        const rows = editPerms.map((permission) => ({
-          business_id: business.id,
-          role: editingRole,
-          permission,
-        }));
+        const rows = editPerms.map((permission) => ({ business_id: business.id, role: editingRole, permission }));
         const { error: insErr } = await (supabase as any).from("role_permissions").insert(rows);
         if (insErr) throw insErr;
       }
-
       setRolePermissions((prev) => ({ ...prev, [editingRole]: editPerms }));
       toast.success(`${roleDescriptions[editingRole].label} permissions saved`);
       setEditingRole(null);
     } catch (err: any) {
       toast.error("Failed to save permissions: " + err.message);
-    } finally {
-      setSavingPerms(false);
-    }
+    } finally { setSavingPerms(false); }
   };
 
-  const roleCounts = {
+  const roleCounts = useMemo(() => ({
     admin: members.filter((m) => m.role === "admin").length,
     manager: members.filter((m) => m.role === "manager").length,
     cashier: members.filter((m) => m.role === "cashier").length,
     stores_manager: members.filter((m) => m.role === "stores_manager").length,
-  };
+  }), [members]);
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-muted-foreground text-sm">Manage team members, roles and their permissions.</p>
-        </div>
+        <p className="text-muted-foreground text-sm">Manage team members, roles and granular permissions.</p>
         {isAdmin && (
           <Button onClick={() => setInviteOpen(true)} size="sm">
             <UserPlus className="mr-2 h-4 w-4" /> Add Member
@@ -279,15 +273,10 @@ export function RolesPermissionsTab() {
 
       <Tabs defaultValue="members">
         <TabsList>
-          <TabsTrigger value="members" className="gap-1.5">
-            <Users className="h-4 w-4" /> Team Members
-          </TabsTrigger>
-          <TabsTrigger value="roles" className="gap-1.5">
-            <ShieldCheck className="h-4 w-4" /> Roles & Permissions
-          </TabsTrigger>
+          <TabsTrigger value="members" className="gap-1.5"><Users className="h-4 w-4" /> Team Members</TabsTrigger>
+          <TabsTrigger value="roles" className="gap-1.5"><ShieldCheck className="h-4 w-4" /> Roles & Permissions</TabsTrigger>
         </TabsList>
 
-        {/* Team Members Tab */}
         <TabsContent value="members" className="mt-4">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             {(["admin", "manager", "stores_manager", "cashier"] as AppRole[]).map((role) => (
@@ -324,57 +313,42 @@ export function RolesPermissionsTab() {
                 </TableHeader>
                 <TableBody>
                   {loading ? (
-                    <TableRow>
-                      <TableCell colSpan={isAdmin ? 5 : 4} className="text-center py-8 text-muted-foreground">Loading...</TableCell>
-                    </TableRow>
+                    <TableRow><TableCell colSpan={isAdmin ? 5 : 4} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
                   ) : members.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={isAdmin ? 5 : 4} className="text-center py-8 text-muted-foreground">No team members found.</TableCell>
-                    </TableRow>
-                  ) : (
-                    members.map((m) => (
-                      <TableRow key={m.user_id}>
-                        <TableCell className="font-medium">
-                          {m.full_name || "Unnamed User"}
-                          {m.user_id === user?.id && (
-                            <span className="ml-2 text-xs text-muted-foreground">(You)</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{m.email || "—"}</TableCell>
-                        <TableCell className="text-muted-foreground">{m.phone || "—"}</TableCell>
+                    <TableRow><TableCell colSpan={isAdmin ? 5 : 4} className="text-center py-8 text-muted-foreground">No team members found.</TableCell></TableRow>
+                  ) : members.map((m) => (
+                    <TableRow key={m.user_id}>
+                      <TableCell className="font-medium">
+                        {m.full_name || "Unnamed User"}
+                        {m.user_id === user?.id && <span className="ml-2 text-xs text-muted-foreground">(You)</span>}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{m.email || "—"}</TableCell>
+                      <TableCell className="text-muted-foreground">{m.phone || "—"}</TableCell>
+                      <TableCell>
+                        <Badge variant={roleBadgeVariant(m.role)} className="flex items-center gap-1 w-fit capitalize">
+                          {roleIcon(m.role)} {m.role.replace("_", " ")}
+                        </Badge>
+                      </TableCell>
+                      {isAdmin && (
                         <TableCell>
-                          <Badge variant={roleBadgeVariant(m.role)} className="flex items-center gap-1 w-fit capitalize">
-                            {roleIcon(m.role)} {m.role}
-                          </Badge>
+                          <Button variant="ghost" size="icon" onClick={() => openEditMember(m)} disabled={m.user_id === user?.id} title={m.user_id === user?.id ? "You can't change your own role" : "Edit user"}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
                         </TableCell>
-                        {isAdmin && (
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => openEditMember(m)}
-                              disabled={m.user_id === user?.id}
-                              title={m.user_id === user?.id ? "You can't change your own role" : "Edit user"}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))
-                  )}
+                      )}
+                    </TableRow>
+                  ))}
                 </TableBody>
               </Table>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Roles & Permissions Tab */}
         <TabsContent value="roles" className="mt-4">
           <div className="grid gap-4">
             {(["admin", "manager", "stores_manager", "cashier"] as AppRole[]).map((role) => {
               const info = roleDescriptions[role];
-              const perms = rolePermissions[role];
+              const perms = rolePermissions[role] || [];
               return (
                 <Card key={role}>
                   <CardHeader className="pb-3">
@@ -390,9 +364,8 @@ export function RolesPermissionsTab() {
                         <CardDescription>{info.description}</CardDescription>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="secondary">
-                          {roleCounts[role]} user{roleCounts[role] !== 1 ? "s" : ""}
-                        </Badge>
+                        <Badge variant="secondary">{roleCounts[role]} user{roleCounts[role] !== 1 ? "s" : ""}</Badge>
+                        <Badge variant="outline">{perms.length} perms</Badge>
                         {isAdmin && role !== "admin" && (
                           <Button variant="outline" size="sm" onClick={() => openEditRole(role)}>
                             <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
@@ -401,19 +374,6 @@ export function RolesPermissionsTab() {
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {perms.map((perm) => (
-                        <div key={perm} className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                          {perm}
-                        </div>
-                      ))}
-                      {perms.length === 0 && (
-                        <p className="text-sm text-muted-foreground col-span-full">No permissions assigned.</p>
-                      )}
-                    </div>
-                  </CardContent>
                 </Card>
               );
             })}
@@ -424,32 +384,20 @@ export function RolesPermissionsTab() {
       {/* Edit Member Dialog */}
       <Dialog open={!!editMember} onOpenChange={(open) => !open && setEditMember(null)}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit User — {editMember?.full_name || "User"}</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Edit User — {editMember?.full_name || "User"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Full Name</Label>
-              <Input value={editName} onChange={(e) => setEditName(e.target.value)} placeholder="Full name" />
-            </div>
-            <div className="space-y-2">
-              <Label>Phone</Label>
-              <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="Phone number" />
-            </div>
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input value={editMember?.email || ""} disabled className="bg-muted" />
-              <p className="text-xs text-muted-foreground">Email cannot be changed here.</p>
-            </div>
+            <div className="space-y-2"><Label>Full Name</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
+            <div className="space-y-2"><Label>Phone</Label><Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} /></div>
+            <div className="space-y-2"><Label>Email</Label><Input value={editMember?.email || ""} disabled className="bg-muted" /></div>
             <div className="space-y-2">
               <Label>Role</Label>
               <Select value={editRole} onValueChange={(v) => setEditRole(v as AppRole)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Admin — Full access to all features</SelectItem>
-                  <SelectItem value="manager">Manager — Inventory, sales & purchases</SelectItem>
-                  <SelectItem value="stores_manager">Stores Manager — Stock & inventory operations</SelectItem>
-                  <SelectItem value="cashier">Cashier — POS access only</SelectItem>
+                  <SelectItem value="admin">Admin — Full access</SelectItem>
+                  <SelectItem value="manager">Manager — Operations</SelectItem>
+                  <SelectItem value="stores_manager">Stores Manager — Stock & inventory</SelectItem>
+                  <SelectItem value="cashier">Cashier — POS only</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -457,40 +405,7 @@ export function RolesPermissionsTab() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditMember(null)}>Cancel</Button>
             <Button onClick={handleSaveUser} disabled={saving}>
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Role Permissions Dialog */}
-      <Dialog open={!!editingRole} onOpenChange={(open) => !open && setEditingRole(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>
-              Edit {editingRole ? roleDescriptions[editingRole].label : ""} Permissions
-            </DialogTitle>
-            <DialogDescription>
-              Select which modules this role can access.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            {allPermissions.map((perm) => (
-              <label key={perm} className="flex items-center gap-3 cursor-pointer hover:bg-muted/50 rounded-md p-2 -mx-2">
-                <Checkbox
-                  checked={editPerms.includes(perm)}
-                  onCheckedChange={() => togglePerm(perm)}
-                />
-                <span className="text-sm">{perm}</span>
-              </label>
-            ))}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingRole(null)}>Cancel</Button>
-            <Button onClick={handleSaveRolePerms} disabled={savingPerms}>
-              {savingPerms && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Permissions
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -499,48 +414,115 @@ export function RolesPermissionsTab() {
       {/* Invite Dialog */}
       <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
         <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Team Member</DialogTitle>
-            <DialogDescription>
-              Add a new user to your business and assign their role.
-            </DialogDescription>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Invite Team Member</DialogTitle></DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Email Address</Label>
-              <Input
-                type="email"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
-                placeholder="colleague@example.com"
-              />
-            </div>
+            <div className="space-y-2"><Label>Email</Label><Input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="colleague@example.com" /></div>
             <div className="space-y-2">
               <Label>Role</Label>
               <Select value={inviteRole} onValueChange={setInviteRole}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Admin — Full access</SelectItem>
-                  <SelectItem value="manager">Manager — Manage inventory & sales</SelectItem>
-                  <SelectItem value="cashier">Cashier — POS access only</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="manager">Manager</SelectItem>
+                  <SelectItem value="stores_manager">Stores Manager</SelectItem>
+                  <SelectItem value="cashier">Cashier</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="flex items-start gap-2 rounded-lg border p-3 bg-muted/50">
-              <Info className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-              <p className="text-xs text-muted-foreground">
-                The user must first create an account. Once they sign up, you can assign them to your business.
-              </p>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button>
-            <Button onClick={handleInvite} disabled={inviting || !inviteEmail.trim()}>
-              Add User
-            </Button>
+            <Button onClick={handleInvite} disabled={inviting || !inviteEmail.trim()}>Send Invite</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Full-screen Roles Editor (Sheet) */}
+      <Sheet open={!!editingRole} onOpenChange={(open) => !open && setEditingRole(null)}>
+        <SheetContent side="right" className="w-full sm:max-w-3xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              {editingRole && roleIcon(editingRole)}
+              Edit Permissions — {editingRole && roleDescriptions[editingRole].label}
+            </SheetTitle>
+            <SheetDescription>
+              Toggle individual View / Create / Edit / Delete permissions per module, plus per-report visibility.
+            </SheetDescription>
+          </SheetHeader>
+
+          <div className="space-y-6 py-4">
+            <section>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-sm">Modules</h3>
+                <div className="text-xs text-muted-foreground">{editPerms.filter(p => !p.startsWith("report.")).length} selected</div>
+              </div>
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Module</TableHead>
+                      <TableHead className="text-center w-20">View</TableHead>
+                      <TableHead className="text-center w-20">Create</TableHead>
+                      <TableHead className="text-center w-20">Edit</TableHead>
+                      <TableHead className="text-center w-20">Delete</TableHead>
+                      <TableHead className="text-center w-16">All</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {moduleCatalog.map((mod) => {
+                      const allOn = mod.actions.every((a) => editPerms.includes(permKey(mod.key, a)));
+                      return (
+                        <TableRow key={mod.key}>
+                          <TableCell className="font-medium">{mod.label}</TableCell>
+                          {(["view", "create", "edit", "delete"] as const).map((a) => {
+                            const supported = mod.actions.includes(a);
+                            const k = permKey(mod.key, a);
+                            return (
+                              <TableCell key={a} className="text-center">
+                                {supported ? (
+                                  <Checkbox checked={editPerms.includes(k)} onCheckedChange={() => togglePerm(k)} />
+                                ) : (
+                                  <span className="text-xs text-muted-foreground/50">—</span>
+                                )}
+                              </TableCell>
+                            );
+                          })}
+                          <TableCell className="text-center">
+                            <Checkbox checked={allOn} onCheckedChange={(v) => toggleModule(mod, !!v)} />
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </section>
+
+            <section>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-sm">Reports — allow viewing each report</h3>
+                <div className="text-xs text-muted-foreground">{editPerms.filter(p => p.startsWith("report.")).length} of {reportsCatalog.length}</div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 border rounded-lg p-3">
+                {reportsCatalog.map((r) => (
+                  <label key={r.key} className="flex items-center gap-2 p-2 rounded hover:bg-muted cursor-pointer">
+                    <Checkbox checked={editPerms.includes(r.key)} onCheckedChange={() => togglePerm(r.key)} />
+                    <span className="text-sm">{r.label}</span>
+                  </label>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          <SheetFooter className="gap-2">
+            <Button variant="outline" onClick={() => setEditingRole(null)}>Cancel</Button>
+            <Button onClick={handleSaveRolePerms} disabled={savingPerms}>
+              {savingPerms ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+              Save Permissions
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
