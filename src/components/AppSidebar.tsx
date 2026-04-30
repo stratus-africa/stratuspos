@@ -5,6 +5,8 @@ import {
   Warehouse,
   TruckIcon,
   Receipt,
+  Users,
+  Truck,
   CreditCard,
   BarChart3,
   Settings,
