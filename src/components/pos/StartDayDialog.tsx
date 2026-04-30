@@ -18,6 +18,7 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
   const { currentLocation, locations, business } = useBusiness();
   const [openingFloat, setOpeningFloat] = useState("0");
   const [cashAccountId, setCashAccountId] = useState<string>("");
+  const [selectedLocationId, setSelectedLocationId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [cashAccountError, setCashAccountError] = useState<string | null>(null);
   const { data: bankAccounts = [] } = useBankAccounts();
