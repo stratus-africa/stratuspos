@@ -79,6 +79,31 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Till / Location picker — cashiers can switch tills here */}
+          {locations.length > 1 && (
+            <div className="space-y-2">
+              <Label htmlFor="till-location" className="flex items-center gap-1.5">
+                <Store className="h-4 w-4 text-muted-foreground" />
+                Till / Location
+              </Label>
+              <Select value={selectedLocationId} onValueChange={setSelectedLocationId}>
+                <SelectTrigger id="till-location" className="h-10">
+                  <SelectValue placeholder="Select till" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.map((loc) => (
+                    <SelectItem key={loc.id} value={loc.id}>
+                      {loc.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Choose which till you're opening today.
+              </p>
+            </div>
+          )}
+
           {/* Cash Account assignment */}
           <div className="space-y-2">
             <Label htmlFor="cash-account" className="flex items-center gap-1.5">
