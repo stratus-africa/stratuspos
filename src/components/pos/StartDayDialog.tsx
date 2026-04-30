@@ -29,6 +29,8 @@ export default function StartDayDialog({ open, onOpenChange, onConfirm }: StartD
   useEffect(() => {
     if (!open || !business) return;
     setCashAccountError(null);
+    // Default till to current location (or first available)
+    setSelectedLocationId(currentLocation?.id || locations[0]?.id || "");
 
     // Default to business-configured cash mapping, else first cash account
     (async () => {
