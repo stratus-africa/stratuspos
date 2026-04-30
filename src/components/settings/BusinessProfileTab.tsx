@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,7 +31,24 @@ export function BusinessProfileTab() {
   const [themeColor, setThemeColor] = useState<ThemeKey>(((business as { theme_color?: ThemeKey })?.theme_color || DEFAULT_THEME) as ThemeKey);
   const [preventOverselling, setPreventOverselling] = useState((business as { prevent_overselling?: boolean })?.prevent_overselling ?? false);
   const [requireManagerToRemove, setRequireManagerToRemove] = useState((business as { pos_require_manager_to_remove_item?: boolean })?.pos_require_manager_to_remove_item ?? false);
+  const [managerApproverId, setManagerApproverId] = useState<string>(((business as any)?.pos_manager_approver_id) || "any");
   const [businessType, setBusinessType] = useState<BusinessType>(((business as { business_type?: BusinessType })?.business_type || "general") as BusinessType);
+  const [managers, setManagers] = useState<{ user_id: string; full_name: string | null; email: string | null }[]>([]);
+
+  useEffect(() => {
+    if (!business) return;
+    (async () => {
+      const { data: roles } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .eq("business_id", business.id)
+        .in("role", ["admin", "manager"] as any);
+      const ids = (roles || []).map((r) => r.user_id);
+      if (ids.length === 0) { setManagers([]); return; }
+      const { data: profs } = await supabase.from("profiles").select("id, full_name, email").in("id", ids);
+      setManagers((profs || []).map((p) => ({ user_id: p.id, full_name: p.full_name, email: p.email })));
+    })();
+  }, [business?.id]);
 
   const handleSave = async () => {
     if (!business) return;
@@ -54,6 +71,7 @@ export function BusinessProfileTab() {
         theme_color: themeColor,
         prevent_overselling: preventOverselling,
         pos_require_manager_to_remove_item: requireManagerToRemove,
+        pos_manager_approver_id: managerApproverId === "any" ? null : managerApproverId,
         business_type: businessType,
       } as never)
       .eq("id", business.id);
@@ -295,6 +313,25 @@ export function BusinessProfileTab() {
             </div>
             <Switch checked={requireManagerToRemove} onCheckedChange={setRequireManagerToRemove} />
           </div>
+          {requireManagerToRemove && (
+            <div className="space-y-2 pt-2 border-t">
+              <Label>Approving Manager</Label>
+              <Select value={managerApproverId} onValueChange={setManagerApproverId}>
+                <SelectTrigger><SelectValue placeholder="Any admin or manager" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="any">Any admin or manager</SelectItem>
+                  {managers.map((m) => (
+                    <SelectItem key={m.user_id} value={m.user_id}>
+                      {m.full_name || m.email || "Unnamed"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                If set, only this specific user can approve POS item removal. Otherwise any admin or manager can approve.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
