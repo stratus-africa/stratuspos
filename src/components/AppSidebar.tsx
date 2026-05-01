@@ -34,12 +34,21 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarFooter,
   SidebarHeader,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronRight } from "lucide-react";
 
 type AppRole = "admin" | "manager" | "cashier" | "stores_manager";
 
@@ -50,6 +59,8 @@ interface NavItem {
   roles: AppRole[];
   /** Feature key from package_features. Item is locked when the user's plan doesn't have it. */
   featureKey?: string;
+  /** Optional sub-items rendered under this item as a collapsible submenu. */
+  children?: NavItem[];
 }
 
 const mainNav: NavItem[] = [
@@ -63,10 +74,18 @@ const inventoryNav: NavItem[] = [
 ];
 
 const transactionNav: NavItem[] = [
-  { title: "Sales", url: "/sales", icon: Receipt, roles: ["admin", "manager"], featureKey: "sales" },
-  { title: "Customers", url: "/customers", icon: Users, roles: ["admin", "manager"], featureKey: "sales" },
-  { title: "Purchases", url: "/purchases", icon: TruckIcon, roles: ["admin", "manager"], featureKey: "purchases" },
-  { title: "Suppliers", url: "/suppliers", icon: Truck, roles: ["admin", "manager"], featureKey: "purchases" },
+  {
+    title: "Sales", url: "/sales", icon: Receipt, roles: ["admin", "manager"], featureKey: "sales",
+    children: [
+      { title: "Customers", url: "/customers", icon: Users, roles: ["admin", "manager"], featureKey: "sales" },
+    ],
+  },
+  {
+    title: "Purchases", url: "/purchases", icon: TruckIcon, roles: ["admin", "manager"], featureKey: "purchases",
+    children: [
+      { title: "Suppliers", url: "/suppliers", icon: Truck, roles: ["admin", "manager"], featureKey: "purchases" },
+    ],
+  },
   { title: "Expenses", url: "/expenses", icon: CreditCard, roles: ["admin"], featureKey: "expenses" },
 ];
 
