@@ -180,6 +180,32 @@ export default function SuperAdminTenantDetail() {
     navigate("/super-admin/businesses");
   };
 
+  const toggleUserActive = async (userId: string, nextActive: boolean) => {
+    const { error } = await supabase
+      .from("profiles")
+      .update({ is_active: nextActive })
+      .eq("id", userId);
+    if (error) { toast.error(error.message); return; }
+    setTenantUsers((prev) => prev.map((u) => u.id === userId ? { ...u, is_active: nextActive } : u));
+    toast.success(nextActive ? "User activated" : "User deactivated");
+  };
+
+  const changeUserRole = async (userId: string, nextRole: AssignableRole) => {
+    if (!id) return;
+    const { error: delErr } = await supabase
+      .from("user_roles")
+      .delete()
+      .eq("business_id", id)
+      .eq("user_id", userId);
+    if (delErr) { toast.error(delErr.message); return; }
+    const { error: insErr } = await supabase
+      .from("user_roles")
+      .insert({ business_id: id, user_id: userId, role: nextRole as any });
+    if (insErr) { toast.error(insErr.message); return; }
+    setTenantUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: nextRole } : u));
+    toast.success("Role updated");
+  };
+
   if (loading || !biz) {
     return (
       <div className="flex items-center justify-center py-20">
