@@ -4,6 +4,8 @@ import { TopBar } from "@/components/TopBar";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { Button } from "@/components/ui/button";
 import { Eye, X } from "lucide-react";
+import { useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
 
 function MasqueradeBanner() {
   const { isMasquerading, business, stopMasquerade } = useBusiness();
@@ -25,8 +27,17 @@ function MasqueradeBanner() {
 }
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
+  const location = useLocation();
+  const isPOS = location.pathname.startsWith("/pos");
+  const [open, setOpen] = useState(!isPOS);
+
+  // Auto-collapse the sidebar whenever the user navigates to POS.
+  useEffect(() => {
+    if (isPOS) setOpen(false);
+  }, [isPOS]);
+
   return (
-    <SidebarProvider>
+    <SidebarProvider open={open} onOpenChange={setOpen}>
       <div className="min-h-screen flex w-full bg-[hsl(210_20%_98%)]">
         <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">

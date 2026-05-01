@@ -190,8 +190,8 @@ const POS = () => {
   return (
     <div className="flex flex-col lg:flex-row gap-4 h-[calc(100dvh-6rem)] lg:h-[calc(100vh-6rem)] pb-[env(safe-area-inset-bottom)]">
 
-      {/* Left: Product selection */}
-      <div className="flex-1 flex flex-col min-h-0">
+      {/* Left: Product selection — 3/5 width on large screens */}
+      <div className="flex flex-col min-h-0 w-full lg:w-3/5 lg:flex-none">
         {/* Search & filters - single row on mobile */}
         <div className="flex flex-row gap-2 mb-3">
           <div className="relative flex-1 min-w-0">
@@ -300,8 +300,8 @@ const POS = () => {
         )}
       </div>
 
-      {/* Right: Cart */}
-      <Card className="w-full lg:w-[34rem] flex flex-col min-h-0">
+      {/* Right: Cart — 2/5 width on large screens */}
+      <Card className="w-full lg:w-2/5 lg:flex-none flex flex-col min-h-0 min-w-0">
         {(!isMobile || mobileCartExpanded) && (
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
