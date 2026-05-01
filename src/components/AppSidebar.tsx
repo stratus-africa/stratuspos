@@ -118,6 +118,10 @@ export function AppSidebar() {
     const filtered = filterByRole(items);
     if (filtered.length === 0) return null;
 
+    const isActiveUrl = (url: string) => currentPath === url;
+    const itemHasActiveChild = (item: NavItem) =>
+      !!item.children?.some((c) => isActiveUrl(c.url));
+
     return (
       <SidebarGroup>
         <SidebarGroupLabel>{label}</SidebarGroupLabel>
@@ -125,16 +129,70 @@ export function AppSidebar() {
           <SidebarMenu>
             {filtered.map((item) => {
               const locked = item.featureKey ? !hasFeatureKey(item.featureKey) : false;
+              const visibleChildren = (item.children || []).filter(
+                (c) => userRole && c.roles.includes(userRole),
+              );
+              const hasChildren = visibleChildren.length > 0;
+              const parentActive = isActiveUrl(item.url) || itemHasActiveChild(item);
+
+              if (!hasChildren) {
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={isActiveUrl(item.url)}>
+                      <NavLink to={item.url} end className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
+                        <item.icon className="mr-2 h-4 w-4" />
+                        {!collapsed && <span>{item.title}</span>}
+                        {!collapsed && locked && <Lock className="ml-auto h-3 w-3 text-muted-foreground" />}
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              }
+
+              // Item with children -> collapsible submenu
               return (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={currentPath === item.url}>
-                    <NavLink to={item.url} end className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                      <item.icon className="mr-2 h-4 w-4" />
-                      {!collapsed && <span>{item.title}</span>}
-                      {!collapsed && locked && <Lock className="ml-auto h-3 w-3 text-muted-foreground" />}
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+                <Collapsible key={item.title} defaultOpen={parentActive} className="group/collapsible">
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActiveUrl(item.url)}>
+                      <NavLink to={item.url} end className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
+                        <item.icon className="mr-2 h-4 w-4" />
+                        {!collapsed && <span className="flex-1">{item.title}</span>}
+                        {!collapsed && locked && <Lock className="mr-1 h-3 w-3 text-muted-foreground" />}
+                        {!collapsed && (
+                          <CollapsibleTrigger asChild onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                            <button
+                              type="button"
+                              aria-label={`Toggle ${item.title} submenu`}
+                              className="ml-auto p-0.5 rounded hover:bg-sidebar-accent/70"
+                            >
+                              <ChevronRight className="h-3.5 w-3.5 transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                            </button>
+                          </CollapsibleTrigger>
+                        )}
+                      </NavLink>
+                    </SidebarMenuButton>
+                    {!collapsed && (
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {visibleChildren.map((child) => {
+                            const childLocked = child.featureKey ? !hasFeatureKey(child.featureKey) : false;
+                            return (
+                              <SidebarMenuSubItem key={child.title}>
+                                <SidebarMenuSubButton asChild isActive={isActiveUrl(child.url)}>
+                                  <NavLink to={child.url} end className="hover:bg-sidebar-accent/50">
+                                    <child.icon className="mr-2 h-3.5 w-3.5" />
+                                    <span>{child.title}</span>
+                                    {childLocked && <Lock className="ml-auto h-3 w-3 text-muted-foreground" />}
+                                  </NavLink>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            );
+                          })}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    )}
+                  </SidebarMenuItem>
+                </Collapsible>
               );
             })}
           </SidebarMenu>
