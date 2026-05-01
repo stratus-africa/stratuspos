@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import {
-  ChevronRight, Pencil, PauseCircle, XCircle, Trash2, Info, Globe, Link as LinkIcon,
-  Plus, Package, Users as UsersIcon, Warehouse, ShoppingCart, Truck, CheckCircle2, Loader2,
+  ChevronRight, Pencil, PauseCircle, XCircle, Trash2, Info,
+  Package, Users as UsersIcon, Warehouse, ShoppingCart, Truck, CheckCircle2, Loader2, Mail,
 } from "lucide-react";
 
 type Biz = {
@@ -62,6 +62,7 @@ export default function SuperAdminTenantDetail() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [features, setFeatures] = useState<Feature[]>([]);
   const [counts, setCounts] = useState({ products: 0, users: 0, locations: 0, customers: 0, suppliers: 0 });
+  const [tenantUsers, setTenantUsers] = useState<Array<{ id: string; full_name: string | null; email: string | null; is_active: boolean; role: string | null }>>([]);
 
   useEffect(() => {
     if (!id) return;
@@ -105,6 +106,23 @@ export default function SuperAdminTenantDetail() {
         .limit(1);
       setSub((subs?.[0] as Sub) || null);
     }
+
+    // Load tenant users (profiles) + their roles
+    const { data: profs } = await supabase
+      .from("profiles")
+      .select("id, full_name, email, is_active")
+      .eq("business_id", id);
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("user_id, role")
+      .eq("business_id", id);
+    const roleMap = new Map<string, string>();
+    (roles || []).forEach((r: any) => { if (!roleMap.has(r.user_id)) roleMap.set(r.user_id, r.role); });
+    setTenantUsers((profs || []).map((p: any) => ({
+      id: p.id, full_name: p.full_name, email: p.email, is_active: p.is_active,
+      role: roleMap.get(p.id) || null,
+    })));
+
     setLoading(false);
   };
 
@@ -308,40 +326,48 @@ export default function SuperAdminTenantDetail() {
           <section className="bg-white border border-border rounded-xl p-5">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2">
-                <Globe className="h-4 w-4 text-muted-foreground" />
-                <h3 className="font-semibold text-sm">Domains</h3>
+                <UsersIcon className="h-4 w-4 text-muted-foreground" />
+                <h3 className="font-semibold text-sm">Users</h3>
               </div>
-              <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">1 domain</Badge>
+              <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
+                {tenantUsers.length} {tenantUsers.length === 1 ? "user" : "users"}
+              </Badge>
             </div>
 
-            <div className="pt-4 space-y-3">
-              <div className="rounded-lg border border-border p-3 flex items-center justify-between">
-                <div className="flex items-start gap-2 min-w-0">
-                  <LinkIcon className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {biz.name.toLowerCase().replace(/\s+/g, "")}.stratuspos.app
-                    </p>
-                    <p className="text-xs text-muted-foreground">Subdomain: {biz.name.toLowerCase().replace(/\s+/g, "").slice(0, 12)}</p>
-                  </div>
-                </div>
-                <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
-                  <span className="h-1.5 w-1.5 rounded-full bg-current mr-1.5" /> Active
-                </Badge>
-              </div>
-
-              <div>
-                <Label>Add Subdomain</Label>
-                <div className="flex gap-2 mt-1.5">
-                  <div className="flex-1 flex items-center rounded-md border border-border bg-background overflow-hidden">
-                    <Input placeholder="myshop" className="border-0 focus-visible:ring-0 h-9 text-sm" />
-                    <span className="px-2.5 text-xs text-muted-foreground border-l border-border h-9 flex items-center bg-muted/40">.stratuspos.app</span>
-                  </div>
-                  <Button className="bg-emerald-600 hover:bg-emerald-700 text-white h-9">
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Add
-                  </Button>
-                </div>
-              </div>
+            <div className="pt-4 space-y-2 max-h-[480px] overflow-auto">
+              {tenantUsers.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-2">No users in this tenant.</p>
+              ) : (
+                tenantUsers.map((u) => {
+                  const initial = (u.full_name || u.email || "?").charAt(0).toUpperCase();
+                  return (
+                    <div key={u.id} className="rounded-lg border border-border p-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-semibold shrink-0">
+                          {initial}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{u.full_name || "Unnamed user"}</p>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
+                            <Mail className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{u.email || "—"}</span>
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        {u.role && (
+                          <Badge variant="outline" className="text-[10px] capitalize">{u.role}</Badge>
+                        )}
+                        <Badge className={u.is_active
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px]"
+                          : "bg-muted text-muted-foreground border border-border text-[10px]"}>
+                          {u.is_active ? "Active" : "Inactive"}
+                        </Badge>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </section>
         </div>
