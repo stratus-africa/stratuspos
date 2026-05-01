@@ -301,7 +301,7 @@ const POS = () => {
       </div>
 
       {/* Right: Cart */}
-      <Card className="w-full lg:w-[28rem] flex flex-col min-h-0">
+      <Card className="w-full lg:w-[34rem] flex flex-col min-h-0">
         {(!isMobile || mobileCartExpanded) && (
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
