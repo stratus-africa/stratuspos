@@ -106,6 +106,23 @@ export default function SuperAdminTenantDetail() {
         .limit(1);
       setSub((subs?.[0] as Sub) || null);
     }
+
+    // Load tenant users (profiles) + their roles
+    const { data: profs } = await supabase
+      .from("profiles")
+      .select("id, full_name, email, is_active")
+      .eq("business_id", id);
+    const { data: roles } = await supabase
+      .from("user_roles")
+      .select("user_id, role")
+      .eq("business_id", id);
+    const roleMap = new Map<string, string>();
+    (roles || []).forEach((r: any) => { if (!roleMap.has(r.user_id)) roleMap.set(r.user_id, r.role); });
+    setTenantUsers((profs || []).map((p: any) => ({
+      id: p.id, full_name: p.full_name, email: p.email, is_active: p.is_active,
+      role: roleMap.get(p.id) || null,
+    })));
+
     setLoading(false);
   };
 
