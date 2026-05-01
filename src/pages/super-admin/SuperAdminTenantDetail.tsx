@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
@@ -10,6 +12,9 @@ import {
   ChevronRight, Pencil, PauseCircle, XCircle, Trash2, Info,
   Package, Users as UsersIcon, Warehouse, ShoppingCart, Truck, CheckCircle2, Loader2, Mail,
 } from "lucide-react";
+
+const ASSIGNABLE_ROLES = ["admin", "manager", "cashier", "stores_manager"] as const;
+type AssignableRole = typeof ASSIGNABLE_ROLES[number];
 
 type Biz = {
   id: string;
