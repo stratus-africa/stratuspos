@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import {
-  ChevronRight, Pencil, PauseCircle, XCircle, Trash2, Info, Globe, Link as LinkIcon,
-  Plus, Package, Users as UsersIcon, Warehouse, ShoppingCart, Truck, CheckCircle2, Loader2,
+  ChevronRight, Pencil, PauseCircle, XCircle, Trash2, Info,
+  Package, Users as UsersIcon, Warehouse, ShoppingCart, Truck, CheckCircle2, Loader2, Mail,
 } from "lucide-react";
 
 type Biz = {
