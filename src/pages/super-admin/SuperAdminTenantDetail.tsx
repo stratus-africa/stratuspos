@@ -372,28 +372,51 @@ export default function SuperAdminTenantDetail() {
                 tenantUsers.map((u) => {
                   const initial = (u.full_name || u.email || "?").charAt(0).toUpperCase();
                   return (
-                    <div key={u.id} className="rounded-lg border border-border p-3 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-semibold shrink-0">
-                          {initial}
+                    <div key={u.id} className="rounded-lg border border-border p-3 space-y-2.5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="h-8 w-8 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs font-semibold shrink-0">
+                            {initial}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{u.full_name || "Unnamed user"}</p>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
+                              <Mail className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{u.email || "—"}</span>
+                            </p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-medium truncate">{u.full_name || "Unnamed user"}</p>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1 truncate">
-                            <Mail className="h-3 w-3 shrink-0" />
-                            <span className="truncate">{u.email || "—"}</span>
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex flex-col items-end gap-1 shrink-0">
-                        {u.role && (
-                          <Badge variant="outline" className="text-[10px] capitalize">{u.role}</Badge>
-                        )}
                         <Badge className={u.is_active
-                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px]"
-                          : "bg-muted text-muted-foreground border border-border text-[10px]"}>
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] shrink-0"
+                          : "bg-muted text-muted-foreground border border-border text-[10px] shrink-0"}>
                           {u.is_active ? "Active" : "Inactive"}
                         </Badge>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <span className="text-[10px] font-semibold uppercase text-muted-foreground">Role</span>
+                          <Select
+                            value={(u.role as AssignableRole) || undefined}
+                            onValueChange={(v) => changeUserRole(u.id, v as AssignableRole)}
+                          >
+                            <SelectTrigger className="h-8 text-xs flex-1">
+                              <SelectValue placeholder="Assign role" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {ASSIGNABLE_ROLES.map((r) => (
+                                <SelectItem key={r} value={r} className="text-xs capitalize">{r.replace("_", " ")}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-[10px] font-semibold uppercase text-muted-foreground">Active</span>
+                          <Switch
+                            checked={u.is_active}
+                            onCheckedChange={(v) => toggleUserActive(u.id, v)}
+                          />
+                        </div>
                       </div>
                     </div>
                   );
