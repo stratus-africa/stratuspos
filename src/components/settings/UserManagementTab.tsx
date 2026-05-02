@@ -12,7 +12,8 @@ import { useBusiness } from "@/contexts/BusinessContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { UserPlus, Shield, User, Crown, Pencil, Loader2, Warehouse } from "lucide-react";
+import { UserPlus, Shield, User, Crown, Pencil, Warehouse, Key } from "lucide-react";
+import ManageUserDialog, { SetPasswordDialog } from "@/components/users/ManageUserDialog";
 
 type AppRole = "admin" | "manager" | "cashier" | "stores_manager";
 
