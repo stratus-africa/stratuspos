@@ -364,10 +364,13 @@ export default function SuperAdminTenantDetail() {
               <div className="flex items-center gap-2">
                 <UsersIcon className="h-4 w-4 text-muted-foreground" />
                 <h3 className="font-semibold text-sm">Users</h3>
+                <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
+                  {tenantUsers.length}
+                </Badge>
               </div>
-              <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
-                {tenantUsers.length} {tenantUsers.length === 1 ? "user" : "users"}
-              </Badge>
+              <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setCreateOpen(true)}>
+                <UserPlus className="h-3.5 w-3.5 mr-1" /> Add user
+              </Button>
             </div>
 
             <div className="pt-4 space-y-2 max-h-[480px] overflow-auto">
@@ -416,12 +419,20 @@ export default function SuperAdminTenantDetail() {
                           </Select>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <span className="text-[10px] font-semibold uppercase text-muted-foreground">Active</span>
                           <Switch
                             checked={u.is_active}
                             onCheckedChange={(v) => toggleUserActive(u.id, v)}
                           />
                         </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 pt-1.5 border-t border-border">
+                        <Button variant="outline" size="sm" className="h-7 text-xs flex-1" onClick={() => setEditingUser(u)}>
+                          <Pencil className="h-3 w-3 mr-1" /> Edit
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-7 text-xs flex-1" onClick={() => setPwUser(u)}>
+                          <Key className="h-3 w-3 mr-1" /> Reset password
+                        </Button>
                       </div>
                     </div>
                   );
@@ -431,6 +442,46 @@ export default function SuperAdminTenantDetail() {
           </section>
         </div>
       </div>
+
+      {/* Create user dialog */}
+      <ManageUserDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        mode="create"
+        businessId={id || ""}
+        locations={tenantLocations}
+        onSaved={fetchAll}
+      />
+
+      {/* Edit user dialog */}
+      <ManageUserDialog
+        open={!!editingUser}
+        onOpenChange={(o) => !o && setEditingUser(null)}
+        mode="edit"
+        businessId={id || ""}
+        locations={tenantLocations}
+        initial={editingUser ? {
+          user_id: editingUser.id,
+          email: editingUser.email || "",
+          full_name: editingUser.full_name || "",
+          phone: editingUser.phone || "",
+          role: (editingUser.role as any) || "cashier",
+          is_active: editingUser.is_active,
+          assigned_location_id: editingUser.assigned_location_id,
+        } : undefined}
+        onSaved={fetchAll}
+      />
+
+      {/* Reset password dialog */}
+      {pwUser && (
+        <SetPasswordDialog
+          open={!!pwUser}
+          onOpenChange={(o) => !o && setPwUser(null)}
+          businessId={id || ""}
+          userId={pwUser.id}
+          userLabel={pwUser.full_name || pwUser.email || "user"}
+        />
+      )}
     </div>
   );
 }
