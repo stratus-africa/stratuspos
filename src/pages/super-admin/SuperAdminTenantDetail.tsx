@@ -118,21 +118,20 @@ export default function SuperAdminTenantDetail() {
       setSub((subs?.[0] as Sub) || null);
     }
 
-    // Load tenant users (profiles) + their roles
-    const { data: profs } = await supabase
-      .from("profiles")
-      .select("id, full_name, email, is_active")
-      .eq("business_id", id);
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("user_id, role")
-      .eq("business_id", id);
+    // Load tenant users (profiles) + their roles + locations
+    const [{ data: profs }, { data: roles }, { data: locs }] = await Promise.all([
+      supabase.from("profiles").select("id, full_name, email, phone, is_active, assigned_location_id").eq("business_id", id),
+      supabase.from("user_roles").select("user_id, role").eq("business_id", id),
+      supabase.from("locations").select("id, name").eq("business_id", id).eq("is_active", true).order("name"),
+    ]);
     const roleMap = new Map<string, string>();
     (roles || []).forEach((r: any) => { if (!roleMap.has(r.user_id)) roleMap.set(r.user_id, r.role); });
     setTenantUsers((profs || []).map((p: any) => ({
-      id: p.id, full_name: p.full_name, email: p.email, is_active: p.is_active,
+      id: p.id, full_name: p.full_name, email: p.email, phone: p.phone,
+      is_active: p.is_active, assigned_location_id: p.assigned_location_id,
       role: roleMap.get(p.id) || null,
     })));
+    setTenantLocations((locs || []) as Array<{ id: string; name: string }>);
 
     setLoading(false);
   };
