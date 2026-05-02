@@ -96,6 +96,24 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           .single();
         businessId = profile?.business_id || null;
         setIsMasquerading(false);
+
+        // Self-heal: if profile has no business_id but user has a role assignment
+        // (e.g. invited by an admin), link them to that business automatically.
+        if (!businessId) {
+          const { data: roleRow } = await supabase
+            .from("user_roles")
+            .select("business_id")
+            .eq("user_id", user.id)
+            .limit(1)
+            .maybeSingle();
+          if (roleRow?.business_id) {
+            await supabase
+              .from("profiles")
+              .update({ business_id: roleRow.business_id })
+              .eq("id", user.id);
+            businessId = roleRow.business_id;
+          }
+        }
       }
 
       if (!businessId) {
