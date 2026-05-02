@@ -11,7 +11,9 @@ import { toast } from "sonner";
 import {
   ChevronRight, Pencil, PauseCircle, XCircle, Trash2, Info,
   Package, Users as UsersIcon, Warehouse, ShoppingCart, Truck, CheckCircle2, Loader2, Mail,
+  UserPlus, Key,
 } from "lucide-react";
+import ManageUserDialog, { SetPasswordDialog } from "@/components/users/ManageUserDialog";
 
 const ASSIGNABLE_ROLES = ["admin", "manager", "cashier", "stores_manager"] as const;
 type AssignableRole = typeof ASSIGNABLE_ROLES[number];
