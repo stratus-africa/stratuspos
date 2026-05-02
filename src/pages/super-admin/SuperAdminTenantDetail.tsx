@@ -11,7 +11,9 @@ import { toast } from "sonner";
 import {
   ChevronRight, Pencil, PauseCircle, XCircle, Trash2, Info,
   Package, Users as UsersIcon, Warehouse, ShoppingCart, Truck, CheckCircle2, Loader2, Mail,
+  UserPlus, Key,
 } from "lucide-react";
+import ManageUserDialog, { SetPasswordDialog } from "@/components/users/ManageUserDialog";
 
 const ASSIGNABLE_ROLES = ["admin", "manager", "cashier", "stores_manager"] as const;
 type AssignableRole = typeof ASSIGNABLE_ROLES[number];
@@ -67,7 +69,11 @@ export default function SuperAdminTenantDetail() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [features, setFeatures] = useState<Feature[]>([]);
   const [counts, setCounts] = useState({ products: 0, users: 0, locations: 0, customers: 0, suppliers: 0 });
-  const [tenantUsers, setTenantUsers] = useState<Array<{ id: string; full_name: string | null; email: string | null; is_active: boolean; role: string | null }>>([]);
+  const [tenantUsers, setTenantUsers] = useState<Array<{ id: string; full_name: string | null; email: string | null; phone: string | null; is_active: boolean; role: string | null; assigned_location_id: string | null }>>([]);
+  const [tenantLocations, setTenantLocations] = useState<Array<{ id: string; name: string }>>([]);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<typeof tenantUsers[number] | null>(null);
+  const [pwUser, setPwUser] = useState<typeof tenantUsers[number] | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -112,21 +118,20 @@ export default function SuperAdminTenantDetail() {
       setSub((subs?.[0] as Sub) || null);
     }
 
-    // Load tenant users (profiles) + their roles
-    const { data: profs } = await supabase
-      .from("profiles")
-      .select("id, full_name, email, is_active")
-      .eq("business_id", id);
-    const { data: roles } = await supabase
-      .from("user_roles")
-      .select("user_id, role")
-      .eq("business_id", id);
+    // Load tenant users (profiles) + their roles + locations
+    const [{ data: profs }, { data: roles }, { data: locs }] = await Promise.all([
+      supabase.from("profiles").select("id, full_name, email, phone, is_active, assigned_location_id").eq("business_id", id),
+      supabase.from("user_roles").select("user_id, role").eq("business_id", id),
+      supabase.from("locations").select("id, name").eq("business_id", id).eq("is_active", true).order("name"),
+    ]);
     const roleMap = new Map<string, string>();
     (roles || []).forEach((r: any) => { if (!roleMap.has(r.user_id)) roleMap.set(r.user_id, r.role); });
     setTenantUsers((profs || []).map((p: any) => ({
-      id: p.id, full_name: p.full_name, email: p.email, is_active: p.is_active,
+      id: p.id, full_name: p.full_name, email: p.email, phone: p.phone,
+      is_active: p.is_active, assigned_location_id: p.assigned_location_id,
       role: roleMap.get(p.id) || null,
     })));
+    setTenantLocations((locs || []) as Array<{ id: string; name: string }>);
 
     setLoading(false);
   };
@@ -359,10 +364,13 @@ export default function SuperAdminTenantDetail() {
               <div className="flex items-center gap-2">
                 <UsersIcon className="h-4 w-4 text-muted-foreground" />
                 <h3 className="font-semibold text-sm">Users</h3>
+                <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
+                  {tenantUsers.length}
+                </Badge>
               </div>
-              <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
-                {tenantUsers.length} {tenantUsers.length === 1 ? "user" : "users"}
-              </Badge>
+              <Button size="sm" className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => setCreateOpen(true)}>
+                <UserPlus className="h-3.5 w-3.5 mr-1" /> Add user
+              </Button>
             </div>
 
             <div className="pt-4 space-y-2 max-h-[480px] overflow-auto">
@@ -411,12 +419,20 @@ export default function SuperAdminTenantDetail() {
                           </Select>
                         </div>
                         <div className="flex items-center gap-1.5 shrink-0">
-                          <span className="text-[10px] font-semibold uppercase text-muted-foreground">Active</span>
                           <Switch
                             checked={u.is_active}
                             onCheckedChange={(v) => toggleUserActive(u.id, v)}
                           />
                         </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 pt-1.5 border-t border-border">
+                        <Button variant="outline" size="sm" className="h-7 text-xs flex-1" onClick={() => setEditingUser(u)}>
+                          <Pencil className="h-3 w-3 mr-1" /> Edit
+                        </Button>
+                        <Button variant="outline" size="sm" className="h-7 text-xs flex-1" onClick={() => setPwUser(u)}>
+                          <Key className="h-3 w-3 mr-1" /> Reset password
+                        </Button>
                       </div>
                     </div>
                   );
@@ -426,6 +442,46 @@ export default function SuperAdminTenantDetail() {
           </section>
         </div>
       </div>
+
+      {/* Create user dialog */}
+      <ManageUserDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        mode="create"
+        businessId={id || ""}
+        locations={tenantLocations}
+        onSaved={fetchAll}
+      />
+
+      {/* Edit user dialog */}
+      <ManageUserDialog
+        open={!!editingUser}
+        onOpenChange={(o) => !o && setEditingUser(null)}
+        mode="edit"
+        businessId={id || ""}
+        locations={tenantLocations}
+        initial={editingUser ? {
+          user_id: editingUser.id,
+          email: editingUser.email || "",
+          full_name: editingUser.full_name || "",
+          phone: editingUser.phone || "",
+          role: (editingUser.role as any) || "cashier",
+          is_active: editingUser.is_active,
+          assigned_location_id: editingUser.assigned_location_id,
+        } : undefined}
+        onSaved={fetchAll}
+      />
+
+      {/* Reset password dialog */}
+      {pwUser && (
+        <SetPasswordDialog
+          open={!!pwUser}
+          onOpenChange={(o) => !o && setPwUser(null)}
+          businessId={id || ""}
+          userId={pwUser.id}
+          userLabel={pwUser.full_name || pwUser.email || "user"}
+        />
+      )}
     </div>
   );
 }
