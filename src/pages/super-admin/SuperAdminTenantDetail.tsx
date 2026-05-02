@@ -69,7 +69,11 @@ export default function SuperAdminTenantDetail() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [features, setFeatures] = useState<Feature[]>([]);
   const [counts, setCounts] = useState({ products: 0, users: 0, locations: 0, customers: 0, suppliers: 0 });
-  const [tenantUsers, setTenantUsers] = useState<Array<{ id: string; full_name: string | null; email: string | null; is_active: boolean; role: string | null }>>([]);
+  const [tenantUsers, setTenantUsers] = useState<Array<{ id: string; full_name: string | null; email: string | null; phone: string | null; is_active: boolean; role: string | null; assigned_location_id: string | null }>>([]);
+  const [tenantLocations, setTenantLocations] = useState<Array<{ id: string; name: string }>>([]);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<typeof tenantUsers[number] | null>(null);
+  const [pwUser, setPwUser] = useState<typeof tenantUsers[number] | null>(null);
 
   useEffect(() => {
     if (!id) return;
