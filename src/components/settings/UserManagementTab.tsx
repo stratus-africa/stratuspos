@@ -1,21 +1,15 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { UserPlus, Shield, User, Crown, Pencil, Warehouse, Key } from "lucide-react";
-import ManageUserDialog, { SetPasswordDialog } from "@/components/users/ManageUserDialog";
-
-type AppRole = "admin" | "manager" | "cashier" | "stores_manager";
+import ManageUserDialog, { SetPasswordDialog, AppRole } from "@/components/users/ManageUserDialog";
 
 interface TeamMember {
   user_id: string;
@@ -54,18 +48,9 @@ export function UserManagementTab() {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [locations, setLocations] = useState<LocationLite[]>([]);
   const [loading, setLoading] = useState(true);
-  const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<string>("cashier");
-  const [inviting, setInviting] = useState(false);
-
-  const [editMember, setEditMember] = useState<TeamMember | null>(null);
-  const [editRole, setEditRole] = useState<AppRole>("cashier");
-  const [editName, setEditName] = useState("");
-  const [editPhone, setEditPhone] = useState("");
-  const [editActive, setEditActive] = useState(true);
-  const [editLocation, setEditLocation] = useState<string>("none");
-  const [saving, setSaving] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editing, setEditing] = useState<TeamMember | null>(null);
+  const [pwUser, setPwUser] = useState<TeamMember | null>(null);
 
   const isAdmin = userRole === "admin";
 
@@ -111,39 +96,6 @@ export function UserManagementTab() {
 
   useEffect(() => { fetchAll(); /* eslint-disable-next-line */ }, [business?.id]);
 
-  const openEdit = (m: TeamMember) => {
-    setEditMember(m); setEditRole(m.role);
-    setEditName(m.full_name || ""); setEditPhone(m.phone || "");
-    setEditActive(m.is_active);
-    setEditLocation(m.assigned_location_id || "none");
-  };
-
-  const handleSaveUser = async () => {
-    if (!editMember) return;
-    setSaving(true);
-
-    const profileUpdate: any = {
-      full_name: editName.trim(),
-      phone: editPhone.trim() || null,
-      is_active: editActive,
-      assigned_location_id: editLocation === "none" ? null : editLocation,
-    };
-
-    const [roleRes, profileRes] = await Promise.all([
-      supabase.from("user_roles").update({ role: editRole }).eq("id", editMember.role_id),
-      (supabase as any).from("profiles").update(profileUpdate).eq("id", editMember.user_id),
-    ]);
-
-    if (roleRes.error || profileRes.error) {
-      toast.error("Failed to update: " + (roleRes.error?.message || profileRes.error?.message));
-    } else {
-      toast.success("User updated");
-      await fetchAll();
-      setEditMember(null);
-    }
-    setSaving(false);
-  };
-
   const toggleActive = async (m: TeamMember, next: boolean) => {
     if (m.user_id === user?.id) {
       toast.error("You can't deactivate yourself");
@@ -154,13 +106,6 @@ export function UserManagementTab() {
     else { toast.success(next ? "User activated" : "User deactivated"); fetchAll(); }
   };
 
-  const handleInvite = async () => {
-    if (!inviteEmail.trim()) return;
-    setInviting(true);
-    toast.info(`To add ${inviteEmail} as a ${inviteRole}: Have them sign up, then assign their role here.`, { duration: 6000 });
-    setInviting(false); setInviteOpen(false); setInviteEmail("");
-  };
-
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -169,8 +114,8 @@ export function UserManagementTab() {
           <CardDescription>All team members with access to this business.</CardDescription>
         </div>
         {isAdmin && (
-          <Button size="sm" onClick={() => setInviteOpen(true)}>
-            <UserPlus className="mr-1 h-4 w-4" /> Invite User
+          <Button size="sm" onClick={() => setCreateOpen(true)}>
+            <UserPlus className="mr-1 h-4 w-4" /> Add User
           </Button>
         )}
       </CardHeader>
@@ -183,7 +128,7 @@ export function UserManagementTab() {
               <TableHead>Role</TableHead>
               <TableHead>Assigned Till</TableHead>
               <TableHead>Status</TableHead>
-              {isAdmin && <TableHead className="w-[60px]" />}
+              {isAdmin && <TableHead className="w-[160px] text-right">Actions</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -223,10 +168,15 @@ export function UserManagementTab() {
                     )}
                   </TableCell>
                   {isAdmin && (
-                    <TableCell>
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(m)} disabled={m.user_id === user?.id} title={m.user_id === user?.id ? "You can't edit yourself here" : "Edit user"}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button variant="ghost" size="sm" onClick={() => setEditing(m)} disabled={m.user_id === user?.id} title={m.user_id === user?.id ? "You can't edit yourself here" : "Edit user"}>
+                          <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setPwUser(m)} title="Reset password">
+                          <Key className="h-3.5 w-3.5 mr-1" /> Password
+                        </Button>
+                      </div>
                     </TableCell>
                   )}
                 </TableRow>
@@ -236,80 +186,44 @@ export function UserManagementTab() {
         </Table>
       </CardContent>
 
-      {/* Edit User Dialog */}
-      <Dialog open={!!editMember} onOpenChange={(open) => !open && setEditMember(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Edit User — {editMember?.full_name || "User"}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2"><Label>Full Name</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
-            <div className="space-y-2"><Label>Phone</Label><Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} /></div>
-            <div className="space-y-2"><Label>Email</Label><Input value={editMember?.email || ""} disabled className="bg-muted" /></div>
-            <div className="space-y-2">
-              <Label>Role</Label>
-              <Select value={editRole} onValueChange={(v) => setEditRole(v as AppRole)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin — Full access</SelectItem>
-                  <SelectItem value="manager">Manager — Operations</SelectItem>
-                  <SelectItem value="stores_manager">Stores Manager — Stock & inventory</SelectItem>
-                  <SelectItem value="cashier">Cashier — POS only</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Assigned Till / Location</Label>
-              <Select value={editLocation} onValueChange={setEditLocation}>
-                <SelectTrigger><SelectValue placeholder="No specific till" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No specific till (can choose at login)</SelectItem>
-                  {locations.map((l) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">Cashiers can switch tills at the start-of-day screen.</p>
-            </div>
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <Label>Active</Label>
-                <p className="text-xs text-muted-foreground">Inactive users cannot sign in to this business.</p>
-              </div>
-              <Switch checked={editActive} onCheckedChange={setEditActive} />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditMember(null)}>Cancel</Button>
-            <Button onClick={handleSaveUser} disabled={saving}>
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save Changes
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Invite Dialog */}
-      <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Invite Team Member</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2"><Label>Email Address</Label><Input type="email" value={inviteEmail} onChange={(e) => setInviteEmail(e.target.value)} placeholder="colleague@example.com" /></div>
-            <div className="space-y-2">
-              <Label>Role</Label>
-              <Select value={inviteRole} onValueChange={setInviteRole}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="stores_manager">Stores Manager</SelectItem>
-                  <SelectItem value="cashier">Cashier</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <p className="text-xs text-muted-foreground">The user must first create an account. Once they sign up, you can assign them to your business.</p>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button>
-            <Button onClick={handleInvite} disabled={inviting || !inviteEmail.trim()}>Send Invite</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {business && (
+        <>
+          <ManageUserDialog
+            open={createOpen}
+            onOpenChange={setCreateOpen}
+            mode="create"
+            businessId={business.id}
+            locations={locations}
+            onSaved={fetchAll}
+          />
+          <ManageUserDialog
+            open={!!editing}
+            onOpenChange={(o) => !o && setEditing(null)}
+            mode="edit"
+            businessId={business.id}
+            locations={locations}
+            initial={editing ? {
+              user_id: editing.user_id,
+              email: editing.email || "",
+              full_name: editing.full_name || "",
+              phone: editing.phone || "",
+              role: editing.role,
+              is_active: editing.is_active,
+              assigned_location_id: editing.assigned_location_id,
+            } : undefined}
+            onSaved={fetchAll}
+          />
+          {pwUser && (
+            <SetPasswordDialog
+              open={!!pwUser}
+              onOpenChange={(o) => !o && setPwUser(null)}
+              businessId={business.id}
+              userId={pwUser.user_id}
+              userLabel={pwUser.full_name || pwUser.email || "user"}
+            />
+          )}
+        </>
+      )}
     </Card>
   );
 }
