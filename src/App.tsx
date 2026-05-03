@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate, useLocation } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -144,14 +144,17 @@ const BusinessSuspended = () => {
 const ProtectedRoutes = () => {
   const { user, loading: authLoading } = useAuth();
   const { needsOnboarding, loading: bizLoading, hasAccess, userRole, isSuspended } = useBusiness();
+  const location = useLocation();
 
   if (authLoading || bizLoading) return <PageLoader />;
   if (!user) return <Navigate to="/sign-in" replace />;
   if (isSuspended) return <BusinessSuspended />;
   if (needsOnboarding) return <Navigate to="/onboarding" replace />;
 
-  // Default redirect based on role - cashiers go to POS
-  if (userRole === "cashier") return <Navigate to="/pos" replace />;
+  // Cashiers land on POS by default — only redirect from root, otherwise they get a blank screen.
+  if (userRole === "cashier" && location.pathname === "/") {
+    return <Navigate to="/pos" replace />;
+  }
 
   const guard = (roles: ("admin" | "manager" | "cashier")[], element: React.ReactNode) =>
     hasAccess(roles) ? element : <AccessDenied />;
