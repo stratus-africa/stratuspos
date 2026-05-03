@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, ShieldAlert } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useBusiness } from "@/contexts/BusinessContext";
@@ -11,61 +12,70 @@ import { toast } from "sonner";
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  /** Called with the manager's user_id once approved. */
   onApproved: (managerUserId: string) => void;
   title?: string;
   description?: string;
 }
 
+interface Manager {
+  user_id: string;
+  email: string;
+  full_name: string | null;
+}
+
 export default function ManagerApprovalDialog({ open, onOpenChange, onApproved, title, description }: Props) {
   const { business } = useBusiness();
-  const [email, setEmail] = useState("");
+  const [managers, setManagers] = useState<Manager[]>([]);
+  const [selected, setSelected] = useState<string>("");
   const [password, setPassword] = useState("");
   const [verifying, setVerifying] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const reset = () => { setEmail(""); setPassword(""); };
+  const reset = () => { setPassword(""); };
 
-  const handleVerify = async () => {
-    if (!business || !email || !password) return;
-    setVerifying(true);
-    try {
-      // Find the user by email within this business with admin/manager/stores_manager role
-      const { data: profile, error: pErr } = await supabase
-        .from("profiles")
-        .select("id, email")
-        .eq("business_id", business.id)
-        .ilike("email", email.trim())
-        .maybeSingle();
-      if (pErr || !profile) {
-        toast.error("No team member found with that email");
-        return;
-      }
+  useEffect(() => {
+    if (!open || !business) return;
+    (async () => {
+      setLoading(true);
       const { data: roles } = await supabase
         .from("user_roles")
-        .select("role")
-        .eq("user_id", profile.id)
-        .eq("business_id", business.id);
-      const allowed = (roles || []).some((r: any) =>
-        ["admin", "manager", "stores_manager"].includes(r.role)
-      );
-      if (!allowed) {
-        toast.error("This user is not authorised to approve");
-        return;
-      }
-      // Verify password by attempting a lightweight sign-in via a temporary client
-      // Use the REST endpoint directly to avoid disturbing the current session.
+        .select("user_id, role")
+        .eq("business_id", business.id)
+        .in("role", ["admin", "manager", "stores_manager"]);
+      const ids = Array.from(new Set((roles || []).map((r: any) => r.user_id)));
+      if (!ids.length) { setManagers([]); setLoading(false); return; }
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, full_name, email")
+        .in("id", ids);
+      const list: Manager[] = (profs || [])
+        .filter((p: any) => !!p.email)
+        .map((p: any) => ({ user_id: p.id, email: p.email, full_name: p.full_name }));
+      setManagers(list);
+      const approver = (business as any)?.pos_manager_approver_id as string | null | undefined;
+      const preferred = approver && list.find((m) => m.user_id === approver);
+      setSelected(preferred?.user_id || list[0]?.user_id || "");
+      setLoading(false);
+    })();
+  }, [open, business]);
+
+  const handleVerify = async () => {
+    const manager = managers.find((m) => m.user_id === selected);
+    if (!manager || !password) return;
+    setVerifying(true);
+    try {
       const url = (import.meta as any).env.VITE_SUPABASE_URL;
       const key = (import.meta as any).env.VITE_SUPABASE_PUBLISHABLE_KEY;
       const res = await fetch(`${url}/auth/v1/token?grant_type=password`, {
         method: "POST",
         headers: { "Content-Type": "application/json", apikey: key },
-        body: JSON.stringify({ email: profile.email || email.trim(), password }),
+        body: JSON.stringify({ email: manager.email, password }),
       });
       if (!res.ok) {
-        toast.error("Invalid manager credentials");
+        toast.error("Invalid manager password");
         return;
       }
-      onApproved(profile.id);
+      onApproved(manager.user_id);
       reset();
       onOpenChange(false);
     } finally {
@@ -82,22 +92,37 @@ export default function ManagerApprovalDialog({ open, onOpenChange, onApproved, 
             {title || "Manager Approval Required"}
           </DialogTitle>
           <DialogDescription>
-            {description || "An admin, manager, or stores manager must approve removing this item from the cart."}
+            {description || "A manager must approve this action. Enter the manager's password."}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
           <div className="space-y-1.5">
-            <Label>Manager Email</Label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="manager@example.com" autoFocus />
+            <Label>Manager</Label>
+            {loading ? (
+              <div className="text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Loading…</div>
+            ) : managers.length === 0 ? (
+              <div className="text-sm text-destructive">No managers found in this business.</div>
+            ) : (
+              <Select value={selected} onValueChange={setSelected}>
+                <SelectTrigger><SelectValue placeholder="Select a manager" /></SelectTrigger>
+                <SelectContent>
+                  {managers.map((m) => (
+                    <SelectItem key={m.user_id} value={m.user_id}>
+                      {m.full_name || m.email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label>Manager Password</Label>
-            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" />
+            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" autoFocus />
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={verifying}>Cancel</Button>
-          <Button onClick={handleVerify} disabled={verifying || !email || !password}>
+          <Button onClick={handleVerify} disabled={verifying || !password || !selected}>
             {verifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Approve
           </Button>
