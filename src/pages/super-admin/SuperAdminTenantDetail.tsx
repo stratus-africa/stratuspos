@@ -118,19 +118,36 @@ export default function SuperAdminTenantDetail() {
       setSub((subs?.[0] as Sub) || null);
     }
 
-    // Load tenant users (profiles) + their roles + locations
+    // Load tenant users — combine profiles linked to this business AND any user_roles entries
+    // (a user could have a role but no profile.business_id yet if onboarding hasn't healed).
     const [{ data: profs }, { data: roles }, { data: locs }] = await Promise.all([
-      supabase.from("profiles").select("id, full_name, email, phone, is_active, assigned_location_id").eq("business_id", id),
+      supabase.from("profiles").select("id, full_name, email, phone, is_active, assigned_location_id, business_id"),
       supabase.from("user_roles").select("user_id, role").eq("business_id", id),
       supabase.from("locations").select("id, name").eq("business_id", id).eq("is_active", true).order("name"),
     ]);
     const roleMap = new Map<string, string>();
     (roles || []).forEach((r: any) => { if (!roleMap.has(r.user_id)) roleMap.set(r.user_id, r.role); });
-    setTenantUsers((profs || []).map((p: any) => ({
-      id: p.id, full_name: p.full_name, email: p.email, phone: p.phone,
-      is_active: p.is_active, assigned_location_id: p.assigned_location_id,
-      role: roleMap.get(p.id) || null,
-    })));
+
+    // Build the set of user ids belonging to this tenant: anyone with a role here OR a profile linked here.
+    const userIds = new Set<string>();
+    (roles || []).forEach((r: any) => userIds.add(r.user_id));
+    (profs || []).forEach((p: any) => { if (p.business_id === id) userIds.add(p.id); });
+
+    const profileMap = new Map<string, any>();
+    (profs || []).forEach((p: any) => profileMap.set(p.id, p));
+
+    setTenantUsers(Array.from(userIds).map((uid) => {
+      const p = profileMap.get(uid) || {};
+      return {
+        id: uid,
+        full_name: p.full_name ?? null,
+        email: p.email ?? null,
+        phone: p.phone ?? null,
+        is_active: p.is_active ?? true,
+        assigned_location_id: p.assigned_location_id ?? null,
+        role: roleMap.get(uid) || null,
+      };
+    }));
     setTenantLocations((locs || []) as Array<{ id: string; name: string }>);
 
     setLoading(false);
