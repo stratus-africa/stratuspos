@@ -214,16 +214,15 @@ export default function SuperAdminTenantDetail() {
 
   const changeUserRole = async (userId: string, nextRole: AssignableRole) => {
     if (!id) return;
-    const { error: delErr } = await supabase
-      .from("user_roles")
-      .delete()
-      .eq("business_id", id)
-      .eq("user_id", userId);
-    if (delErr) { toast.error(delErr.message); return; }
-    const { error: insErr } = await supabase
-      .from("user_roles")
-      .insert({ business_id: id, user_id: userId, role: nextRole as any });
-    if (insErr) { toast.error(insErr.message); return; }
+    const { error } = await supabase.functions.invoke("admin-manage-user", {
+      body: {
+        action: "update_user",
+        business_id: id,
+        user_id: userId,
+        role: nextRole,
+      },
+    });
+    if (error) { toast.error(error.message); return; }
     setTenantUsers((prev) => prev.map((u) => u.id === userId ? { ...u, role: nextRole } : u));
     toast.success("Role updated");
   };
