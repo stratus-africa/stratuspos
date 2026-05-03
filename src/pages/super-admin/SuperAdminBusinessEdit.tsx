@@ -103,7 +103,7 @@ export default function SuperAdminBusinessEdit() {
     setTimezone(b.timezone);
 
     const [{ data: roles }, { data: locs }, { data: planRows }] = await Promise.all([
-      supabase.from("user_roles").select("user_id, role, created_at").eq("business_id", id),
+      supabase.from("user_roles").select("user_id, role").eq("business_id", id),
       supabase.from("locations").select("id, name").eq("business_id", id).eq("is_active", true).order("name"),
       supabase.from("subscription_packages").select("id, name, monthly_price_kes, paddle_product_id").eq("is_active", true).order("sort_order"),
     ]);
@@ -142,7 +142,7 @@ export default function SuperAdminBusinessEdit() {
       return {
         user_id: r.user_id,
         role: r.role as AppRole,
-        created_at: r.created_at,
+        created_at: null,
         full_name: p.full_name ?? null,
         email: p.email ?? null,
         phone: p.phone ?? null,
