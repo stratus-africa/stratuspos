@@ -367,7 +367,7 @@ export default function SuperAdminPackageEdit() {
                 <Info className="h-4 w-4 text-muted-foreground" />
                 <h2 className="font-semibold text-sm">Usage limits</h2>
               </div>
-              <span className="text-xs text-muted-foreground">Leave empty or -1 for unlimited</span>
+              <span className="text-xs text-muted-foreground">Use 0 or any negative value (e.g. -1) for unlimited</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
               {[
@@ -383,6 +383,7 @@ export default function SuperAdminPackageEdit() {
                   </div>
                   <Input
                     type="number"
+                    step="1"
                     value={(form as any)[key]}
                     onChange={(e) => setForm({ ...form, [key]: Number(e.target.value) } as Form)}
                     className="h-9 text-sm"
