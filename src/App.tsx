@@ -144,15 +144,15 @@ const BusinessSuspended = () => {
 const ProtectedRoutes = () => {
   const { user, loading: authLoading } = useAuth();
   const { needsOnboarding, loading: bizLoading, hasAccess, userRole, isSuspended } = useBusiness();
+  const location = useLocation();
 
   if (authLoading || bizLoading) return <PageLoader />;
   if (!user) return <Navigate to="/sign-in" replace />;
   if (isSuspended) return <BusinessSuspended />;
   if (needsOnboarding) return <Navigate to="/onboarding" replace />;
 
-  // Default redirect based on role — cashiers go to POS, but only when on the root path.
-  // Redirecting on every route would render <Navigate> instead of the matched route, causing a blank screen.
-  if (userRole === "cashier" && window.location.pathname === "/") {
+  // Cashiers land on POS by default — only redirect from root, otherwise they get a blank screen.
+  if (userRole === "cashier" && location.pathname === "/") {
     return <Navigate to="/pos" replace />;
   }
 
