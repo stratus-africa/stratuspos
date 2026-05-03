@@ -150,8 +150,11 @@ const ProtectedRoutes = () => {
   if (isSuspended) return <BusinessSuspended />;
   if (needsOnboarding) return <Navigate to="/onboarding" replace />;
 
-  // Default redirect based on role - cashiers go to POS
-  if (userRole === "cashier") return <Navigate to="/pos" replace />;
+  // Default redirect based on role — cashiers go to POS, but only when on the root path.
+  // Redirecting on every route would render <Navigate> instead of the matched route, causing a blank screen.
+  if (userRole === "cashier" && window.location.pathname === "/") {
+    return <Navigate to="/pos" replace />;
+  }
 
   const guard = (roles: ("admin" | "manager" | "cashier")[], element: React.ReactNode) =>
     hasAccess(roles) ? element : <AccessDenied />;
