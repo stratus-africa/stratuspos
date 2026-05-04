@@ -88,6 +88,8 @@ export default function SuperAdminBusinessEdit() {
   const [sub, setSub] = useState<SubRow | null>(null);
   const [planSaving, setPlanSaving] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string>("");
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const fetchAll = async () => {
     if (!id) return;
