@@ -224,6 +224,19 @@ export default function SuperAdminBusinessEdit() {
     setPlanSaving(false);
   };
 
+  const cancelSubscription = async () => {
+    if (!sub) return;
+    setCancelling(true);
+    const { error } = await supabase.from("subscriptions")
+      .update({ status: "canceled", cancel_at_period_end: true } as any)
+      .eq("id", sub.id);
+    setCancelling(false);
+    setConfirmCancel(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Subscription cancelled");
+    await fetchAll();
+  };
+
   if (loading || !biz) {
     return (
       <div className="flex items-center justify-center py-20">
