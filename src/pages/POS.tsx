@@ -191,7 +191,7 @@ const POS = () => {
     <div className="flex flex-col lg:flex-row gap-4 h-[calc(100dvh-6rem)] lg:h-[calc(100vh-6rem)] pb-[env(safe-area-inset-bottom)]">
 
       {/* Left: Product selection — 3/5 width on large screens */}
-      <div className="flex flex-col min-h-0 w-full lg:w-3/5 lg:flex-none">
+      <div className="flex flex-col min-h-0 flex-1 lg:flex-none w-full lg:w-3/5">
         {/* Search & filters - single row on mobile */}
         <div className="flex flex-row gap-2 mb-3">
           <div className="relative flex-1 min-w-0">
@@ -301,7 +301,7 @@ const POS = () => {
       </div>
 
       {/* Right: Cart — 2/5 width on large screens */}
-      <Card className="w-full lg:w-2/5 lg:flex-none flex flex-col min-h-0 min-w-0">
+      <Card className="w-full lg:w-2/5 lg:flex-none flex flex-col min-h-0 min-w-0 shrink-0">
         {(!isMobile || mobileCartExpanded) && (
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
@@ -386,7 +386,7 @@ const POS = () => {
             <div className="grid grid-cols-2 gap-1.5">
               <Button
                 variant="default"
-                className="flex flex-col items-center gap-0.5 h-auto py-3"
+                className="flex flex-col items-center gap-0.5 h-auto py-3 bg-[hsl(5,75%,48%)] hover:bg-[hsl(5,75%,42%)] text-white border-transparent"
                 disabled={pos.cart.length === 0}
                 onClick={() => { setInitialPaymentMethod("cash"); setPaymentOpen(true); }}
               >
@@ -395,7 +395,7 @@ const POS = () => {
               </Button>
               <Button
                 variant="outline"
-                className="flex flex-col items-center gap-0.5 h-auto py-3 bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700"
+                className="flex flex-col items-center gap-0.5 h-auto py-3 bg-[hsl(130,55%,25%)] text-white border-[hsl(130,55%,25%)] hover:bg-[hsl(130,55%,20%)]"
                 disabled={pos.cart.length === 0}
                 onClick={() => { setInitialPaymentMethod("mpesa"); setPaymentOpen(true); }}
               >
