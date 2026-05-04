@@ -1628,8 +1628,10 @@ export type Database = {
           description: string | null
           id: string
           is_active: boolean
+          max_customers: number
           max_locations: number
           max_products: number
+          max_suppliers: number
           max_users: number
           monthly_price: number
           monthly_price_kes: number
@@ -1650,8 +1652,10 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean
+          max_customers?: number
           max_locations?: number
           max_products?: number
+          max_suppliers?: number
           max_users?: number
           monthly_price?: number
           monthly_price_kes?: number
@@ -1672,8 +1676,10 @@ export type Database = {
           description?: string | null
           id?: string
           is_active?: boolean
+          max_customers?: number
           max_locations?: number
           max_products?: number
+          max_suppliers?: number
           max_users?: number
           monthly_price?: number
           monthly_price_kes?: number
