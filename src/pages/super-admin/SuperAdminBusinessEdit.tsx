@@ -352,10 +352,18 @@ export default function SuperAdminBusinessEdit() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={savePlan} disabled={planSaving || !selectedPlanId}>
-              {planSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
-              Update Plan
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button onClick={savePlan} disabled={planSaving || !selectedPlanId}>
+                {planSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
+                Update Plan
+              </Button>
+              {sub && sub.status !== "canceled" && (
+                <Button variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                  onClick={() => setConfirmCancel(true)} disabled={cancelling}>
+                  <XCircle className="h-4 w-4 mr-2" /> Cancel Subscription
+                </Button>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">
               Changes the tenant's active plan immediately. Billing must be reconciled via the payment provider.
             </p>
