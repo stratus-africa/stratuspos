@@ -160,6 +160,8 @@ export default function SuperAdminPackageEdit() {
         max_products: form.max_products,
         max_users: form.max_users,
         max_locations: form.max_locations,
+        max_customers: form.max_customers,
+        max_suppliers: form.max_suppliers,
         trial_days: form.free_trial ? form.trial_days : 0,
         is_active: form.is_active,
       };

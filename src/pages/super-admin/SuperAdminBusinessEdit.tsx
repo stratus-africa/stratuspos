@@ -9,9 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Check, ChevronRight, Loader2, Settings2, Users, Mail, Package, UserPlus, Key, Pencil } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, Loader2, Settings2, Users, Mail, Package, UserPlus, Key, Pencil, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import ManageUserDialog, { SetPasswordDialog, AppRole } from "@/components/users/ManageUserDialog";
 
 type Status = "active" | "suspended" | "cancelled";
@@ -84,6 +88,8 @@ export default function SuperAdminBusinessEdit() {
   const [sub, setSub] = useState<SubRow | null>(null);
   const [planSaving, setPlanSaving] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string>("");
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   const fetchAll = async () => {
     if (!id) return;
@@ -218,6 +224,19 @@ export default function SuperAdminBusinessEdit() {
     setPlanSaving(false);
   };
 
+  const cancelSubscription = async () => {
+    if (!sub) return;
+    setCancelling(true);
+    const { error } = await supabase.from("subscriptions")
+      .update({ status: "canceled", cancel_at_period_end: true } as any)
+      .eq("id", sub.id);
+    setCancelling(false);
+    setConfirmCancel(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Subscription cancelled");
+    await fetchAll();
+  };
+
   if (loading || !biz) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -333,10 +352,18 @@ export default function SuperAdminBusinessEdit() {
                 </SelectContent>
               </Select>
             </div>
-            <Button onClick={savePlan} disabled={planSaving || !selectedPlanId}>
-              {planSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
-              Update Plan
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button onClick={savePlan} disabled={planSaving || !selectedPlanId}>
+                {planSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
+                Update Plan
+              </Button>
+              {sub && sub.status !== "canceled" && (
+                <Button variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                  onClick={() => setConfirmCancel(true)} disabled={cancelling}>
+                  <XCircle className="h-4 w-4 mr-2" /> Cancel Subscription
+                </Button>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">
               Changes the tenant's active plan immediately. Billing must be reconciled via the payment provider.
             </p>
@@ -448,6 +475,27 @@ export default function SuperAdminBusinessEdit() {
           userLabel={pwUser.full_name || pwUser.email || "user"}
         />
       )}
+
+      <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel this subscription?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The tenant's subscription will be marked cancelled immediately. You will still need to stop billing in the payment provider if applicable.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>Keep subscription</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); cancelSubscription(); }}
+              disabled={cancelling}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {cancelling ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Cancelling…</> : "Yes, cancel"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
