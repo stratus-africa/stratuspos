@@ -9,9 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Check, ChevronRight, Loader2, Settings2, Users, Mail, Package, UserPlus, Key, Pencil } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, Loader2, Settings2, Users, Mail, Package, UserPlus, Key, Pencil, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import ManageUserDialog, { SetPasswordDialog, AppRole } from "@/components/users/ManageUserDialog";
 
 type Status = "active" | "suspended" | "cancelled";
