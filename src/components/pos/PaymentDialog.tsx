@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Banknote, Smartphone, CreditCard, Plus, Trash2, Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { PaymentEntry } from "@/hooks/usePOS";
 import { useBankAccounts } from "@/hooks/useBankAccounts";
+import { usePaymentMethodAccounts } from "@/hooks/usePaymentMethodAccounts";
 import { useBusiness } from "@/contexts/BusinessContext";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -32,7 +33,9 @@ type MpesaStatus = "idle" | "sending" | "waiting" | "completed" | "failed";
 export default function PaymentDialog({ open, onOpenChange, total, onConfirm, processing, initialMethod = "cash" }: Props) {
   const [payments, setPayments] = useState<PaymentEntry[]>([{ method: initialMethod, amount: total, reference: "" }]);
   const [bankAccountId, setBankAccountId] = useState<string>("none");
+  const [bankAccountTouched, setBankAccountTouched] = useState(false);
   const { data: bankAccounts = [] } = useBankAccounts();
+  const { data: methodAccounts = {} as Record<string, string | null> } = usePaymentMethodAccounts();
   const { business } = useBusiness();
 
   // M-Pesa STK Push state
@@ -66,10 +69,20 @@ export default function PaymentDialog({ open, onOpenChange, total, onConfirm, pr
     setPayments((prev) => prev.filter((_, i) => i !== idx));
   };
 
+  // Auto-apply mapped account based on the (first) payment method until user overrides
+  useEffect(() => {
+    if (bankAccountTouched) return;
+    const primary = payments[0]?.method;
+    const mapped = primary ? (methodAccounts as any)[primary] : null;
+    if (mapped) setBankAccountId(mapped);
+    else setBankAccountId("none");
+  }, [payments, methodAccounts, bankAccountTouched]);
+
   const handleOpenChange = (v: boolean) => {
     if (v) {
       setPayments([{ method: initialMethod, amount: total, reference: "" }]);
       setBankAccountId("none");
+      setBankAccountTouched(false);
       setMpesaStatus("idle");
       setMpesaPhone("");
       setMpesaCheckoutId("");
@@ -288,7 +301,7 @@ export default function PaymentDialog({ open, onOpenChange, total, onConfirm, pr
 
           <div className="space-y-2">
             <Label className="text-muted-foreground text-xs">Deposit To (optional — links to Banking)</Label>
-            <Select value={bankAccountId} onValueChange={setBankAccountId}>
+            <Select value={bankAccountId} onValueChange={(v) => { setBankAccountTouched(true); setBankAccountId(v); }}>
               <SelectTrigger><SelectValue placeholder="No bank account linked" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">None</SelectItem>
