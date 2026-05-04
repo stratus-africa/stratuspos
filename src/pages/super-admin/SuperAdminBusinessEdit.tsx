@@ -475,6 +475,27 @@ export default function SuperAdminBusinessEdit() {
           userLabel={pwUser.full_name || pwUser.email || "user"}
         />
       )}
+
+      <AlertDialog open={confirmCancel} onOpenChange={setConfirmCancel}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel this subscription?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The tenant's subscription will be marked cancelled immediately. You will still need to stop billing in the payment provider if applicable.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>Keep subscription</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); cancelSubscription(); }}
+              disabled={cancelling}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {cancelling ? <><Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" /> Cancelling…</> : "Yes, cancel"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
