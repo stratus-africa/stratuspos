@@ -134,15 +134,23 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setIsSuspended(biz.is_active === false);
         applyTheme((biz as { theme_color?: string }).theme_color || DEFAULT_THEME);
 
-        // Fetch role
-        const { data: roleData } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
-          .eq("business_id", biz.id)
-          .single();
+        // Fetch role + assigned location in parallel
+        const [{ data: roleData }, { data: profileExtra }] = await Promise.all([
+          supabase
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", user.id)
+            .eq("business_id", biz.id)
+            .maybeSingle(),
+          supabase
+            .from("profiles")
+            .select("assigned_location_id")
+            .eq("id", user.id)
+            .maybeSingle(),
+        ]);
 
-        setUserRole((roleData?.role as AppRole) || null);
+        const role = (roleData?.role as AppRole) || null;
+        setUserRole(role);
 
         const { data: locs } = await supabase
           .from("locations")
@@ -153,9 +161,13 @@ export const BusinessProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         const locationList = (locs || []) as Location[];
         setLocations(locationList);
 
+        const assignedId = (profileExtra as { assigned_location_id?: string | null } | null)?.assigned_location_id;
         const savedLocId = localStorage.getItem("currentLocationId");
-        const savedLoc = locationList.find((l) => l.id === savedLocId);
-        setCurrentLocation(savedLoc || locationList[0] || null);
+        // Cashiers are pinned to their assigned till; others remember their last selection.
+        const preferredId =
+          role === "cashier" && assignedId ? assignedId : (savedLocId || assignedId || locationList[0]?.id);
+        const chosen = locationList.find((l) => l.id === preferredId) || locationList[0] || null;
+        setCurrentLocation(chosen);
       } else {
         setNeedsOnboarding(true);
       }
