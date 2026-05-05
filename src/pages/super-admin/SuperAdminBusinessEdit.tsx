@@ -348,7 +348,7 @@ export default function SuperAdminBusinessEdit() {
               <span className="text-muted-foreground">Current: </span>
               <span className="font-medium">
                 {(() => {
-                  const cur = plans.find((p) => sub && p.paddle_product_id === sub.product_id);
+                  const cur = plans.find((p) => sub && (p.id === sub.product_id || p.paddle_product_id === sub.product_id));
                   return cur ? `${cur.name} — KES ${Number(cur.monthly_price_kes || 0).toFixed(0)}/mo` : "No active plan";
                 })()}
               </span>
@@ -367,6 +367,17 @@ export default function SuperAdminBusinessEdit() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <Label>Subscription end date</Label>
+              <Input
+                type="date"
+                value={periodEnd}
+                onChange={(e) => setPeriodEnd(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Controls when the tenant's plan expires. Leave blank for no expiry.
+              </p>
+            </div>
             <div className="flex items-center gap-2">
               <Button onClick={savePlan} disabled={planSaving || !selectedPlanId}>
                 {planSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
@@ -380,7 +391,7 @@ export default function SuperAdminBusinessEdit() {
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Changes the tenant's active plan immediately. Billing must be reconciled via the payment provider.
+              Assigning a plan immediately activates all of its included features for the tenant.
             </p>
           </CardContent>
         </Card>
