@@ -153,24 +153,26 @@ export function AppSidebar() {
               return (
                 <Collapsible key={item.title} defaultOpen={parentActive} className="group/collapsible">
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActiveUrl(item.url)}>
-                      <NavLink to={item.url} end className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
-                        <item.icon className="mr-2 h-4 w-4" />
-                        {!collapsed && <span className="flex-1">{item.title}</span>}
-                        {!collapsed && locked && <Lock className="mr-1 h-3 w-3 text-muted-foreground" />}
-                        {!collapsed && (
-                          <CollapsibleTrigger asChild onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
-                            <button
-                              type="button"
-                              aria-label={`Toggle ${item.title} submenu`}
-                              className="ml-auto p-0.5 rounded hover:bg-sidebar-accent/70"
-                            >
-                              <ChevronRight className="h-3.5 w-3.5 transition-transform group-data-[state=open]/collapsible:rotate-90" />
-                            </button>
-                          </CollapsibleTrigger>
-                        )}
-                      </NavLink>
-                    </SidebarMenuButton>
+                    <div className="flex items-center w-full">
+                      <SidebarMenuButton asChild isActive={isActiveUrl(item.url)} className="flex-1">
+                        <NavLink to={item.url} end className="hover:bg-sidebar-accent/50" activeClassName="bg-sidebar-accent text-sidebar-primary font-medium">
+                          <item.icon className="mr-2 h-4 w-4" />
+                          {!collapsed && <span className="flex-1">{item.title}</span>}
+                          {!collapsed && locked && <Lock className="mr-1 h-3 w-3 text-muted-foreground" />}
+                        </NavLink>
+                      </SidebarMenuButton>
+                      {!collapsed && (
+                        <CollapsibleTrigger asChild>
+                          <button
+                            type="button"
+                            aria-label={`Toggle ${item.title} submenu`}
+                            className="ml-1 p-1.5 rounded hover:bg-sidebar-accent/70 text-sidebar-foreground/70"
+                          >
+                            <ChevronRight className="h-3.5 w-3.5 transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                          </button>
+                        </CollapsibleTrigger>
+                      )}
+                    </div>
                     {!collapsed && (
                       <CollapsibleContent>
                         <SidebarMenuSub>

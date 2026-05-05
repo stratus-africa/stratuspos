@@ -88,6 +88,7 @@ export default function SuperAdminBusinessEdit() {
   const [sub, setSub] = useState<SubRow | null>(null);
   const [planSaving, setPlanSaving] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string>("");
+  const [periodEnd, setPeriodEnd] = useState<string>(""); // yyyy-mm-dd for date input
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
@@ -129,9 +130,11 @@ export default function SuperAdminBusinessEdit() {
       setSub(s);
       const matched = s ? (planRows || []).find((p: any) => p.paddle_product_id === s.product_id) : null;
       setSelectedPlanId(matched?.id || (planRows?.[0] as any)?.id || "");
+      setPeriodEnd(s?.current_period_end ? new Date(s.current_period_end).toISOString().slice(0, 10) : "");
     } else {
       setSub(null);
       setSelectedPlanId((planRows?.[0] as any)?.id || "");
+      setPeriodEnd("");
     }
 
     const userIds = Array.from(new Set((roles || []).map((r: any) => r.user_id)));
@@ -205,21 +208,33 @@ export default function SuperAdminBusinessEdit() {
     const ownerId = biz.owner_id || users.find((u) => u.role === "admin")?.user_id;
     if (!ownerId) { toast.error("No tenant admin/owner found to attach plan to"); return; }
     setPlanSaving(true);
+
+    // Store the PACKAGE ID in product_id so useSubscription resolves features via packages.id
+    // (matches the resolver in src/hooks/useSubscription.ts).
+    const periodEndIso = periodEnd ? new Date(periodEnd + "T23:59:59Z").toISOString() : null;
+
     if (sub) {
       const { error } = await supabase.from("subscriptions")
-        .update({ product_id: plan.paddle_product_id, status: "active" } as any)
+        .update({
+          product_id: plan.id,
+          status: "active",
+          cancel_at_period_end: false,
+          ...(periodEndIso ? { current_period_end: periodEndIso } : {}),
+        } as any)
         .eq("id", sub.id);
       if (error) { toast.error(error.message); setPlanSaving(false); return; }
     } else {
       const { error } = await supabase.from("subscriptions").insert({
         user_id: ownerId,
-        product_id: plan.paddle_product_id,
+        product_id: plan.id,
         status: "active",
         environment: "live",
+        current_period_start: new Date().toISOString(),
+        current_period_end: periodEndIso,
       } as any);
       if (error) { toast.error(error.message); setPlanSaving(false); return; }
     }
-    toast.success("Plan updated");
+    toast.success("Plan updated — features activated for tenant");
     await fetchAll();
     setPlanSaving(false);
   };
@@ -333,7 +348,7 @@ export default function SuperAdminBusinessEdit() {
               <span className="text-muted-foreground">Current: </span>
               <span className="font-medium">
                 {(() => {
-                  const cur = plans.find((p) => sub && p.paddle_product_id === sub.product_id);
+                  const cur = plans.find((p) => sub && (p.id === sub.product_id || p.paddle_product_id === sub.product_id));
                   return cur ? `${cur.name} — KES ${Number(cur.monthly_price_kes || 0).toFixed(0)}/mo` : "No active plan";
                 })()}
               </span>
@@ -352,6 +367,17 @@ export default function SuperAdminBusinessEdit() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <Label>Subscription end date</Label>
+              <Input
+                type="date"
+                value={periodEnd}
+                onChange={(e) => setPeriodEnd(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">
+                Controls when the tenant's plan expires. Leave blank for no expiry.
+              </p>
+            </div>
             <div className="flex items-center gap-2">
               <Button onClick={savePlan} disabled={planSaving || !selectedPlanId}>
                 {planSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Check className="h-4 w-4 mr-2" />}
@@ -365,7 +391,7 @@ export default function SuperAdminBusinessEdit() {
               )}
             </div>
             <p className="text-xs text-muted-foreground">
-              Changes the tenant's active plan immediately. Billing must be reconciled via the payment provider.
+              Assigning a plan immediately activates all of its included features for the tenant.
             </p>
           </CardContent>
         </Card>

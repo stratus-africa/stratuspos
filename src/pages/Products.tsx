@@ -13,6 +13,7 @@ import { Package, Plus, Search, Pencil, Trash2, Tag, Layers, Ruler, Download, Up
 import { useProducts, useCategories, useBrands, useUnits, type ProductFormData, type Product } from "@/hooks/useProducts";
 import { ProductFormDialog } from "@/components/products/ProductFormDialog";
 import { QuickAddDialog } from "@/components/products/QuickAddDialog";
+import ImportMappingDialog from "@/components/products/ImportMappingDialog";
 import ProductDetailDialog from "@/components/products/ProductDetailDialog";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import { useBusiness } from "@/contexts/BusinessContext";
@@ -40,6 +41,9 @@ const Products = () => {
   const [brandDialogOpen, setBrandDialogOpen] = useState(false);
   const [unitDialogOpen, setUnitDialogOpen] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [mappingOpen, setMappingOpen] = useState(false);
+  const [importRows, setImportRows] = useState<Record<string, any>[]>([]);
+  const [importHeaders, setImportHeaders] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkUpdateOpen, setBulkUpdateOpen] = useState(false);
@@ -203,43 +207,54 @@ const Products = () => {
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !business) return;
-    setImporting(true);
     try {
       const data = await file.arrayBuffer();
       const wb = XLSX.read(data);
       const ws = wb.Sheets[wb.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json<Record<string, any>>(ws);
-
       if (rows.length === 0) { toast.error("File is empty"); return; }
+      setImportRows(rows);
+      setImportHeaders(Object.keys(rows[0]));
+      setMappingOpen(true);
+    } catch (err: any) {
+      toast.error(`Failed to read file: ${err.message}`);
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
+  const runImport = async (mapping: Record<string, string | null>) => {
+    if (!business) return;
+    setImporting(true);
+    try {
       const catMap = new Map((categoriesQuery.data || []).map((c) => [c.name.toLowerCase(), c.id]));
       const brandMap = new Map((brandsQuery.data || []).map((b) => [b.name.toLowerCase(), b.id]));
       const unitMap = new Map((unitsQuery.data || []).map((u) => [u.name.toLowerCase(), u.id]));
-
-      const toInsert = rows.map((row) => ({
+      const get = (row: Record<string, any>, k: string) => mapping[k] ? row[mapping[k] as string] : undefined;
+      const toInsert = importRows.map((row) => ({
         business_id: business.id,
-        name: String(row["Name"] || row["name"] || "Unnamed"),
-        sku: row["SKU"] || row["sku"] || null,
-        barcode: row["Barcode"] || row["barcode"] || null,
-        category_id: catMap.get(String(row["Category"] || row["category"] || "").toLowerCase()) || null,
-        brand_id: brandMap.get(String(row["Brand"] || row["brand"] || "").toLowerCase()) || null,
-        unit_id: unitMap.get(String(row["Unit"] || row["unit"] || "").toLowerCase()) || null,
-        purchase_price: Number(row["Purchase Price"] || row["purchase_price"] || 0),
-        selling_price: Number(row["Selling Price"] || row["selling_price"] || 0),
-        tax_rate: row["Tax Rate"] != null && row["Tax Rate"] !== "" ? Number(row["Tax Rate"]) : 16,
-        is_active: String(row["Active"] || row["active"] || "Yes").toLowerCase() !== "no",
+        name: String(get(row, "name") ?? "Unnamed"),
+        sku: get(row, "sku") || null,
+        barcode: get(row, "barcode") || null,
+        category_id: catMap.get(String(get(row, "category") ?? "").toLowerCase()) || null,
+        brand_id: brandMap.get(String(get(row, "brand") ?? "").toLowerCase()) || null,
+        unit_id: unitMap.get(String(get(row, "unit") ?? "").toLowerCase()) || null,
+        purchase_price: Number(get(row, "purchase_price") ?? 0),
+        selling_price: Number(get(row, "selling_price") ?? 0),
+        tax_rate: get(row, "tax_rate") != null && get(row, "tax_rate") !== "" ? Number(get(row, "tax_rate")) : 16,
+        is_active: String(get(row, "active") ?? "Yes").toLowerCase() !== "no",
       }));
-
       const { error } = await supabase.from("products").insert(toInsert);
       if (error) throw error;
-
       toast.success(`Imported ${toInsert.length} products`);
       productsQuery.refetch();
+      setMappingOpen(false);
+      setImportRows([]);
+      setImportHeaders([]);
     } catch (err: any) {
       toast.error(`Import failed: ${err.message}`);
     } finally {
       setImporting(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -581,6 +596,14 @@ const Products = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <ImportMappingDialog
+        open={mappingOpen}
+        onOpenChange={setMappingOpen}
+        headers={importHeaders}
+        sampleRow={importRows[0]}
+        importing={importing}
+        onConfirm={(m) => runImport(m as Record<string, string | null>)}
+      />
     </div>
   );
 };
