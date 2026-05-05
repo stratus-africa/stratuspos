@@ -88,6 +88,7 @@ export default function SuperAdminBusinessEdit() {
   const [sub, setSub] = useState<SubRow | null>(null);
   const [planSaving, setPlanSaving] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string>("");
+  const [periodEnd, setPeriodEnd] = useState<string>(""); // yyyy-mm-dd for date input
   const [confirmCancel, setConfirmCancel] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
@@ -129,9 +130,11 @@ export default function SuperAdminBusinessEdit() {
       setSub(s);
       const matched = s ? (planRows || []).find((p: any) => p.paddle_product_id === s.product_id) : null;
       setSelectedPlanId(matched?.id || (planRows?.[0] as any)?.id || "");
+      setPeriodEnd(s?.current_period_end ? new Date(s.current_period_end).toISOString().slice(0, 10) : "");
     } else {
       setSub(null);
       setSelectedPlanId((planRows?.[0] as any)?.id || "");
+      setPeriodEnd("");
     }
 
     const userIds = Array.from(new Set((roles || []).map((r: any) => r.user_id)));
