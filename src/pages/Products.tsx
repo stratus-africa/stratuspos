@@ -13,6 +13,7 @@ import { Package, Plus, Search, Pencil, Trash2, Tag, Layers, Ruler, Download, Up
 import { useProducts, useCategories, useBrands, useUnits, type ProductFormData, type Product } from "@/hooks/useProducts";
 import { ProductFormDialog } from "@/components/products/ProductFormDialog";
 import { QuickAddDialog } from "@/components/products/QuickAddDialog";
+import ImportMappingDialog from "@/components/products/ImportMappingDialog";
 import ProductDetailDialog from "@/components/products/ProductDetailDialog";
 import BarcodeScanner from "@/components/BarcodeScanner";
 import { useBusiness } from "@/contexts/BusinessContext";
@@ -40,6 +41,9 @@ const Products = () => {
   const [brandDialogOpen, setBrandDialogOpen] = useState(false);
   const [unitDialogOpen, setUnitDialogOpen] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [mappingOpen, setMappingOpen] = useState(false);
+  const [importRows, setImportRows] = useState<Record<string, any>[]>([]);
+  const [importHeaders, setImportHeaders] = useState<string[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkUpdateOpen, setBulkUpdateOpen] = useState(false);
@@ -592,6 +596,14 @@ const Products = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <ImportMappingDialog
+        open={mappingOpen}
+        onOpenChange={setMappingOpen}
+        headers={importHeaders}
+        sampleRow={importRows[0]}
+        importing={importing}
+        onConfirm={(m) => runImport(m as Record<string, string | null>)}
+      />
     </div>
   );
 };
