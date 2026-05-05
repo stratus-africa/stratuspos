@@ -208,21 +208,33 @@ export default function SuperAdminBusinessEdit() {
     const ownerId = biz.owner_id || users.find((u) => u.role === "admin")?.user_id;
     if (!ownerId) { toast.error("No tenant admin/owner found to attach plan to"); return; }
     setPlanSaving(true);
+
+    // Store the PACKAGE ID in product_id so useSubscription resolves features via packages.id
+    // (matches the resolver in src/hooks/useSubscription.ts).
+    const periodEndIso = periodEnd ? new Date(periodEnd + "T23:59:59Z").toISOString() : null;
+
     if (sub) {
       const { error } = await supabase.from("subscriptions")
-        .update({ product_id: plan.paddle_product_id, status: "active" } as any)
+        .update({
+          product_id: plan.id,
+          status: "active",
+          cancel_at_period_end: false,
+          ...(periodEndIso ? { current_period_end: periodEndIso } : {}),
+        } as any)
         .eq("id", sub.id);
       if (error) { toast.error(error.message); setPlanSaving(false); return; }
     } else {
       const { error } = await supabase.from("subscriptions").insert({
         user_id: ownerId,
-        product_id: plan.paddle_product_id,
+        product_id: plan.id,
         status: "active",
         environment: "live",
+        current_period_start: new Date().toISOString(),
+        current_period_end: periodEndIso,
       } as any);
       if (error) { toast.error(error.message); setPlanSaving(false); return; }
     }
-    toast.success("Plan updated");
+    toast.success("Plan updated — features activated for tenant");
     await fetchAll();
     setPlanSaving(false);
   };
